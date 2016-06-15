@@ -1,0 +1,16 @@
+// The Firmament project
+// Copyright (c) 2015 Malte Schwarzkopf <malte.schwarzkopf@cl.cam.ac.uk>
+//
+// CoCo co-location interference score protobuf.
+
+syntax="proto3";
+package firmament;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+message CoCoInterferenceScores {
+  uint32 devil_penalty = 1;
+  uint32 rabbit_penalty = 2;
+  uint32 sheep_penalty = 3;
+  uint32 turtle_penalty = 4;
+}

@@ -1,0 +1,65 @@
+// The Firmament project
+// Copyright (c) 2011-2012 Malte Schwarzkopf <malte.schwarzkopf@cl.cam.ac.uk>
+//
+// Resource descriptor protobuf.
+
+syntax="proto3";
+
+package firmament;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "coco_interference_scores.proto";
+import "resource_vector.proto";
+import "whare_map_stats.proto";
+
+//option (gogoproto.goproto_enum_prefix_all) = false;
+
+message ResourceDescriptor {
+  enum ResourceState {
+    ResourceUnknown = 0;
+    ResourceIdle = 1;
+    ResourceBusy = 2;
+    ResourceLost = 3;
+  }
+
+  enum ResourceType {
+    ResourcePu = 0;
+    ResourceCore = 1;
+    ResourceCache = 2;
+    ResourceNic = 3;
+    ResourceDisk = 4;
+    ResourceSsd = 5;
+    ResourceMachine = 6;
+    ResourceLogical = 7;
+    ResourceNumaNode = 8;
+    ResourceSocket = 9;
+    ResourceCoordinator = 10;
+  }
+
+  string uuid = 1;
+  string friendly_name = 2;
+  string descriptive_name = 3;
+  ResourceState state = 4;
+  uint64 task_capacity = 5;
+  uint64 last_heartbeat = 6;
+  ResourceType type = 7;
+  bool schedulable = 8;
+  repeated uint64 current_running_tasks = 9;
+  // Stores the number of running tasks on the resources that
+  // are below this node,
+  uint64 num_running_tasks_below = 10;
+  uint64 num_slots_below = 11;
+  // Resource capacity and load tracking
+  ResourceVector available_resources = 12;
+  ResourceVector reserved_resources = 13;
+  ResourceVector min_available_resources_below = 14;
+  ResourceVector max_available_resources_below = 15;
+  ResourceVector min_unreserved_resources_below = 16;
+  ResourceVector max_unreserved_resources_below = 17;
+  ResourceVector resource_capacity = 18;
+  // Cost-model-specific statistics
+  WhareMapStats whare_map_stats = 19;
+  CoCoInterferenceScores coco_interference_scores = 20;
+  // Simulation related fields
+  uint64 trace_machine_id = 21;
+}

@@ -1,0 +1,45 @@
+// The Firmament project
+// Copyright (c) 2011-2012 Malte Schwarzkopf <malte.schwarzkopf@cl.cam.ac.uk>
+//
+// Reference description protobuf. This is used to serialize and pass around
+// references.
+
+syntax="proto3";
+
+package firmament;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+//option (gogoproto.goproto_enum_prefix_all) = false;
+
+message ReferenceDescriptor {
+  enum ReferenceType {
+    Tombstone = 0;
+    Future = 1;
+    Concrete = 2;
+    Stream = 3;
+    Value = 4;
+    Error = 5;
+  }
+  enum ReferenceScope {
+    // TODO(malte): really encode like this?
+    Public = 0;
+    Private = 1;
+  }
+
+  bytes id = 1;
+  ReferenceType type = 2;
+  ReferenceScope scope = 3;
+  bool non_deterministic = 4;
+  uint64 size = 5;
+  string location = 6;
+  bytes inline_data = 7;
+  uint64 producing_task = 8;
+
+  uint64 time_to_compute = 9 ;
+  uint64 version = 10 ;
+
+  // Modifications for storage engine 
+  bool is_modified = 11;
+}
+

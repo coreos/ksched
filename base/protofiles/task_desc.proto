@@ -1,0 +1,81 @@
+
+syntax="proto3";
+
+package firmament;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "reference_desc.proto";
+import "resource_vector.proto";
+import "task_final_report.proto";
+
+//option (gogoproto.goproto_enum_prefix_all) = false;
+
+message TaskDescriptor {
+  enum TaskState {
+    Created = 0;
+    Blocking = 1;
+    Runnable = 2;
+    Assigned = 3;
+    Running = 4;
+    Completed = 5;
+    Failed = 6;
+    Aborted = 7;
+    Delegated = 8;
+    Unknown = 9;
+  }
+
+  enum TaskType {
+    Sheep = 0;
+    Rabbit = 1;
+    Devil = 2;
+    Turtle = 3;
+  }
+
+  uint64 uid = 1;
+  string name = 2;
+  TaskState state = 3;
+  string job_id = 4;
+  uint64 index = 5;
+  // Inputs/outputs 
+  repeated ReferenceDescriptor dependencies = 6;
+  repeated ReferenceDescriptor outputs = 7;
+  // Command and arguments 
+  bytes binary = 8;
+  repeated string args = 9;
+  // Children 
+  repeated TaskDescriptor spawned = 10;
+  // Runtime meta-data 
+  string scheduled_to_resource = 11;
+  string last_heartbeat_location = 12;
+  uint64 last_heartbeat_time = 13;
+  // Delegation info 
+  string delegated_to = 14;
+  string delegated_from = 15;
+  // Timestamps 
+  uint64 submit_time = 16;
+  uint64 start_time = 17;
+  uint64 finish_time = 18;
+  // The total time spent unscheduled before previous runs. 
+  uint64 total_unscheduled_time = 19;
+  // The total time spent in previous runs. This field only gets updated when
+     the task finishes running. 
+  uint64 total_run_time = 20;
+  // Deadlines 
+  uint64 relative_deadline = 21;
+  uint64 absolute_deadline = 22;
+  // Application-specific fields 
+  // TODO(malte): move these to sub-messages 
+  uint64 port = 23;
+  uint64 input_size = 24;
+  // TaskLib related stuff 
+  bool inject_task_lib = 25;
+  // Task resource request and priority 
+  ResourceVector resource_request = 26;
+  uint32 priority = 27;
+  TaskType task_type = 28;
+  // Final report after successful execution 
+  TaskFinalReport final_report = 29;
+  // Simulation related fields
+  uint64 trace_job_id = 30;
+  uint64 trace_task_id = 31;
+}
