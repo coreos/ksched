@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# Run all tests in all packages
+go test ./...
