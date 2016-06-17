@@ -1,0 +1,18 @@
+// The Firmament project
+// Copyright (c) 2015 Ionel Gog <ionel.gog@cl.cam.ac.uk>
+//
+// WhareMap statistics protobuf.
+
+syntax="proto3";
+
+package firmament;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+message WhareMapStats {
+  uint64 num_idle = 1;
+  uint64 num_devils = 2;
+  uint64 num_rabbits = 3;
+  uint64 num_sheep = 4;
+  uint64 num_turtles = 5;
+}

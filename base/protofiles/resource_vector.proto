@@ -1,0 +1,19 @@
+// The Firmament project
+// Copyright (c) 2015 Malte Schwarzkopf <malte.schwarzkopf@cl.cam.ac.uk>
+//
+// Resource vector protobuf.
+
+syntax="proto3";
+
+package firmament;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+message ResourceVector {
+  float cpu_cores = 1;
+  uint64 ram_bw = 2;
+  uint64 ram_cap = 3; // in MB
+  uint64 disk_bw = 4;
+  uint64 disk_cap = 5;
+  uint64 net_bw = 6;
+}
