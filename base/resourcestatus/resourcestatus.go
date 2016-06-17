@@ -34,6 +34,6 @@ func (rs *ResourceStatus) LastHeartbeat() uint64 {
 	return rs.lastHeartbeat
 }
 
-func (rs *ResourceStatus) SetLastHeartBeat(hb uint64) {
+func (rs *ResourceStatus) SetLastHeartbeat(hb uint64) {
 	rs.lastHeartbeat = hb
 }
