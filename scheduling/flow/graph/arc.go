@@ -20,3 +20,13 @@ type FlowGraphArc struct {
 	dstNode       *FlowGraphNode
 	typ           FlowArcType
 }
+
+// Constructor equivalent in go
+func NewFlowGraphArc(srcID uint64, dstID uint64, srcNode *FlowGraphNode, dstNode *FlowGraphNode) *FlowGraphArc {
+	a := new(FlowGraphArc)
+	a.src = srcID
+	a.dst = dstID
+	a.srcNode = srcNode
+	a.dstNode = dstNode
+	return a
+}
