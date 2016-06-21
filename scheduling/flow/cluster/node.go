@@ -15,13 +15,13 @@
 // Represents a node in the scheduling flow graph.
 // C++ file: https://github.com/camsas/firmament/blob/master/src/scheduling/flow/flow_graph_node.h
 
-package graph
+package cluster
 
 import (
 	"log"
 
-	pb "github.com/coreos/ksched/base/protofiles"
-	t "github.com/coreos/ksched/base/types"
+	t "github.com/coreos/ksched/pkg/types"
+	pb "github.com/coreos/ksched/proto"
 )
 
 //Enum for flow node type

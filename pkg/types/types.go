@@ -20,8 +20,8 @@ package types
 import (
 	"sync"
 
-	pb "github.com/coreos/ksched/base/protofiles"
-	rs "github.com/coreos/ksched/base/resourcestatus"
+	rs "github.com/coreos/ksched/pkg/types/resourcestatus"
+	pb "github.com/coreos/ksched/proto"
 )
 
 type (
