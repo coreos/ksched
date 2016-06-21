@@ -20,8 +20,8 @@ package graph
 import (
 	"log"
 
-	pb "github.com/coreos/ksched/base/protofiles"
-	t "github.com/coreos/ksched/base/types"
+	pb "github.com/coreos/ksched/proto"
+	t "github.com/coreos/ksched/pkg/types"
 )
 
 //Enum for flow node type

@@ -22,7 +22,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/coreos/ksched/misc/queue"
+	"github.com/coreos/ksched/pkg/util/queue"
 )
 
 type FlowGraph struct {
