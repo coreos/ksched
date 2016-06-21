@@ -1,3 +1,17 @@
+// Copyright 2016 The ksched Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Represents the scheduling flow graph.
 // C++ file: https://github.com/camsas/firmament/blob/master/src/scheduling/flow/flow_graph.h
 
@@ -11,9 +25,6 @@ import (
 	"github.com/coreos/ksched/misc/queue"
 )
 
-// If true the the flow graph will not generate node ids in order
-var RandomizeNodeIDs bool
-
 type FlowGraph struct {
 	// Next node id to use
 	nextID uint64
@@ -23,17 +34,24 @@ type FlowGraph struct {
 	nodeMap map[uint64]*FlowGraphNode
 	// Queue storing the ids of the nodes we've previously removed.
 	unusedIDs queue.FIFO
+
+	// Behaviour flag - set as struct field rather than global static variable
+	//                  since we will have only one instance of the FlowGraph.
+	// If true the the flow graph will not generate node ids in order
+	RandomizeNodeIDs bool
 }
 
 // Constructor equivalent in Go
-func NewFlowGraph() *FlowGraph {
-	g := new(FlowGraph)
-	g.nextID = 1
-	g.unusedIDs = queue.NewFIFO()
-	if RandomizeNodeIDs {
-		g.PopulateUnusedIds(50)
+// Must specify RandomizeNodeIDs flag
+func NewFlowGraph(randomizeNodeIDs bool) *FlowGraph {
+	fg := new(FlowGraph)
+	fg.nextID = 1
+	fg.unusedIDs = queue.NewFIFO()
+	if randomizeNodeIDs {
+		fg.RandomizeNodeIDs = true
+		fg.PopulateUnusedIds(50)
 	}
-	return g
+	return fg
 }
 
 // Adds an arc based on references to the src and dst nodes
@@ -96,15 +114,23 @@ func (fg *FlowGraph) DeleteNode(node *FlowGraphNode) {
 	fg.unusedIDs.Push(&queue.Node{Value: node.id})
 	// First remove all outgoing arcs
 	for dstID, arc := range node.outgoingArcMap {
-		checkEquals(dstID != arc.dst)
-		checkEquals(node.id != arc.src)
+		if dstID != arc.dst {
+			log.Fatalf("graph: DeleteNode error, dstID:%d != arc.dst:%d\n", dstID, arc.dst)
+		}
+		if node.id != arc.src {
+			log.Fatalf("graph: DeleteNode error, node.id:%d != arc.src:%d\n", node.id, arc.src)
+		}
 		delete(arc.dstNode.incomingArcMap, arc.src)
 		fg.DeleteArc(arc)
 	}
 	// Remove all incoming arcs
 	for srcID, arc := range node.incomingArcMap {
-		checkEquals(srcID != arc.src)
-		checkEquals(node.id != arc.dst)
+		if srcID != arc.dst {
+			log.Fatalf("graph: DeleteNode error, srcID:%d != arc.src:%d\n", srcID, arc.src)
+		}
+		if node.id != arc.dst {
+			log.Fatalf("graph: DeleteNode error, node.id:%d != arc.dst:%d\n", node.id, arc.dst)
+		}
 		delete(arc.srcNode.outgoingArcMap, arc.dst)
 		fg.DeleteArc(arc)
 	}
@@ -122,7 +148,7 @@ func (fg *FlowGraph) GetArc(src, dst *FlowGraphNode) *FlowGraphArc {
 
 // Returns the nextID to assign to a node
 func (fg *FlowGraph) NextId() uint64 {
-	if RandomizeNodeIDs {
+	if fg.RandomizeNodeIDs {
 		if fg.unusedIDs.IsEmpty() {
 			fg.PopulateUnusedIds(fg.nextID * 2)
 		}
@@ -138,7 +164,7 @@ func (fg *FlowGraph) NextId() uint64 {
 	return newID
 }
 
-// Called if RandomizeNodeIDs is true to generate a random shuffle of ids
+// Called if fg.RandomizeNodeIDs is true to generate a random shuffle of ids
 func (fg *FlowGraph) PopulateUnusedIds(newNextID uint64) {
 	t := time.Now().UnixNano()
 	r := rand.New(rand.NewSource(t))
@@ -155,11 +181,4 @@ func (fg *FlowGraph) PopulateUnusedIds(newNextID uint64) {
 		fg.unusedIDs.Push(&queue.Node{Value: ids[i]})
 	}
 	fg.nextID = newNextID
-}
-
-// Macro to error log failed equality
-func checkEquals(c bool) {
-	if !c {
-		log.Fatalf("Error: Not Equal\n")
-	}
 }

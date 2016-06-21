@@ -1,3 +1,17 @@
+// Copyright 2016 The ksched Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Read Write thread safe FIFO queue data structure using slices
 // The type has to be asserted on retrieval of value
 
@@ -10,10 +24,15 @@ type Node struct {
 }
 
 type FIFO interface {
+	// Push to the end of a queue
 	Push(*Node)
+	// Pop from the front of a queue
 	Pop() *Node
+	// Same as Pop but doesn't remove the element from the queue
 	Front() *Node
+	// Get length of queue
 	Len() int
+	// Check if queue is empty
 	IsEmpty() bool
 }
 
@@ -23,41 +42,36 @@ func NewFIFO() FIFO {
 
 type fifo struct {
 	rwMu  sync.RWMutex
-	array []*Node
+	nodes []*Node
 }
 
-// Push to the end of a queue
 func (f *fifo) Push(n *Node) {
 	f.rwMu.Lock()
 	defer f.rwMu.Unlock()
-	f.array = append(f.array, n)
+	f.nodes = append(f.nodes, n)
 }
 
-// Pop from the front of a queue
 func (f *fifo) Pop() *Node {
 	f.rwMu.Lock()
 	defer f.rwMu.Unlock()
-	n := f.array[0]
-	f.array = f.array[1:]
+	n := f.nodes[0]
+	f.nodes = f.nodes[1:]
 	return n
 }
 
-// Same as Pop but doesn't remove the element from the queue
 func (f *fifo) Front() (n *Node) {
 	f.rwMu.RLock()
 	defer f.rwMu.RUnlock()
-	n = f.array[0]
+	n = f.nodes[0]
 	return n
 }
 
-// Get length of queue
 func (f *fifo) Len() int {
 	f.rwMu.RLock()
 	defer f.rwMu.RUnlock()
-	return len(f.array)
+	return len(f.nodes)
 }
 
-// Check if queue is empty
 func (f *fifo) IsEmpty() bool {
 	f.rwMu.RLock()
 	defer f.rwMu.RUnlock()
