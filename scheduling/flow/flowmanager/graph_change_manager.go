@@ -39,14 +39,14 @@ type GraphChangeManager interface {
 		changeType dimacs.ChangeType,
 		comment string) *flowgraph.Node
 
-	ChangeArc(arc flowgraph.Arc, capLowerBound uint64,
+	ChangeArc(arc *flowgraph.Arc, capLowerBound uint64,
 		capUpperBound uint64, cost int64,
 		changeType dimacs.ChangeType, comment string)
 
-	ChangeArcCapacity(arc flowgraph.Arc, capacity uint64,
+	ChangeArcCapacity(arc *flowgraph.Arc, capacity uint64,
 		changeType dimacs.ChangeType, comment string)
 
-	ChangeArcCost(arc flowgraph.Arc, cost int64,
+	ChangeArcCost(arc *flowgraph.Arc, cost int64,
 		changeType dimacs.ChangeType, comment string)
 
 	DeleteArc(arc flowgraph.Arc, changeType dimacs.ChangeType, comment string)
@@ -113,24 +113,37 @@ func (cm *changeManager) DeleteNode(n *flowgraph.Node, changeType dimacs.ChangeT
 	// TODO: add dimacs increamental change
 }
 
-func (cm *changeManager) ChangeArc(arc flowgraph.Arc, capLowerBound uint64,
-	capUpperBound uint64, cost int64,
-	changeType dimacs.ChangeType, comment string) {
+func (cm *changeManager) ChangeArc(arc *flowgraph.Arc, lower, upper uint64, cost int64, changeType dimacs.ChangeType, comment string) {
+	if arc.CapLowerBound == lower && arc.CapUpperBound == upper && arc.Cost != cost {
+		return
+	}
 
+	arc.CapLowerBound = lower
+	arc.CapUpperBound = upper
+	arc.Cost = cost
+	// TODO: add dimacs increamental change
 }
 
-func (cm *changeManager) ChangeArcCapacity(arc flowgraph.Arc, capacity uint64,
-	changeType dimacs.ChangeType, comment string) {
+func (cm *changeManager) ChangeArcCapacity(arc *flowgraph.Arc, capacity uint64, changeType dimacs.ChangeType, comment string) {
+	oldcap := arc.CapUpperBound
+	if oldcap == capacity {
+		return
+	}
 
+	arc.CapUpperBound = capacity
+	// TODO: add dimacs increamental change
 }
 
-func (cm *changeManager) ChangeArcCost(arc flowgraph.Arc, cost int64,
-	changeType dimacs.ChangeType, comment string) {
+func (cm *changeManager) ChangeArcCost(arc *flowgraph.Arc, cost int64, changeType dimacs.ChangeType, comment string) {
+	if arc.Cost != cost {
+		return
+	}
 
+	arc.Cost = cost
+	// TODO: add dimacs increamental change
 }
 
 func (cm *changeManager) DeleteArc(arc flowgraph.Arc, changeType dimacs.ChangeType, comment string) {
-
 }
 
 func (cm *changeManager) GetGraphChanges() []*dimacs.Change {
