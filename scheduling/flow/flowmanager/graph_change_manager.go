@@ -57,6 +57,8 @@ type GraphChangeManager interface {
 
 	GetOptimizedGraphChanges() []*dimacs.Change
 
+	// ResetChanges resets the incremental changes that the manager keeps.
+	// This method should be called after consuming all the recent changes.
 	ResetChanges()
 
 	// Graph returns flow graph instance for this manager.
@@ -149,7 +151,7 @@ func (cm *changeManager) GetOptimizedGraphChanges() []*dimacs.Change {
 }
 
 func (cm *changeManager) ResetChanges() {
-
+	cm.graphChanges = make([]*dimacs.Change, 0)
 }
 
 func (cm *changeManager) Graph() *flowgraph.Graph {
