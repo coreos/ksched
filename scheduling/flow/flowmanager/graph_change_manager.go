@@ -12,53 +12,52 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The FlowGraphChangeManager bridges FlowGraphManager and FlowGraph. Every
-// graph change done by the FlowGraphManager should be conducted via
+package flowmanager
+
+import (
+	"github.com/coreos/ksched/scheduling/flow/dimacs"
+	"github.com/coreos/ksched/scheduling/flow/flowgraph"
+)
+
+// The GraphChangeManager bridges GraphManager and Graph. Every
+// graph change done by the GraphManager should be conducted via
 // FlowGraphChangeManager's methods.
 // The class stores all the changes conducted in-between two scheduling rounds.
 // Moreover, FlowGraphChangeManager applies various algorithms to reduce
 // the number of changes (e.g., merges idempotent changes, removes superfluous
 // changes).
-
-package flow
-
-import (
-	"github.com/coreos/ksched/scheduling/flow/cluster"
-	"github.com/coreos/ksched/scheduling/flow/dimacs"
-)
-
-type ChangeManager interface {
-	AddArcNew(src, dst *cluster.FlowGraphNode,
+type GraphChangeManager interface {
+	AddArcNew(src, dst *flowgraph.Node,
 		capLowerBound, capUpperBound uint64,
 		cost int64,
-		arcType cluster.FlowArcType,
+		arcType flowgraph.ArcType,
 		changeType dimacs.ChangeType,
-		comment string) *cluster.FlowGraphArc
+		comment string) *flowgraph.Arc
 
 	AddArcExisting(srcNodeID, dstNodeID, capLowerBound, capUpperBound uint64,
 		cost int64,
-		arcType cluster.FlowArcType,
+		arcType flowgraph.ArcType,
 		changeType dimacs.ChangeType,
-		comment string) *cluster.FlowGraphArc
+		comment string) *flowgraph.Arc
 
-	AddNode(nodeType cluster.FlowNodeType,
+	AddNode(nodeType flowgraph.NodeType,
 		excess int64,
 		changeType dimacs.ChangeType,
-		comment string) *cluster.FlowGraphNode
+		comment string) *flowgraph.Node
 
-	ChangeArc(arc cluster.FlowGraphArc, capLowerBound uint64,
+	ChangeArc(arc flowgraph.Arc, capLowerBound uint64,
 		capUpperBound uint64, cost int64,
 		changeType dimacs.ChangeType, comment string)
 
-	ChangeArcCapacity(arc cluster.FlowGraphArc, capacity uint64,
+	ChangeArcCapacity(arc flowgraph.Arc, capacity uint64,
 		changeType dimacs.ChangeType, comment string)
 
-	ChangeArcCost(arc cluster.FlowGraphArc, cost int64,
+	ChangeArcCost(arc flowgraph.Arc, cost int64,
 		changeType dimacs.ChangeType, comment string)
 
-	DeleteArc(arc cluster.FlowGraphArc, changeType dimacs.ChangeType, comment string)
+	DeleteArc(arc flowgraph.Arc, changeType dimacs.ChangeType, comment string)
 
-	DeleteNode(arc cluster.FlowGraphNode, changeType dimacs.ChangeType, comment string)
+	DeleteNode(arc flowgraph.Node, changeType dimacs.ChangeType, comment string)
 
 	GetGraphChanges() []*dimacs.Change
 
@@ -66,68 +65,68 @@ type ChangeManager interface {
 
 	ResetChanges()
 
-	CheckNodeType(nodeID uint64, typ cluster.FlowNodeType) bool
+	CheckNodeType(nodeID uint64, typ flowgraph.NodeType) bool
 
 	// FlowGraph getter: Returns flow graph instance for this manager
-	FlowGraph() *cluster.FlowGraph
+	Graph() *flowgraph.Graph
 	// Node getter
-	Node(nodeID uint64) *cluster.FlowGraphNode
+	Node(nodeID uint64) *flowgraph.Node
 }
 
 // The change manager that should implement the ChangeMangerInterface
 type changeManager struct {
-	flowGraph *cluster.FlowGraph
+	flowGraph *flowgraph.Graph
 	// Vector storing the graph changes occured since the last scheduling round.
 	graphChanges []*dimacs.Change
 	dimacsStats  *dimacs.ChangeStats
 }
 
 // Public Interface functions
-func (cm *changeManager) AddArcNew(src, dst *cluster.FlowGraphNode,
+func (cm *changeManager) AddArcNew(src, dst *flowgraph.Node,
 	capLowerBound, capUpperBound uint64,
 	cost int64,
-	arcType cluster.FlowArcType,
+	arcType flowgraph.ArcType,
 	changeType dimacs.ChangeType,
-	comment string) *cluster.FlowGraphArc {
+	comment string) *flowgraph.Arc {
 	return nil
 }
 
 func (cm *changeManager) AddArcExisting(srcNodeID, dstNodeID, capLowerBound, capUpperBound uint64,
 	cost int64,
-	arcType cluster.FlowArcType,
+	arcType flowgraph.ArcType,
 	changeType dimacs.ChangeType,
-	comment string) *cluster.FlowGraphArc {
+	comment string) *flowgraph.Arc {
 	return nil
 }
 
-func (cm *changeManager) AddNode(nodeType cluster.FlowNodeType,
+func (cm *changeManager) AddNode(nodeType flowgraph.NodeType,
 	excess int64,
 	changeType dimacs.ChangeType,
-	comment string) *cluster.FlowGraphNode {
+	comment string) *flowgraph.Node {
 	return nil
 }
 
-func (cm *changeManager) ChangeArc(arc cluster.FlowGraphArc, capLowerBound uint64,
+func (cm *changeManager) ChangeArc(arc flowgraph.Arc, capLowerBound uint64,
 	capUpperBound uint64, cost int64,
 	changeType dimacs.ChangeType, comment string) {
 
 }
 
-func (cm *changeManager) ChangeArcCapacity(arc cluster.FlowGraphArc, capacity uint64,
+func (cm *changeManager) ChangeArcCapacity(arc flowgraph.Arc, capacity uint64,
 	changeType dimacs.ChangeType, comment string) {
 
 }
 
-func (cm *changeManager) ChangeArcCost(arc cluster.FlowGraphArc, cost int64,
+func (cm *changeManager) ChangeArcCost(arc flowgraph.Arc, cost int64,
 	changeType dimacs.ChangeType, comment string) {
 
 }
 
-func (cm *changeManager) DeleteArc(arc cluster.FlowGraphArc, changeType dimacs.ChangeType, comment string) {
+func (cm *changeManager) DeleteArc(arc flowgraph.Arc, changeType dimacs.ChangeType, comment string) {
 
 }
 
-func (cm *changeManager) DeleteNode(arc cluster.FlowGraphNode, changeType dimacs.ChangeType, comment string) {
+func (cm *changeManager) DeleteNode(arc flowgraph.Node, changeType dimacs.ChangeType, comment string) {
 
 }
 
@@ -143,15 +142,15 @@ func (cm *changeManager) ResetChanges() {
 
 }
 
-func (cm *changeManager) CheckNodeType(nodeID uint64, typ cluster.FlowNodeType) bool {
+func (cm *changeManager) CheckNodeType(nodeID uint64, typ flowgraph.NodeType) bool {
 	return false
 }
 
-func (cm *changeManager) FlowGraph() *cluster.FlowGraph {
+func (cm *changeManager) Graph() *flowgraph.Graph {
 	return nil
 }
 
-func (cm *changeManager) Node(nodeID uint64) *cluster.FlowGraphNode {
+func (cm *changeManager) Node(nodeID uint64) *flowgraph.Node {
 	return nil
 }
 
@@ -173,7 +172,7 @@ func (cm *changeManager) mergeChangesToSameArc() {
 // it updates the existing change.
 func (cm *changeManager) mergeChangesToSameArcHelper(
 	srcID, dstID, capLowerBound, capUpperBound uint64,
-	cost int64, typ cluster.FlowArcType,
+	cost int64, typ flowgraph.ArcType,
 	change *dimacs.Change, newGraphChanges []*dimacs.Change,
 	arcsSrcChanges map[uint64]map[uint64]*dimacs.Change,
 	arcsDstChanges map[uint64]map[uint64]*dimacs.Change) {

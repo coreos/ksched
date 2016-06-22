@@ -12,23 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Represents a node in the scheduling flow graph.
-// C++ file: https://github.com/camsas/firmament/blob/master/src/scheduling/flow/flow_graph_node.h
-
-package cluster
+package flowgraph
 
 import (
 	"log"
 
-	t "github.com/coreos/ksched/pkg/types"
+	"github.com/coreos/ksched/pkg/types"
 	pb "github.com/coreos/ksched/proto"
 )
 
 //Enum for flow node type
-type FlowNodeType int
+type NodeType int
 
 const (
-	RootTask FlowNodeType = iota + 1
+	RootTask NodeType = iota + 1
 	ScheduledTask
 	UnscheduledTask
 	JobAggregator
@@ -43,28 +40,29 @@ const (
 	Pu
 )
 
-type FlowGraphNode struct {
+// Represents a node in the scheduling flow graph.
+type Node struct {
 	id       uint64
 	excess   int64
-	nodeType FlowNodeType
+	nodeType NodeType
 	// TODO(malte): Not sure if these should be here, but they've got to go
 	// somewhere.
 	// The ID of the job that this task belongs to (if task node).
-	jobID t.JobID
+	jobID types.JobID
 	// The ID of the resource that this node represents.
-	resourceID t.ResourceID
+	resourceID types.ResourceID
 	// The descriptor of the resource that this node represents.
 	rdPtr *pb.ResourceDescriptor
 	// The descriptor of the task represented by this node.
 	tdPtr *pb.TaskDescriptor
 	// the ID of the equivalence class represented by this node.
-	ecID t.EquivClass
+	ecID types.EquivClass
 	// Free-form comment for debugging purposes (used to label special nodes)
 	comment string
 	// Outgoing arcs from this node, keyed by destination node
-	outgoingArcMap map[uint64]*FlowGraphArc
+	outgoingArcMap map[uint64]*Arc
 	// Incoming arcs to this node, keyed by source node
-	incomingArcMap map[uint64]*FlowGraphArc
+	incomingArcMap map[uint64]*Arc
 	// Field use to mark if the node has been visited in a graph traversal.
 	// TODO: Why is this a uint32 in the original code
 	visited uint32
@@ -72,7 +70,7 @@ type FlowGraphNode struct {
 
 // True indicates that an insert took place,
 // False indicates the key was already present.
-func insertIfNotPresent(m map[uint64]*FlowGraphArc, k uint64, val *FlowGraphArc) bool {
+func insertIfNotPresent(m map[uint64]*Arc, k uint64, val *Arc) bool {
 	_, ok := m[k]
 	if !ok {
 		m[k] = val
@@ -80,7 +78,7 @@ func insertIfNotPresent(m map[uint64]*FlowGraphArc, k uint64, val *FlowGraphArc)
 	return !ok
 }
 
-func (n *FlowGraphNode) AddArc(arc *FlowGraphArc) {
+func (n *Node) AddArc(arc *Arc) {
 	//Arc must be outgoing from this node
 	if arc.src != n.id {
 		log.Fatalf("AddArc Error: arc.src:%v != node:%v\n", arc.src, n.id)
@@ -95,11 +93,11 @@ func (n *FlowGraphNode) AddArc(arc *FlowGraphArc) {
 	}
 }
 
-func (n *FlowGraphNode) IsEquivalenceClassNode() bool {
+func (n *Node) IsEquivalenceClassNode() bool {
 	return n.nodeType == EquivalenceClass
 }
 
-func (n *FlowGraphNode) IsResourceNode() bool {
+func (n *Node) IsResourceNode() bool {
 	return n.nodeType == Coordinator ||
 		n.nodeType == Machine ||
 		n.nodeType == NumaNode ||
@@ -109,20 +107,20 @@ func (n *FlowGraphNode) IsResourceNode() bool {
 		n.nodeType == Pu
 }
 
-func (n *FlowGraphNode) IsTaskNode() bool {
+func (n *Node) IsTaskNode() bool {
 	return n.nodeType == RootTask ||
 		n.nodeType == ScheduledTask ||
 		n.nodeType == UnscheduledTask
 }
 
-func (n *FlowGraphNode) IsTaskAssignedOrRunning() bool {
+func (n *Node) IsTaskAssignedOrRunning() bool {
 	if n.tdPtr == nil {
 		log.Fatalf("TaskDescriptor pointer for node:%v is nil\n", n.id)
 	}
 	return n.tdPtr.State == pb.TaskDescriptor_Assigned || n.tdPtr.State == pb.TaskDescriptor_Running
 }
 
-func (n *FlowGraphNode) TransformToResourceNodeType(rdPtr *pb.ResourceDescriptor) FlowNodeType {
+func (n *Node) TransformToResourceNodeType(rdPtr *pb.ResourceDescriptor) NodeType {
 	// Using proto3 syntax
 	resourceType := rdPtr.Type
 	switch resourceType {
