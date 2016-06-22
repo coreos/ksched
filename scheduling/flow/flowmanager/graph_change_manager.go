@@ -59,8 +59,6 @@ type GraphChangeManager interface {
 
 	ResetChanges()
 
-	CheckNodeType(nodeID uint64, typ flowgraph.NodeType) bool
-
 	// FlowGraph getter: Returns flow graph instance for this manager
 	Graph() *flowgraph.Graph
 	// Node getter
@@ -92,6 +90,10 @@ func (cm *changeManager) AddArc(src, dst *flowgraph.Node,
 	// TODO: add dimacs increamental change
 
 	return nil
+}
+
+func (cm *changeManager) Node(id uint64) *flowgraph.Node {
+	return cm.flowGraph.Node(id)
 }
 
 func (cm *changeManager) AddNode(t flowgraph.NodeType, excess int64, changet dimacs.ChangeType, comment string) *flowgraph.Node {
@@ -143,15 +145,7 @@ func (cm *changeManager) ResetChanges() {
 
 }
 
-func (cm *changeManager) CheckNodeType(nodeID uint64, typ flowgraph.NodeType) bool {
-	return false
-}
-
 func (cm *changeManager) Graph() *flowgraph.Graph {
-	return nil
-}
-
-func (cm *changeManager) Node(nodeID uint64) *flowgraph.Node {
 	return nil
 }
 
