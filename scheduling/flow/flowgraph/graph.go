@@ -75,11 +75,9 @@ func (fg *Graph) AddArcExisting(srcID, dstID uint64) *Arc {
 
 func (fg *Graph) AddNode() *Node {
 	id := fg.NextId()
-	node := &Node{}
-	if node == nil {
-		log.Fatalf("graph: AddNode error, memory for node struct not allocated\n")
+	node := &Node{
+		id: id,
 	}
-	node.id = id
 	// Insert into nodeMap, must not already be present
 	_, ok := fg.nodeMap[id]
 	if ok {
@@ -126,9 +124,6 @@ func (fg *Graph) DeleteNode(node *Node) {
 
 // Returns nil if arc not found
 func (fg *Graph) GetArc(src, dst *Node) *Arc {
-	if src == nil || dst == nil {
-		log.Fatalf("graph: GetArc error, src:%v and dst:%v cannot be nil\n", src, dst)
-	}
 	return src.outgoingArcMap[dst.id]
 }
 
@@ -138,16 +133,14 @@ func (fg *Graph) NextId() uint64 {
 		if fg.unusedIDs.IsEmpty() {
 			fg.PopulateUnusedIds(fg.nextID * 2)
 		}
-		newID := fg.unusedIDs.Pop().(uint64)
-		return newID
+		return fg.unusedIDs.Pop().(uint64)
 	}
 	if fg.unusedIDs.IsEmpty() {
 		newID := fg.nextID
 		fg.nextID++
 		return newID
 	}
-	newID := fg.unusedIDs.Pop().(uint64)
-	return newID
+	return fg.unusedIDs.Pop().(uint64)
 }
 
 // Called if fg.RandomizeNodeIDs is true to generate a random shuffle of ids
