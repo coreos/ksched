@@ -12,27 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Read Write thread safe FIFO queue data structure using slices
-// The type has to be asserted on retrieval of value
-
 package queue
 
 import "sync"
 
-type Node struct {
-	Value interface{}
-}
-
+// Read Write thread safe FIFO queue data structure.
 type FIFO interface {
-	// Push to the end of a queue
-	Push(*Node)
-	// Pop from the front of a queue
-	Pop() *Node
-	// Same as Pop but doesn't remove the element from the queue
-	Front() *Node
-	// Get length of queue
+	// Push to the end of a queue.
+	Push(val interface{})
+	// Pop from the front of a queue.
+	Pop() interface{}
+	// Same as Pop but doesn't remove the element from the queue.
+	// The returned value should be read only.
+	Front() interface{}
+	// Get length of queue.
 	Len() int
-	// Check if queue is empty
+	// Check if queue is empty.
 	IsEmpty() bool
 }
 
@@ -42,16 +37,16 @@ func NewFIFO() FIFO {
 
 type fifo struct {
 	rwMu  sync.RWMutex
-	nodes []*Node
+	nodes []interface{}
 }
 
-func (f *fifo) Push(n *Node) {
+func (f *fifo) Push(val interface{}) {
 	f.rwMu.Lock()
 	defer f.rwMu.Unlock()
-	f.nodes = append(f.nodes, n)
+	f.nodes = append(f.nodes, val)
 }
 
-func (f *fifo) Pop() *Node {
+func (f *fifo) Pop() interface{} {
 	f.rwMu.Lock()
 	defer f.rwMu.Unlock()
 	n := f.nodes[0]
@@ -59,11 +54,10 @@ func (f *fifo) Pop() *Node {
 	return n
 }
 
-func (f *fifo) Front() (n *Node) {
+func (f *fifo) Front() interface{} {
 	f.rwMu.RLock()
 	defer f.rwMu.RUnlock()
-	n = f.nodes[0]
-	return n
+	return f.nodes[0]
 }
 
 func (f *fifo) Len() int {
@@ -73,7 +67,5 @@ func (f *fifo) Len() int {
 }
 
 func (f *fifo) IsEmpty() bool {
-	f.rwMu.RLock()
-	defer f.rwMu.RUnlock()
 	return f.Len() == 0
 }
