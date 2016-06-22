@@ -83,6 +83,14 @@ func (cm *changeManager) AddArc(src, dst *flowgraph.Node,
 	changeType dimacs.ChangeType,
 	comment string) *flowgraph.Arc {
 
+	arc := cm.flowGraph.AddArc(src, dst)
+	arc.CapLowerBound = capLowerBound
+	arc.CapUpperBound = capUpperBound
+	arc.Cost = cost
+	arc.Type = arcType
+
+	// TODO: add dimacs increamental change
+
 	return nil
 }
 

@@ -24,32 +24,24 @@ const (
 
 // Represents an arc in the scheduling flow graph.
 type Arc struct {
-	src           uint64
-	dst           uint64
-	capLowerBound uint64
-	capUpperBound uint64
-	cost          int64
-	srcNode       *Node
-	dstNode       *Node
-	typ           ArcType
+	src     uint64
+	dst     uint64
+	srcNode *Node
+	dstNode *Node
+
+	CapLowerBound uint64
+	CapUpperBound uint64
+	Cost          int64
+	Type          ArcType
 }
 
 // Constructor equivalent in go
 func NewArc(srcNode, dstNode *Node) *Arc {
-	a := new(Arc)
-	a.src = srcNode.id
-	a.dst = dstNode.id
-	a.srcNode = srcNode
-	a.dstNode = dstNode
+	a := &Arc{
+		src:     srcNode.id,
+		dst:     dstNode.id,
+		srcNode: srcNode,
+		dstNode: dstNode,
+	}
 	return a
-}
-
-func (a *Arc) Change(capLowerBound, capUpperBound uint64, cost int64) {
-	a.capLowerBound = capLowerBound
-	a.capUpperBound = capUpperBound
-	a.cost = cost
-}
-
-func (a *Arc) ChangeCost(cost int64) {
-	a.cost = cost
 }
