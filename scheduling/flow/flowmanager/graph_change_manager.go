@@ -27,14 +27,8 @@ import (
 // the number of changes (e.g., merges idempotent changes, removes superfluous
 // changes).
 type GraphChangeManager interface {
-	AddArcNew(src, dst *flowgraph.Node,
+	AddArc(src, dst *flowgraph.Node,
 		capLowerBound, capUpperBound uint64,
-		cost int64,
-		arcType flowgraph.ArcType,
-		changeType dimacs.ChangeType,
-		comment string) *flowgraph.Arc
-
-	AddArcExisting(srcNodeID, dstNodeID, capLowerBound, capUpperBound uint64,
 		cost int64,
 		arcType flowgraph.ArcType,
 		changeType dimacs.ChangeType,
@@ -82,20 +76,13 @@ type changeManager struct {
 }
 
 // Public Interface functions
-func (cm *changeManager) AddArcNew(src, dst *flowgraph.Node,
+func (cm *changeManager) AddArc(src, dst *flowgraph.Node,
 	capLowerBound, capUpperBound uint64,
 	cost int64,
 	arcType flowgraph.ArcType,
 	changeType dimacs.ChangeType,
 	comment string) *flowgraph.Arc {
-	return nil
-}
 
-func (cm *changeManager) AddArcExisting(srcNodeID, dstNodeID, capLowerBound, capUpperBound uint64,
-	cost int64,
-	arcType flowgraph.ArcType,
-	changeType dimacs.ChangeType,
-	comment string) *flowgraph.Arc {
 	return nil
 }
 
