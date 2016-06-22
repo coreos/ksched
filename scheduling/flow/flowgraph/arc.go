@@ -18,7 +18,7 @@ package flowgraph
 type ArcType int
 
 const (
-	Other NodeType = iota + 1
+	Other ArcType = iota + 1
 	Running
 )
 
