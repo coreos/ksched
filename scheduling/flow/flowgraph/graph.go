@@ -12,10 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Represents the scheduling flow graph.
-// C++ file: https://github.com/camsas/firmament/blob/master/src/scheduling/flow/flow_graph.h
-
-package cluster
+package flowgraph
 
 import (
 	"log"
@@ -25,13 +22,13 @@ import (
 	"github.com/coreos/ksched/pkg/util/queue"
 )
 
-type FlowGraph struct {
+type Graph struct {
 	// Next node id to use
 	nextID uint64
 	// Unordered set of arcs in graph
-	arcSet map[*FlowGraphArc]struct{}
+	arcSet map[*Arc]struct{}
 	// Map of nodes keyed by nodeID
-	nodeMap map[uint64]*FlowGraphNode
+	nodeMap map[uint64]*Node
 	// Queue storing the ids of the nodes we've previously removed.
 	unusedIDs queue.FIFO
 
@@ -43,8 +40,8 @@ type FlowGraph struct {
 
 // Constructor equivalent in Go
 // Must specify RandomizeNodeIDs flag
-func NewFlowGraph(randomizeNodeIDs bool) *FlowGraph {
-	fg := new(FlowGraph)
+func New(randomizeNodeIDs bool) *Graph {
+	fg := new(Graph)
 	fg.nextID = 1
 	fg.unusedIDs = queue.NewFIFO()
 	if randomizeNodeIDs {
@@ -55,13 +52,13 @@ func NewFlowGraph(randomizeNodeIDs bool) *FlowGraph {
 }
 
 // Adds an arc based on references to the src and dst nodes
-func (fg *FlowGraph) AddArcNew(src, dst *FlowGraphNode) *FlowGraphArc {
+func (fg *Graph) AddArcNew(src, dst *Node) *Arc {
 	arc := NewArc(src.id, dst.id, src, dst)
 	return arc
 }
 
 // Adds an arc based on ids of existing src and dst nodes in the graph
-func (fg *FlowGraph) AddArcExisting(srcID, dstID uint64) *FlowGraphArc {
+func (fg *Graph) AddArcExisting(srcID, dstID uint64) *Arc {
 	srcNode := fg.nodeMap[srcID]
 	if srcNode == nil {
 		log.Fatalf("graph: AddArc error, src node with id:%d not found\n", srcID)
@@ -77,9 +74,9 @@ func (fg *FlowGraph) AddArcExisting(srcID, dstID uint64) *FlowGraphArc {
 	return arc
 }
 
-func (fg *FlowGraph) AddNode() *FlowGraphNode {
+func (fg *Graph) AddNode() *Node {
 	id := fg.NextId()
-	node := &FlowGraphNode{}
+	node := &Node{}
 	if node == nil {
 		log.Fatalf("graph: AddNode error, memory for node struct not allocated\n")
 	}
@@ -93,23 +90,23 @@ func (fg *FlowGraph) AddNode() *FlowGraphNode {
 	return node
 }
 
-func (fg *FlowGraph) ChangeArc(arc *FlowGraphArc, capLowerBound, capUpperBound uint64, cost int64) {
+func (fg *Graph) ChangeArc(arc *Arc, capLowerBound, capUpperBound uint64, cost int64) {
 	arc.capLowerBound = capLowerBound
 	arc.capUpperBound = capUpperBound
 	arc.cost = cost
 }
 
-func (fg *FlowGraph) ChangeArcCost(arc *FlowGraphArc, cost int64) {
+func (fg *Graph) ChangeArcCost(arc *Arc, cost int64) {
 	arc.cost = cost
 }
 
-func (fg *FlowGraph) DeleteArc(arc *FlowGraphArc) {
+func (fg *Graph) DeleteArc(arc *Arc) {
 	delete(arc.srcNode.outgoingArcMap, arc.dstNode.id)
 	delete(arc.dstNode.incomingArcMap, arc.srcNode.id)
 	delete(fg.arcSet, arc)
 }
 
-func (fg *FlowGraph) DeleteNode(node *FlowGraphNode) {
+func (fg *Graph) DeleteNode(node *Node) {
 	// Reuse this ID for later
 	fg.unusedIDs.Push(node.id)
 	// First remove all outgoing arcs
@@ -139,7 +136,7 @@ func (fg *FlowGraph) DeleteNode(node *FlowGraphNode) {
 }
 
 // Returns nil if arc not found
-func (fg *FlowGraph) GetArc(src, dst *FlowGraphNode) *FlowGraphArc {
+func (fg *Graph) GetArc(src, dst *Node) *Arc {
 	if src == nil || dst == nil {
 		log.Fatalf("graph: GetArc error, src:%v and dst:%v cannot be nil\n", src, dst)
 	}
@@ -147,7 +144,7 @@ func (fg *FlowGraph) GetArc(src, dst *FlowGraphNode) *FlowGraphArc {
 }
 
 // Returns the nextID to assign to a node
-func (fg *FlowGraph) NextId() uint64 {
+func (fg *Graph) NextId() uint64 {
 	if fg.RandomizeNodeIDs {
 		if fg.unusedIDs.IsEmpty() {
 			fg.PopulateUnusedIds(fg.nextID * 2)
@@ -165,7 +162,7 @@ func (fg *FlowGraph) NextId() uint64 {
 }
 
 // Called if fg.RandomizeNodeIDs is true to generate a random shuffle of ids
-func (fg *FlowGraph) PopulateUnusedIds(newNextID uint64) {
+func (fg *Graph) PopulateUnusedIds(newNextID uint64) {
 	t := time.Now().UnixNano()
 	r := rand.New(rand.NewSource(t))
 	ids := make([]uint64, 0)

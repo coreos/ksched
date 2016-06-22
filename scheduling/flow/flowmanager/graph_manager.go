@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The flow graph manager which uses the changemanager to change the graph
+package flowmanager
 
-package flow
-
-type ManagerInterface interface {
+// NOTE: GraphManager uses GraphChangeManager to change the graph.
+type GraphManager interface {
 }
 
-type Manager struct {
+type graphManager struct {
 }

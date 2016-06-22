@@ -12,32 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Represents an arc in the scheduling flow graph.
-// C++ file: https://github.com/camsas/firmament/blob/master/src/scheduling/flow/flow_graph_arc.h
-package cluster
+package flowgraph
 
 //Enum for flow arc type
-type FlowArcType int
+type ArcType int
 
 const (
-	Other FlowNodeType = iota + 1
+	Other NodeType = iota + 1
 	Running
 )
 
-type FlowGraphArc struct {
+// Represents an arc in the scheduling flow graph.
+type Arc struct {
 	src           uint64
 	dst           uint64
 	capLowerBound uint64
 	capUpperBound uint64
 	cost          int64
-	srcNode       *FlowGraphNode
-	dstNode       *FlowGraphNode
-	typ           FlowArcType
+	srcNode       *Node
+	dstNode       *Node
+	typ           ArcType
 }
 
 // Constructor equivalent in go
-func NewArc(srcID, dstID uint64, srcNode, dstNode *FlowGraphNode) *FlowGraphArc {
-	a := new(FlowGraphArc)
+func NewArc(srcID, dstID uint64, srcNode, dstNode *Node) *Arc {
+	a := new(Arc)
 	a.src = srcID
 	a.dst = dstID
 	a.srcNode = srcNode

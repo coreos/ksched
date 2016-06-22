@@ -20,7 +20,7 @@ package costmodel
 import (
 	"github.com/coreos/ksched/pkg/types"
 	pb "github.com/coreos/ksched/proto"
-	"github.com/coreos/ksched/scheduling/flow/cluster"
+	"github.com/coreos/ksched/scheduling/flow/flowgraph"
 )
 
 type (
@@ -109,14 +109,14 @@ type CostModeler interface {
 
 	// Gathers statistics during reverse traversal of resource topology (from
 	// sink upwards). Called on pairs of connected nodes.
-	GatherStats(accumulator, other *cluster.FlowGraphNode)
+	GatherStats(accumulator, other *flowgraph.Node)
 
 	// The default Prepare action is a no-op. Cost models can override this if
 	// they need to perform preparation actions before GatherStats is invoked.
-	PrepareStats(accumulator *cluster.FlowGraphNode)
+	PrepareStats(accumulator *flowgraph.Node)
 
 	// Generates updates for arc costs in the resource topology.
-	UpdateStats(accumulator, other *cluster.FlowGraphNode) *cluster.FlowGraphNode
+	UpdateStats(accumulator, other *flowgraph.Node) *flowgraph.Node
 
 	// Handle to pull debug information from cost model; return string.
 	DebugInfo() string
