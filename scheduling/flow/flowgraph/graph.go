@@ -53,7 +53,7 @@ func New(randomizeNodeIDs bool) *Graph {
 
 // Adds an arc based on references to the src and dst nodes
 func (fg *Graph) AddArcNew(src, dst *Node) *Arc {
-	arc := NewArc(src.id, dst.id, src, dst)
+	arc := NewArc(src, dst)
 	return arc
 }
 
@@ -67,9 +67,8 @@ func (fg *Graph) AddArcExisting(srcID, dstID uint64) *Arc {
 	if dstNode == nil {
 		log.Fatalf("graph: AddArc error, dst node with id:%d not found\n", dstID)
 	}
-	arc := NewArc(srcID, dstID, srcNode, dstNode)
-	var s struct{}
-	fg.arcSet[arc] = s
+	arc := NewArc(srcNode, dstNode)
+	fg.arcSet[arc] = struct{}{}
 	srcNode.AddArc(arc)
 	return arc
 }
@@ -88,16 +87,6 @@ func (fg *Graph) AddNode() *Node {
 	}
 	fg.nodeMap[id] = node
 	return node
-}
-
-func (fg *Graph) ChangeArc(arc *Arc, capLowerBound, capUpperBound uint64, cost int64) {
-	arc.capLowerBound = capLowerBound
-	arc.capUpperBound = capUpperBound
-	arc.cost = cost
-}
-
-func (fg *Graph) ChangeArcCost(arc *Arc, cost int64) {
-	arc.cost = cost
 }
 
 func (fg *Graph) DeleteArc(arc *Arc) {
