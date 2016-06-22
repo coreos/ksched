@@ -95,6 +95,10 @@ func (fg *Graph) DeleteArc(arc *Arc) {
 	delete(fg.arcSet, arc)
 }
 
+func (fg *Graph) Node(id uint64) *Node {
+	return fg.nodeMap[id]
+}
+
 func (fg *Graph) DeleteNode(node *Node) {
 	// Reuse this ID for later
 	fg.unusedIDs.Push(node.id)
