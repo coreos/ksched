@@ -59,10 +59,8 @@ type GraphChangeManager interface {
 
 	ResetChanges()
 
-	// FlowGraph getter: Returns flow graph instance for this manager
+	// Graph returns flow graph instance for this manager.
 	Graph() *flowgraph.Graph
-	// Node getter
-	Node(nodeID uint64) *flowgraph.Node
 }
 
 // The change manager that should implement the ChangeMangerInterface
@@ -90,10 +88,6 @@ func (cm *changeManager) AddArc(src, dst *flowgraph.Node,
 	// TODO: add dimacs increamental change
 
 	return nil
-}
-
-func (cm *changeManager) Node(id uint64) *flowgraph.Node {
-	return cm.flowGraph.Node(id)
 }
 
 func (cm *changeManager) AddNode(t flowgraph.NodeType, excess int64, changet dimacs.ChangeType, comment string) *flowgraph.Node {
@@ -159,7 +153,7 @@ func (cm *changeManager) ResetChanges() {
 }
 
 func (cm *changeManager) Graph() *flowgraph.Graph {
-	return nil
+	return cm.flowGraph
 }
 
 // Private helper methods for change_manager internal use
@@ -217,5 +211,4 @@ func (cm *changeManager) removeDuplicateCleanState(
 	newNodeID, srcID, dstID uint64,
 	changeDesc string,
 	node_to_change map[uint64]map[string]*dimacs.Change) {
-
 }
