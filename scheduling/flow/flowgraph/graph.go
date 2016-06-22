@@ -52,13 +52,9 @@ func New(randomizeNodeIDs bool) *Graph {
 }
 
 // Adds an arc based on references to the src and dst nodes
-func (fg *Graph) AddArcNew(src, dst *Node) *Arc {
-	arc := NewArc(src, dst)
-	return arc
-}
+func (fg *Graph) AddArc(src, dst *Node) *Arc {
+	srcID, dstID := src.id, dst.id
 
-// Adds an arc based on ids of existing src and dst nodes in the graph
-func (fg *Graph) AddArcExisting(srcID, dstID uint64) *Arc {
 	srcNode := fg.nodeMap[srcID]
 	if srcNode == nil {
 		log.Fatalf("graph: AddArc error, src node with id:%d not found\n", srcID)
