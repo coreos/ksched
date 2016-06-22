@@ -42,7 +42,7 @@ const (
 
 // Represents a node in the scheduling flow graph.
 type Node struct {
-	id uint64
+	ID uint64
 
 	Excess int64
 	Type   NodeType
@@ -83,16 +83,16 @@ func insertIfNotPresent(m map[uint64]*Arc, k uint64, val *Arc) bool {
 
 func (n *Node) AddArc(arc *Arc) {
 	//Arc must be outgoing from this node
-	if arc.src != n.id {
-		log.Fatalf("AddArc Error: arc.src:%v != node:%v\n", arc.src, n.id)
+	if arc.src != n.ID {
+		log.Fatalf("AddArc Error: arc.src:%v != node:%v\n", arc.src, n.ID)
 	}
 	//Add arc to outgoing arc map from current node, must not already be present
 	if !insertIfNotPresent(n.outgoingArcMap, arc.dst, arc) {
-		log.Fatalf("AddArc Error: arc:%v already present in node:%v outgoingArcMap\n", arc, n.id)
+		log.Fatalf("AddArc Error: arc:%v already present in node:%v outgoingArcMap\n", arc, n.ID)
 	}
 	//Add arc to incoming arc map at dst node, must not already be present
 	if !insertIfNotPresent(arc.dstNode.incomingArcMap, arc.src, arc) {
-		log.Fatalf("AddArc Error: arc:%v already present in node:%v incomingArcMap\n", arc, arc.dstNode.id)
+		log.Fatalf("AddArc Error: arc:%v already present in node:%v incomingArcMap\n", arc, arc.dstNode.ID)
 	}
 }
 
@@ -118,7 +118,7 @@ func (n *Node) IsTaskNode() bool {
 
 func (n *Node) IsTaskAssignedOrRunning() bool {
 	if n.tdPtr == nil {
-		log.Fatalf("TaskDescriptor pointer for node:%v is nil\n", n.id)
+		log.Fatalf("TaskDescriptor pointer for node:%v is nil\n", n.ID)
 	}
 	return n.tdPtr.State == pb.TaskDescriptor_Assigned || n.tdPtr.State == pb.TaskDescriptor_Running
 }

@@ -38,8 +38,8 @@ type Arc struct {
 // Constructor equivalent in go
 func NewArc(srcNode, dstNode *Node) *Arc {
 	a := &Arc{
-		src:     srcNode.id,
-		dst:     dstNode.id,
+		src:     srcNode.ID,
+		dst:     dstNode.ID,
 		srcNode: srcNode,
 		dstNode: dstNode,
 	}

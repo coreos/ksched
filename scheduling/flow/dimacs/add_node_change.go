@@ -44,6 +44,15 @@ type AddNodeChange struct {
 	ArcAdditions []CreateArcChange
 }
 
+func NewAddNodeChange(n *flowgraph.Node) *AddNodeChange {
+	anc := &AddNodeChange{
+		ID:     n.ID,
+		Excess: n.Excess,
+		Typ:    n.Type,
+	}
+	return anc
+}
+
 // Get comment
 func (an *AddNodeChange) Comment() string {
 	return an.comment
