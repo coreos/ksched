@@ -111,7 +111,7 @@ func (fg *FlowGraph) DeleteArc(arc *FlowGraphArc) {
 
 func (fg *FlowGraph) DeleteNode(node *FlowGraphNode) {
 	// Reuse this ID for later
-	fg.unusedIDs.Push(&queue.Node{Value: node.id})
+	fg.unusedIDs.Push(node.id)
 	// First remove all outgoing arcs
 	for dstID, arc := range node.outgoingArcMap {
 		if dstID != arc.dst {
@@ -152,7 +152,7 @@ func (fg *FlowGraph) NextId() uint64 {
 		if fg.unusedIDs.IsEmpty() {
 			fg.PopulateUnusedIds(fg.nextID * 2)
 		}
-		newID := fg.unusedIDs.Pop().Value.(uint64)
+		newID := fg.unusedIDs.Pop().(uint64)
 		return newID
 	}
 	if fg.unusedIDs.IsEmpty() {
@@ -160,7 +160,7 @@ func (fg *FlowGraph) NextId() uint64 {
 		fg.nextID++
 		return newID
 	}
-	newID := fg.unusedIDs.Pop().Value.(uint64)
+	newID := fg.unusedIDs.Pop().(uint64)
 	return newID
 }
 
@@ -178,7 +178,7 @@ func (fg *FlowGraph) PopulateUnusedIds(newNextID uint64) {
 		ids[i], ids[j] = ids[j], ids[i]
 	}
 	for i := range ids {
-		fg.unusedIDs.Push(&queue.Node{Value: ids[i]})
+		fg.unusedIDs.Push(ids[i])
 	}
 	fg.nextID = newNextID
 }
