@@ -18,12 +18,12 @@ package units
 
 const (
 	// Capacity
-	BytesToMb = 1024 * 1024
-	BytesToGb = 1024 * 1024 * 1024
-	KbToBytes = 1024
-	KbToMb    = 1024
-	KbToGb    = 1024 * 1024
-	MbToBytes = 1024 * 1024
+	BytesToMB = 1024 * 1024
+	BytesToGB = 1024 * 1024 * 1024
+	KBToBytes = 1024
+	KBToMB    = 1024
+	KBToGB    = 1024 * 1024
+	MBToBytes = 1024 * 1024
 
 	// Bandwidth
 	BytesToMbits = 8 * 1000 * 1000
