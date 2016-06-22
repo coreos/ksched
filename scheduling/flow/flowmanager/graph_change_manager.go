@@ -67,6 +67,11 @@ type GraphChangeManager interface {
 
 // The change manager that should implement the ChangeMangerInterface
 type changeManager struct {
+	// Optimization options
+	RemoveDuplicate        bool
+	MergeToSameArc         bool
+	PurgeBeforeNodeRemoval bool
+
 	flowGraph *flowgraph.Graph
 	// Vector storing the graph changes occured since the last scheduling round.
 	graphChanges []*dimacs.Change
@@ -169,11 +174,19 @@ func (cm *changeManager) addGraphChange(change *dimacs.Change) {
 }
 
 func (cm *changeManager) optimizeChanges() {
-
+	if cm.RemoveDuplicate {
+		cm.removeDuplicateChanges()
+	}
+	if cm.MergeToSameArc {
+		cm.mergeChangesToSameArc()
+	}
+	if cm.PurgeBeforeNodeRemoval {
+		cm.purgeChangesBeforeNodeRemoval()
+	}
 }
 
 func (cm *changeManager) mergeChangesToSameArc() {
-
+	panic("optimization not implemented ")
 }
 
 // Checks if there's already a change for the (src_id, dst_id) arc.
@@ -189,11 +202,11 @@ func (cm *changeManager) mergeChangesToSameArcHelper(
 }
 
 func (cm *changeManager) purgeChangesBeforeNodeRemoval() {
-
+	panic("optimization not implemented ")
 }
 
 func (cm *changeManager) removeDuplicateChanges() {
-
+	panic("optimization not implemented ")
 }
 
 // Checks if there's already an identical change for the (src_id, dst_id) arc.
