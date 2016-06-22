@@ -35,11 +35,21 @@ type Arc struct {
 }
 
 // Constructor equivalent in go
-func NewArc(srcID, dstID uint64, srcNode, dstNode *Node) *Arc {
+func NewArc(srcNode, dstNode *Node) *Arc {
 	a := new(Arc)
-	a.src = srcID
-	a.dst = dstID
+	a.src = srcNode.id
+	a.dst = dstNode.id
 	a.srcNode = srcNode
 	a.dstNode = dstNode
 	return a
+}
+
+func (a *Arc) Change(capLowerBound, capUpperBound uint64, cost int64) {
+	a.capLowerBound = capLowerBound
+	a.capUpperBound = capUpperBound
+	a.cost = cost
+}
+
+func (a *Arc) ChangeCost(cost int64) {
+	a.cost = cost
 }
