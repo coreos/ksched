@@ -143,11 +143,12 @@ func (cm *changeManager) DeleteArc(arc flowgraph.Arc, changeType dimacs.ChangeTy
 }
 
 func (cm *changeManager) GetGraphChanges() []*dimacs.Change {
-	return nil
+	return cm.graphChanges
 }
 
 func (cm *changeManager) GetOptimizedGraphChanges() []*dimacs.Change {
-	return nil
+	cm.optimizeChanges()
+	return cm.graphChanges
 }
 
 func (cm *changeManager) ResetChanges() {
