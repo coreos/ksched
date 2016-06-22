@@ -1,0 +1,58 @@
+// Copyright 2016 The ksched Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package dimacs
+
+import (
+	"strconv"
+
+	"github.com/coreos/ksched/scheduling/flow/flowgraph"
+)
+
+// UpdateArcChange implements the Change interface from dimacschange.go
+type UpdateArcChange struct {
+	comment                                string
+	Src, Dst, CapLowerBound, CapUpperBound uint64
+	Cost, OldCost                          int64
+	Typ                                    flowgraph.ArcType
+}
+
+// Get comment
+func (uac *UpdateArcChange) Comment() string {
+	return uac.comment
+}
+
+// Set comment
+func (uac *UpdateArcChange) SetComment(comment string) {
+	uac.comment = comment
+}
+
+// Generates the dimacs comment line for this change
+func (uac *UpdateArcChange) GenerateChangeDescription() string {
+	if uac.comment != "" {
+		return "c " + uac.comment + "\n"
+	}
+	return ""
+}
+
+// Returns an update to the dimacs Arc Descriptor format
+func (uac *UpdateArcChange) GenerateChange() string {
+	return "x " + strconv.FormatUint(uac.Src, 10) +
+		" " + strconv.FormatUint(uac.Dst, 10) +
+		" " + strconv.FormatUint(uac.CapLowerBound, 10) +
+		" " + strconv.FormatUint(uac.CapUpperBound, 10) +
+		" " + strconv.FormatInt(uac.Cost, 10) +
+		" " + strconv.Itoa(int(uac.Typ)) +
+		" " + strconv.FormatInt(uac.OldCost, 10) + "\n"
+}

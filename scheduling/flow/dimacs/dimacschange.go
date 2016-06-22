@@ -19,14 +19,10 @@
 package dimacs
 
 type Change interface {
-	// Every struct implementing this interface must have this field
-	// comment string
-
-	// Getter Setter for comment
 	Comment() string
-	SetComment() string
-	// This had an implementation in the parent class
-	// So it should be implemented as is given in the original file
+	SetComment(string)
+	// Generate dimacs comment line descriptor for this change
 	GenerateChangeDescription() string
+	// Generate dimacs line descriptor for this change
 	GenerateChange() string
 }

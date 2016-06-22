@@ -41,7 +41,7 @@ type Graph struct {
 // Constructor equivalent in Go
 // Must specify RandomizeNodeIDs flag
 func New(randomizeNodeIDs bool) *Graph {
-	fg := new(Graph)
+	fg := &Graph{}
 	fg.nextID = 1
 	fg.unusedIDs = queue.NewFIFO()
 	if randomizeNodeIDs {
