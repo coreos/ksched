@@ -42,9 +42,13 @@ const (
 
 // Represents a node in the scheduling flow graph.
 type Node struct {
-	id       uint64
-	excess   int64
-	nodeType NodeType
+	id uint64
+
+	Excess int64
+	Type   NodeType
+	// Comment for debugging purposes (used to label special nodes)
+	Comment string
+
 	// TODO(malte): Not sure if these should be here, but they've got to go
 	// somewhere.
 	// The ID of the job that this task belongs to (if task node).
@@ -57,8 +61,7 @@ type Node struct {
 	tdPtr *pb.TaskDescriptor
 	// the ID of the equivalence class represented by this node.
 	ecID types.EquivClass
-	// Free-form comment for debugging purposes (used to label special nodes)
-	comment string
+
 	// Outgoing arcs from this node, keyed by destination node
 	outgoingArcMap map[uint64]*Arc
 	// Incoming arcs to this node, keyed by source node
@@ -94,23 +97,23 @@ func (n *Node) AddArc(arc *Arc) {
 }
 
 func (n *Node) IsEquivalenceClassNode() bool {
-	return n.nodeType == EquivalenceClass
+	return n.Type == EquivalenceClass
 }
 
 func (n *Node) IsResourceNode() bool {
-	return n.nodeType == Coordinator ||
-		n.nodeType == Machine ||
-		n.nodeType == NumaNode ||
-		n.nodeType == Socket ||
-		n.nodeType == Cache ||
-		n.nodeType == Core ||
-		n.nodeType == Pu
+	return n.Type == Coordinator ||
+		n.Type == Machine ||
+		n.Type == NumaNode ||
+		n.Type == Socket ||
+		n.Type == Cache ||
+		n.Type == Core ||
+		n.Type == Pu
 }
 
 func (n *Node) IsTaskNode() bool {
-	return n.nodeType == RootTask ||
-		n.nodeType == ScheduledTask ||
-		n.nodeType == UnscheduledTask
+	return n.Type == RootTask ||
+		n.Type == ScheduledTask ||
+		n.Type == UnscheduledTask
 }
 
 func (n *Node) IsTaskAssignedOrRunning() bool {

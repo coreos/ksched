@@ -99,11 +99,21 @@ func (cm *changeManager) AddArcExisting(srcNodeID, dstNodeID, capLowerBound, cap
 	return nil
 }
 
-func (cm *changeManager) AddNode(nodeType flowgraph.NodeType,
-	excess int64,
-	changeType dimacs.ChangeType,
-	comment string) *flowgraph.Node {
-	return nil
+func (cm *changeManager) AddNode(t flowgraph.NodeType, excess int64, changet dimacs.ChangeType, comment string) *flowgraph.Node {
+	n := cm.flowGraph.AddNode()
+	n.Type = t
+	n.Excess = excess
+	n.Comment = comment
+
+	// TODO: add dimacs increamental change
+
+	return n
+}
+
+func (cm *changeManager) DeleteNode(n *flowgraph.Node, changeType dimacs.ChangeType, comment string) {
+	cm.flowGraph.DeleteNode(n)
+
+	// TODO: add dimacs increamental change
 }
 
 func (cm *changeManager) ChangeArc(arc flowgraph.Arc, capLowerBound uint64,
@@ -123,10 +133,6 @@ func (cm *changeManager) ChangeArcCost(arc flowgraph.Arc, cost int64,
 }
 
 func (cm *changeManager) DeleteArc(arc flowgraph.Arc, changeType dimacs.ChangeType, comment string) {
-
-}
-
-func (cm *changeManager) DeleteNode(arc flowgraph.Node, changeType dimacs.ChangeType, comment string) {
 
 }
 
