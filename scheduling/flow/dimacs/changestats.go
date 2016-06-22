@@ -14,19 +14,19 @@
 
 package dimacs
 
-type DimacsChangeType int
+type ChangeType int
 
 const NumChangeTypes = 36
 
 const (
-	AddTaskNode DimacsChangeType = iota
+	AddTaskNode ChangeType = iota + 1
 	AddResourceNode
 	AddEquivClassNode
 	// Add more types later
 	// ...
 )
 
-type DimacsChangeStats struct {
+type ChangeStats struct {
 	NodesAdded       uint64
 	NodesRemoved     uint64
 	ArcsAdded        uint64
@@ -34,12 +34,3 @@ type DimacsChangeStats struct {
 	ArcsRemoved      uint64
 	NumChangesOfType [NumChangeTypes]uint64
 }
-
-// Needs these functions to be implemented later
-/*
-DIMACSChangeStats();
-~DIMACSChangeStats();
-string GetStatsString() const;
-void ResetStats();
-void UpdateStats(DIMACSChangeType change_type);
-*/

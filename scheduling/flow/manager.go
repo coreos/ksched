@@ -14,7 +14,7 @@
 
 // The flow graph manager which uses the changemanager to change the graph
 
-package manage
+package flow
 
 type ManagerInterface interface {
 }

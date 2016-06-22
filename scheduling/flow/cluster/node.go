@@ -28,7 +28,7 @@ import (
 type FlowNodeType int
 
 const (
-	RootTask FlowNodeType = iota
+	RootTask FlowNodeType = iota + 1
 	ScheduledTask
 	UnscheduledTask
 	JobAggregator

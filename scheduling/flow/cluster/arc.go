@@ -20,7 +20,7 @@ package cluster
 type FlowArcType int
 
 const (
-	Other FlowNodeType = iota
+	Other FlowNodeType = iota + 1
 	Running
 )
 
