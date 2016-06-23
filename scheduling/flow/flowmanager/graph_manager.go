@@ -19,6 +19,7 @@ import (
 
 	"github.com/coreos/ksched/pkg/types"
 	pb "github.com/coreos/ksched/proto"
+	"github.com/coreos/ksched/scheduling/flow/costmodel"
 	"github.com/coreos/ksched/scheduling/flow/dimacs"
 	"github.com/coreos/ksched/scheduling/flow/flowgraph"
 )
@@ -72,7 +73,8 @@ type GraphManager interface {
 type graphManager struct {
 	Preemption bool
 
-	cm GraphChangeManager
+	cm          GraphChangeManager
+	costModeler costmodel.CostModeler
 
 	mu sync.Mutex
 
@@ -141,6 +143,24 @@ func (gm *graphManager) TaskEvicted(id types.TaskID, rid types.ResourceID) {
 		gm.updateUnscheduledAggNode(unschedAggNode, 1)
 	}
 	// The task's arcs will be updated just before the next solver run.
+}
+
+func (gm *graphManager) TaskFailed(id types.TaskID) {
+	gm.mu.Lock()
+	defer gm.mu.Unlock()
+
+	taskNode := gm.taskToNode[id]
+	if gm.Preemption {
+		// When we pin the task we reduce the capacity from the unscheduled
+		// aggrator to the sink. Hence, we only have to reduce the capacity
+		// when we support preemption.
+		unschedAggNode := gm.jobUnschedToNode[taskNode.JobID]
+		gm.updateUnscheduledAggNode(unschedAggNode, -1)
+	}
+
+	delete(gm.taskToRunningArc, id)
+	gm.removeTaskNode(taskNode)
+	gm.costModeler.RemoveTask(id)
 }
 
 func (gm *graphManager) TaskScheduled(id types.TaskID, rid types.ResourceID) {
