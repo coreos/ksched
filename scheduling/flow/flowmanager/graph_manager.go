@@ -79,6 +79,9 @@ type graphManager struct {
 	// Map storing the running arc for every task that is running.
 	taskToRunningArc map[types.TaskID]*flowgraph.Arc
 
+	// Mapping storing flow graph node for each unscheduled aggregator.
+	jobUnschedToNode map[types.JobID]*flowgraph.Node
+
 	sinkNode *flowgraph.Node
 }
 
@@ -92,7 +95,8 @@ func (gm *graphManager) TaskCompleted(id types.TaskID) uint64 {
 		// When we pin the task we reduce the capacity from the unscheduled
 		// aggrator to the sink. Hence, we only have to reduce the capacity
 		// when we support preemption.
-		gm.updateUnscheduledAggNode()
+		unschedAggNode := gm.jobUnschedToNode[taskNode.JobID]
+		gm.updateUnscheduledAggNode(unschedAggNode, -1)
 	}
 
 	delete(gm.taskToRunningArc, id)
@@ -103,7 +107,7 @@ func (gm *graphManager) TaskCompleted(id types.TaskID) uint64 {
 	return nodeID
 }
 
-func (gm *graphManager) updateUnscheduledAggNode() {
+func (gm *graphManager) updateUnscheduledAggNode(n *flowgraph.Node, capDelta int64) {
 	panic("not implemented")
 }
 
@@ -125,7 +129,22 @@ func (gm *graphManager) TaskMigrated(id types.TaskID, from, to types.ResourceID)
 }
 
 func (gm *graphManager) TaskEvicted(id types.TaskID, rid types.ResourceID) {
-	panic("not implemented")
+	taskNode := gm.taskToNode[id]
+	taskNode.Type = flowgraph.UnscheduledTask
+
+	arc := gm.taskToRunningArc[id]
+	delete(gm.taskToRunningArc, id)
+	gm.cm.DeleteArc(arc, dimacs.DelArcEvictedTask, "TaskEvicted: delete running arc")
+
+	if !gm.Preemption {
+		// If we're running with preemption disabled then increase the capacity from
+		// the unscheduled aggregator to the sink because the task can now stay
+		// unscheduled.
+		unschedAggNode := gm.jobUnschedToNode[taskNode.JobID]
+		// Increment capacity from unsched agg node to sink.
+		gm.updateUnscheduledAggNode(unschedAggNode, 1)
+	}
+	// The task's arcs will be updated just before the next solver run.
 }
 
 func (gm *graphManager) TaskScheduled(id types.TaskID, rid types.ResourceID) {

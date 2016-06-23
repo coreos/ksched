@@ -49,7 +49,7 @@ type GraphChangeManager interface {
 	ChangeArcCost(arc *flowgraph.Arc, cost int64,
 		changeType dimacs.ChangeType, comment string)
 
-	DeleteArc(arc flowgraph.Arc, changeType dimacs.ChangeType, comment string)
+	DeleteArc(arc *flowgraph.Arc, changeType dimacs.ChangeType, comment string)
 
 	DeleteNode(arc *flowgraph.Node, changeType dimacs.ChangeType, comment string)
 

@@ -51,11 +51,11 @@ type Node struct {
 
 	// The descriptor of the task represented by this node.
 	Task *pb.TaskDescriptor
-
 	// TODO(malte): Not sure if these should be here, but they've got to go
 	// somewhere.
 	// The ID of the job that this task belongs to (if task node).
-	jobID types.JobID
+	JobID types.JobID
+
 	// The ID of the resource that this node represents.
 	ResourceID types.ResourceID
 	// The descriptor of the resource that this node represents.
