@@ -1,14 +1,12 @@
 
 syntax="proto3";
 
-package firmament;
+package proto;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "reference_desc.proto";
 import "resource_vector.proto";
 import "task_final_report.proto";
-
-//option (gogoproto.goproto_enum_prefix_all) = false;
 
 message TaskDescriptor {
   enum TaskState {
@@ -58,7 +56,7 @@ message TaskDescriptor {
   // The total time spent unscheduled before previous runs. 
   uint64 total_unscheduled_time = 19;
   // The total time spent in previous runs. This field only gets updated when
-     the task finishes running. 
+  // the task finishes running. 
   uint64 total_run_time = 20;
   // Deadlines 
   uint64 relative_deadline = 21;

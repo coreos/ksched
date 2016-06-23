@@ -4,7 +4,7 @@
 // CoCo co-location interference score protobuf.
 
 syntax="proto3";
-package firmament;
+package proto;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 

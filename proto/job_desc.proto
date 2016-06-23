@@ -5,7 +5,7 @@
 
 syntax="proto3";
 
-package firmament;
+package proto;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "task_desc.proto";

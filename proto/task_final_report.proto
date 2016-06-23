@@ -1,10 +1,9 @@
 // The Firmament project
 // Copyright (c) 2013 Malte Schwarzkopf <malte.schwarzkopf@cl.cam.ac.uk>
-//
 
 syntax="proto3";
 
-package firmament;
+package proto;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
