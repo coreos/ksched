@@ -200,18 +200,6 @@ func (gm *graphManager) addResourceNode(rd *pb.ResourceDescriptor) *flowgraph.No
 	return nil
 }
 
-// Updates the arc of a newly scheduled task.
-// If we're running with preemption enabled then the method just adds/changes
-// an arc to the resource node and updates the arc to the unscheduled agg to
-// ave the premeption cost.
-// If we're not running with preemption enabled then the method deletes the
-// task's arcs and only adds a running arc.
-// tn is the node of the task recently scheduled
-// rn is the node of the resource to which the task has been scheduled
-func (gm *graphManager) updateArcsForScheduledTask(tn *flowgraph.Node, rn *flowgraph.Node) {
-
-}
-
 // Adds to the graph all the node from the subtree rooted at rtnd_ptr.
 // The method also correctly computes statistics for every new node (e.g.,
 // num slots, num running tasks)
@@ -298,7 +286,7 @@ func (gm *graphManager) traverseAndRemoveTopology(resNode *flowgraph.Node,
 // taskNode is the node of the task recently scheduled
 // resourceNode is the node of the resource to which the task has been
 // scheduled
-func (gm *graphManager) updateArcsForScheduledTask(taskNode, resourceNode flowgraph.Node) {
+func (gm *graphManager) updateArcsForScheduledTask(taskNode, resourceNode *flowgraph.Node) {
 
 }
 
