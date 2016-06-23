@@ -93,7 +93,7 @@ type graphManager struct {
 func (gm *graphManager) JobCompleted(id types.JobID) {
 	// We don't have to do anything else here. The task nodes have already been
 	// removed.
-	gm.removeUnscheduledAggNode(jobID)
+	gm.removeUnscheduledAggNode(id)
 }
 
 func (gm *graphManager) TaskCompleted(id types.TaskID) uint64 {

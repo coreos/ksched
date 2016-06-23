@@ -41,7 +41,10 @@ type Graph struct {
 // Constructor equivalent in Go
 // Must specify RandomizeNodeIDs flag
 func New(randomizeNodeIDs bool) *Graph {
-	fg := &Graph{}
+	fg := &Graph{
+		arcSet:  make(map[*Arc]struct{}),
+		nodeMap: make(map[uint64]*Node),
+	}
 	fg.nextID = 1
 	fg.unusedIDs = queue.NewFIFO()
 	if randomizeNodeIDs {
@@ -72,7 +75,9 @@ func (fg *Graph) AddArc(src, dst *Node) *Arc {
 func (fg *Graph) AddNode() *Node {
 	id := fg.NextId()
 	node := &Node{
-		ID: id,
+		ID:             id,
+		incomingArcMap: make(map[uint64]*Arc),
+		outgoingArcMap: make(map[uint64]*Arc),
 	}
 	// Insert into nodeMap, must not already be present
 	_, ok := fg.nodeMap[id]
@@ -89,8 +94,16 @@ func (fg *Graph) DeleteArc(arc *Arc) {
 	delete(fg.arcSet, arc)
 }
 
+func (fg *Graph) NumArcs() int {
+	return len(fg.arcSet)
+}
+
 func (fg *Graph) Node(id uint64) *Node {
 	return fg.nodeMap[id]
+}
+
+func (fg *Graph) NumNodes() int {
+	return len(fg.nodeMap)
 }
 
 func (fg *Graph) DeleteNode(node *Node) {
