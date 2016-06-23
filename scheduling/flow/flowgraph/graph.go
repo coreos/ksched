@@ -53,7 +53,7 @@ func New(randomizeNodeIDs bool) *Graph {
 
 // Adds an arc based on references to the src and dst nodes
 func (fg *Graph) AddArc(src, dst *Node) *Arc {
-	srcID, dstID := src.id, dst.id
+	srcID, dstID := src.ID, dst.ID
 
 	srcNode := fg.nodeMap[srcID]
 	if srcNode == nil {
@@ -72,7 +72,7 @@ func (fg *Graph) AddArc(src, dst *Node) *Arc {
 func (fg *Graph) AddNode() *Node {
 	id := fg.NextId()
 	node := &Node{
-		id: id,
+		ID: id,
 	}
 	// Insert into nodeMap, must not already be present
 	_, ok := fg.nodeMap[id]
@@ -84,8 +84,8 @@ func (fg *Graph) AddNode() *Node {
 }
 
 func (fg *Graph) DeleteArc(arc *Arc) {
-	delete(arc.srcNode.outgoingArcMap, arc.dstNode.id)
-	delete(arc.dstNode.incomingArcMap, arc.srcNode.id)
+	delete(arc.srcNode.outgoingArcMap, arc.dstNode.ID)
+	delete(arc.dstNode.incomingArcMap, arc.srcNode.ID)
 	delete(fg.arcSet, arc)
 }
 
@@ -95,14 +95,14 @@ func (fg *Graph) Node(id uint64) *Node {
 
 func (fg *Graph) DeleteNode(node *Node) {
 	// Reuse this ID for later
-	fg.unusedIDs.Push(node.id)
+	fg.unusedIDs.Push(node.ID)
 	// First remove all outgoing arcs
 	for dstID, arc := range node.outgoingArcMap {
 		if dstID != arc.dst {
 			log.Fatalf("graph: DeleteNode error, dstID:%d != arc.dst:%d\n", dstID, arc.dst)
 		}
-		if node.id != arc.src {
-			log.Fatalf("graph: DeleteNode error, node.id:%d != arc.src:%d\n", node.id, arc.src)
+		if node.ID != arc.src {
+			log.Fatalf("graph: DeleteNode error, node.ID:%d != arc.src:%d\n", node.ID, arc.src)
 		}
 		delete(arc.dstNode.incomingArcMap, arc.src)
 		fg.DeleteArc(arc)
@@ -112,19 +112,19 @@ func (fg *Graph) DeleteNode(node *Node) {
 		if srcID != arc.dst {
 			log.Fatalf("graph: DeleteNode error, srcID:%d != arc.src:%d\n", srcID, arc.src)
 		}
-		if node.id != arc.dst {
-			log.Fatalf("graph: DeleteNode error, node.id:%d != arc.dst:%d\n", node.id, arc.dst)
+		if node.ID != arc.dst {
+			log.Fatalf("graph: DeleteNode error, node.ID:%d != arc.dst:%d\n", node.ID, arc.dst)
 		}
 		delete(arc.srcNode.outgoingArcMap, arc.dst)
 		fg.DeleteArc(arc)
 	}
 	// Remove node from nodeMap
-	delete(fg.nodeMap, node.id)
+	delete(fg.nodeMap, node.ID)
 }
 
 // Returns nil if arc not found
 func (fg *Graph) GetArc(src, dst *Node) *Arc {
-	return src.outgoingArcMap[dst.id]
+	return src.outgoingArcMap[dst.ID]
 }
 
 // Returns the nextID to assign to a node

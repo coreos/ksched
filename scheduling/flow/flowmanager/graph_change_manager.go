@@ -92,9 +92,11 @@ func (cm *changeManager) AddArc(src, dst *flowgraph.Node,
 	arc.Cost = cost
 	arc.Type = arcType
 
-	// TODO: add dimacs increamental change
-
-	return nil
+	var change dimacs.Change = &dimacs.CreateArcChange{}
+	change.SetComment(comment)
+	cm.addGraphChange(change)
+	cm.dimacsStats.UpdateStats(changeType)
+	return arc
 }
 
 func (cm *changeManager) AddNode(t flowgraph.NodeType, excess int64, changet dimacs.ChangeType, comment string) *flowgraph.Node {
@@ -103,8 +105,10 @@ func (cm *changeManager) AddNode(t flowgraph.NodeType, excess int64, changet dim
 	n.Excess = excess
 	n.Comment = comment
 
-	// TODO: add dimacs increamental change
-
+	var change dimacs.Change = dimacs.NewAddNodeChange(n)
+	change.SetComment(comment)
+	cm.addGraphChange(change)
+	cm.dimacsStats.UpdateStats(changeType)
 	return n
 }
 
@@ -169,7 +173,7 @@ func (cm *changeManager) Graph() *flowgraph.Graph {
 }
 
 // Private helper methods for change_manager internal use
-func (cm *changeManager) addGraphChange(change *dimacs.Change) {
+func (cm *changeManager) addGraphChange(change dimacs.Change) {
 
 }
 
