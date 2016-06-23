@@ -92,20 +92,20 @@ func (cm *changeManager) AddArc(src, dst *flowgraph.Node,
 	arc.Cost = cost
 	arc.Type = arcType
 
-	var change dimacs.Change = &dimacs.CreateArcChange{}
+	change := &dimacs.CreateArcChange{}
 	change.SetComment(comment)
 	cm.addGraphChange(change)
 	cm.dimacsStats.UpdateStats(changeType)
 	return arc
 }
 
-func (cm *changeManager) AddNode(t flowgraph.NodeType, excess int64, changet dimacs.ChangeType, comment string) *flowgraph.Node {
+func (cm *changeManager) AddNode(t flowgraph.NodeType, excess int64, changeType dimacs.ChangeType, comment string) *flowgraph.Node {
 	n := cm.flowGraph.AddNode()
 	n.Type = t
 	n.Excess = excess
 	n.Comment = comment
 
-	var change dimacs.Change = dimacs.NewAddNodeChange(n)
+	change := dimacs.NewAddNodeChange(n)
 	change.SetComment(comment)
 	cm.addGraphChange(change)
 	cm.dimacsStats.UpdateStats(changet)
@@ -115,7 +115,14 @@ func (cm *changeManager) AddNode(t flowgraph.NodeType, excess int64, changet dim
 func (cm *changeManager) DeleteNode(n *flowgraph.Node, changeType dimacs.ChangeType, comment string) {
 	cm.flowGraph.DeleteNode(n)
 
-	// TODO: add dimacs increamental change
+	change := &dimacs.RemoveNodeChange{
+		ID: n.ID,
+	}
+	change.SetComment(comment)
+	cm.addGraphChange(change)
+	cm.dimacsStats.UpdateStats(changeType)
+	cm.flowGraph.DeleteNode(n)
+
 }
 
 func (cm *changeManager) ChangeArc(arc *flowgraph.Arc, lower, upper uint64, cost int64, changeType dimacs.ChangeType, comment string) {
@@ -152,7 +159,12 @@ func (cm *changeManager) DeleteArc(arc *flowgraph.Arc, changeType dimacs.ChangeT
 	arc.CapUpperBound = 0
 	arc.CapLowerBound = 0
 	cm.flowGraph.DeleteArc(arc)
-	// TODO: add dimacs increamental change
+
+	change := dimacs.NewUpdateArcChange(arc, arc.Cost)
+	change.SetComment(comment)
+	cm.addGraphChange(change)
+	cm.dimacsStats.UpdateStats(changeType)
+	cm.flowGraph.DeleteArc(arc)
 }
 
 func (cm *changeManager) GetGraphChanges() []*dimacs.Change {
