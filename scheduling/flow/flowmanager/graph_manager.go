@@ -74,8 +74,11 @@ type graphManager struct {
 
 	cm GraphChangeManager
 
-	mu         sync.Mutex
-	taskToNode map[types.TaskID]*flowgraph.Node
+	mu sync.Mutex
+
+	// Resource and task mappings
+	resourceToNode map[types.ResourceID]*flowgraph.Node
+	taskToNode     map[types.TaskID]*flowgraph.Node
 	// Map storing the running arc for every task that is running.
 	taskToRunningArc map[types.TaskID]*flowgraph.Arc
 
@@ -113,6 +116,9 @@ func (gm *graphManager) TaskMigrated(id types.TaskID, from, to types.ResourceID)
 }
 
 func (gm *graphManager) TaskEvicted(id types.TaskID, rid types.ResourceID) {
+	gm.mu.Lock()
+	defer gm.mu.Unlock()
+
 	taskNode := gm.taskToNode[id]
 	taskNode.Type = flowgraph.UnscheduledTask
 
@@ -132,7 +138,14 @@ func (gm *graphManager) TaskEvicted(id types.TaskID, rid types.ResourceID) {
 }
 
 func (gm *graphManager) TaskScheduled(id types.TaskID, rid types.ResourceID) {
-	panic("not implemented")
+	gm.mu.Lock()
+	defer gm.mu.Unlock()
+
+	taskNode := gm.taskToNode[id]
+	taskNode.Type = flowgraph.ScheduledTask
+
+	resNode := gm.resourceToNode[rid]
+	gm.updateArcsForScheduledTask(taskNode, resNode)
 }
 
 // Private Methods
@@ -143,8 +156,22 @@ func (gm *graphManager) updateUnscheduledAggNode(unschedAggNode *flowgraph.Node,
 func (gm *graphManager) addEquivClassNode(ec types.EquivClass) *flowgraph.Node {
 	return nil
 }
+
 func (gm *graphManager) addResourceNode(rd *pb.ResourceDescriptor) *flowgraph.Node {
 	return nil
+}
+
+// Updates the arc of a newly scheduled task.
+// If we're running with preemption enabled then the method just adds/changes
+// an arc to the resource node and updates the arc to the unscheduled agg to
+// ave the premeption cost.
+// If we're not running with preemption enabled then the method deletes the
+// task's arcs and only adds a running arc.
+//
+// tn is the node of the task recently scheduled
+// rn is the node of the resource to which the task has been scheduled
+func (gm *graphManager) updateArcsForScheduledTask(tn *flowgraph.Node, rn *flowgraph.Node) {
+
 }
 
 // Adds to the graph all the node from the subtree rooted at rtnd_ptr.
