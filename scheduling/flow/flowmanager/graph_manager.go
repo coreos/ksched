@@ -107,22 +107,6 @@ func (gm *graphManager) TaskCompleted(id types.TaskID) uint64 {
 	return nodeID
 }
 
-func (gm *graphManager) updateUnscheduledAggNode(n *flowgraph.Node, capDelta int64) {
-	panic("not implemented")
-}
-
-func (gm *graphManager) removeTaskNode(n *flowgraph.Node) uint64 {
-	taskNodeID := n.ID
-
-	// Increase the sink's excess and set this node's excess to zero.
-	n.Excess = 0
-	gm.sinkNode.Excess++
-	delete(gm.taskToNode, types.TaskID(n.Task.Uid))
-	gm.cm.DeleteNode(n, dimacs.DelTaskNode, "RemoveTaskNode")
-
-	return taskNodeID
-}
-
 func (gm *graphManager) TaskMigrated(id types.TaskID, from, to types.ResourceID) {
 	gm.TaskEvicted(id, from)
 	gm.TaskScheduled(id, to)
@@ -149,4 +133,93 @@ func (gm *graphManager) TaskEvicted(id types.TaskID, rid types.ResourceID) {
 
 func (gm *graphManager) TaskScheduled(id types.TaskID, rid types.ResourceID) {
 	panic("not implemented")
+}
+
+// Private Methods
+func (gm *graphManager) updateUnscheduledAggNode(unschedAggNode *flowgraph.Node, capDelta int64) {
+	panic("not implemented")
+}
+
+func (gm *graphManager) addEquivClassNode(ec types.EquivClass) *flowgraph.Node {
+	return nil
+}
+func (gm *graphManager) addResourceNode(rd *pb.ResourceDescriptor) *flowgraph.Node {
+	return nil
+}
+
+// Adds to the graph all the node from the subtree rooted at rtnd_ptr.
+// The method also correctly computes statistics for every new node (e.g.,
+// num slots, num running tasks)
+// @param rtnd the topology descriptor of the root node
+func (gm *graphManager) addResourceTopologyDFS(rtnd *pb.ResourceTopologyNodeDescriptor) {
+
+}
+
+func (gm *graphManager) addTaskNode(jobID types.JobID, td *pb.TaskDescriptor) *flowgraph.Node {
+	return nil
+}
+
+func (gm *graphManager) addUnscheduledAggNode(jobID types.JobID) *flowgraph.Node {
+	return nil
+}
+
+func (gm *graphManager) capacityFromResNodeToParent(rd *pb.ResourceDescriptor) uint64 {
+	return 0
+}
+
+func (gm *graphManager) pinTaskToNode(taskNode, resourceNode *flowgraph.Node) {
+
+}
+
+func (gm *graphManager) removeEquivClassNode(ecNode *flowgraph.Node) {
+
+}
+
+// Remove invalid preference arcs from node to equivalence class nodes.
+// @param node the node for which to remove its invalid peference arcs
+// to equivalence classes
+// @param prefEcs node's current preferred equivalence classes
+// @param changeType the type of the change
+func (gm *graphManager) removeInvalidECPrefArcs(node *flowgraph.Node, prefEcs []types.EquivClass,
+	changeType dimacs.ChangeType) {
+
+}
+
+// Remove invalid preference arcs from node to resource nodes.
+// @param node the node for which to remove its invalid preference arcs to
+// resources
+// @param prefResources node's current preferred resources
+// @param changeType the type of the change
+func (gm *graphManager) removeInvalidPrefResArcs(node *flowgraph.Node,
+	prefResources []types.ResourceID,
+	changeType dimacs.ChangeType) {
+
+}
+
+func (gm *graphManager) removeResourceNode(resNode *flowgraph.Node) {
+
+}
+
+func (gm *graphManager) removeTaskNode(n *flowgraph.Node) uint64 {
+	taskNodeID := n.ID
+
+	// Increase the sink's excess and set this node's excess to zero.
+	n.Excess = 0
+	gm.sinkNode.Excess++
+	delete(gm.taskToNode, types.TaskID(n.Task.Uid))
+	gm.cm.DeleteNode(n, dimacs.DelTaskNode, "RemoveTaskNode")
+
+	return taskNodeID
+}
+
+func (gm *graphManager) removeUnscheduledAggNode(jobID types.JobID) {
+
+}
+
+// Remove the resource topology rooted at res_node.
+// @param resNode the root of the topology tree to remove
+// @param pusRemoved set that gets updated whenever we remove a PU
+func (gm *graphManager) traverseAndRemoveTopology(resNode *flowgraph.Node,
+	pusRemoved map[uint64]struct{}) {
+
 }
