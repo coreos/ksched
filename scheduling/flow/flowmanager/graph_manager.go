@@ -163,6 +163,10 @@ func (gm *graphManager) TaskFailed(id types.TaskID) {
 	gm.costModeler.RemoveTask(id)
 }
 
+func (gm *graphManager) TaskKilled(id types.TaskID) {
+	gm.TaskFailed(id)
+}
+
 func (gm *graphManager) TaskScheduled(id types.TaskID, rid types.ResourceID) {
 	gm.mu.Lock()
 	defer gm.mu.Unlock()
