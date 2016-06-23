@@ -51,7 +51,7 @@ type GraphChangeManager interface {
 
 	DeleteArc(arc flowgraph.Arc, changeType dimacs.ChangeType, comment string)
 
-	DeleteNode(arc flowgraph.Node, changeType dimacs.ChangeType, comment string)
+	DeleteNode(arc *flowgraph.Node, changeType dimacs.ChangeType, comment string)
 
 	GetGraphChanges() []*dimacs.Change
 
@@ -108,7 +108,7 @@ func (cm *changeManager) AddNode(t flowgraph.NodeType, excess int64, changeType 
 	change := dimacs.NewAddNodeChange(n)
 	change.SetComment(comment)
 	cm.addGraphChange(change)
-	cm.dimacsStats.UpdateStats(changet)
+	cm.dimacsStats.UpdateStats(changeType)
 	return n
 }
 
