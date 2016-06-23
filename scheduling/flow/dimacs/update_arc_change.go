@@ -28,6 +28,19 @@ type UpdateArcChange struct {
 	Typ                                    flowgraph.ArcType
 }
 
+func NewUpdateArcChange(arc *flowgraph.Arc, oldCost int64) *UpdateArcChange {
+	uac := &UpdateArcChange{
+		Src:           arc.Src,
+		Dst:           arc.Dst,
+		CapLowerBound: arc.CapLowerBound,
+		CapUpperBound: arc.CapUpperBound,
+		Typ:           arc.Type,
+		Cost:          arc.Cost,
+		OldCost:       oldCost,
+	}
+	return uac
+}
+
 // Get comment
 func (uac *UpdateArcChange) Comment() string {
 	return uac.comment

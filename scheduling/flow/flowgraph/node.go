@@ -83,16 +83,16 @@ func insertIfNotPresent(m map[uint64]*Arc, k uint64, val *Arc) bool {
 
 func (n *Node) AddArc(arc *Arc) {
 	//Arc must be outgoing from this node
-	if arc.src != n.ID {
-		log.Fatalf("AddArc Error: arc.src:%v != node:%v\n", arc.src, n.ID)
+	if arc.Src != n.ID {
+		log.Fatalf("AddArc Error: arc.Src:%v != node:%v\n", arc.Src, n.ID)
 	}
 	//Add arc to outgoing arc map from current node, must not already be present
-	if !insertIfNotPresent(n.outgoingArcMap, arc.dst, arc) {
+	if !insertIfNotPresent(n.outgoingArcMap, arc.Dst, arc) {
 		log.Fatalf("AddArc Error: arc:%v already present in node:%v outgoingArcMap\n", arc, n.ID)
 	}
 	//Add arc to incoming arc map at dst node, must not already be present
-	if !insertIfNotPresent(arc.dstNode.incomingArcMap, arc.src, arc) {
-		log.Fatalf("AddArc Error: arc:%v already present in node:%v incomingArcMap\n", arc, arc.dstNode.ID)
+	if !insertIfNotPresent(arc.DstNode.incomingArcMap, arc.Src, arc) {
+		log.Fatalf("AddArc Error: arc:%v already present in node:%v incomingArcMap\n", arc, arc.DstNode.ID)
 	}
 }
 
