@@ -43,7 +43,7 @@ const (
 // Represents a node in the scheduling flow graph.
 type Node struct {
 	ID uint64
-
+	// The supply of excess flow at this node. 0 for non-source/sink nodes
 	Excess int64
 	Type   NodeType
 	// Comment for debugging purposes (used to label special nodes)
