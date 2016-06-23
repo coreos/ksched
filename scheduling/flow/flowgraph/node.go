@@ -49,6 +49,9 @@ type Node struct {
 	// Comment for debugging purposes (used to label special nodes)
 	Comment string
 
+	// The descriptor of the task represented by this node.
+	Task *pb.TaskDescriptor
+
 	// TODO(malte): Not sure if these should be here, but they've got to go
 	// somewhere.
 	// The ID of the job that this task belongs to (if task node).
@@ -57,8 +60,6 @@ type Node struct {
 	ResourceID types.ResourceID
 	// The descriptor of the resource that this node represents.
 	ResourceDescriptor *pb.ResourceDescriptor
-	// The descriptor of the task represented by this node.
-	tdPtr *pb.TaskDescriptor
 	// the ID of the equivalence class represented by this node.
 	ecID types.EquivClass
 
@@ -117,10 +118,11 @@ func (n *Node) IsTaskNode() bool {
 }
 
 func (n *Node) IsTaskAssignedOrRunning() bool {
-	if n.tdPtr == nil {
+	t := n.Task
+	if t == nil {
 		log.Fatalf("TaskDescriptor pointer for node:%v is nil\n", n.ID)
 	}
-	return n.tdPtr.State == pb.TaskDescriptor_Assigned || n.tdPtr.State == pb.TaskDescriptor_Running
+	return t.State == pb.TaskDescriptor_Assigned || t.State == pb.TaskDescriptor_Running
 }
 
 func (n *Node) TransformToResourceNodeType(rdPtr *pb.ResourceDescriptor) NodeType {

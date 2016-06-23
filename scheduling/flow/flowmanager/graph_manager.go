@@ -19,6 +19,7 @@ import (
 
 	"github.com/coreos/ksched/pkg/types"
 	pb "github.com/coreos/ksched/proto"
+	"github.com/coreos/ksched/scheduling/flow/dimacs"
 	"github.com/coreos/ksched/scheduling/flow/flowgraph"
 )
 
@@ -71,10 +72,14 @@ type GraphManager interface {
 type graphManager struct {
 	Preemption bool
 
+	cm GraphChangeManager
+
 	mu         sync.Mutex
 	taskToNode map[types.TaskID]*flowgraph.Node
 	// Map storing the running arc for every task that is running.
 	taskToRunningArc map[types.TaskID]*flowgraph.Arc
+
+	sinkNode *flowgraph.Node
 }
 
 func (gm *graphManager) TaskCompleted(id types.TaskID) uint64 {
@@ -103,7 +108,15 @@ func (gm *graphManager) updateUnscheduledAggNode() {
 }
 
 func (gm *graphManager) removeTaskNode(n *flowgraph.Node) uint64 {
-	panic("not implemented")
+	taskNodeID := n.ID
+
+	// Increase the sink's excess and set this node's excess to zero.
+	n.Excess = 0
+	gm.sinkNode.Excess++
+	delete(gm.taskToNode, types.TaskID(n.Task.Uid))
+	gm.cm.DeleteNode(n, dimacs.DelTaskNode, "RemoveTaskNode")
+
+	return taskNodeID
 }
 
 func (gm *graphManager) TaskMigrated(id types.TaskID, from, to types.ResourceID) {
