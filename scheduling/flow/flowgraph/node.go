@@ -54,9 +54,9 @@ type Node struct {
 	// The ID of the job that this task belongs to (if task node).
 	jobID types.JobID
 	// The ID of the resource that this node represents.
-	resourceID types.ResourceID
+	ResourceID types.ResourceID
 	// The descriptor of the resource that this node represents.
-	rdPtr *pb.ResourceDescriptor
+	ResourceDescriptor *pb.ResourceDescriptor
 	// The descriptor of the task represented by this node.
 	tdPtr *pb.TaskDescriptor
 	// the ID of the equivalence class represented by this node.
