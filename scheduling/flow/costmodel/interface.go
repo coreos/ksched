@@ -19,6 +19,7 @@ package costmodel
 
 import (
 	"github.com/coreos/ksched/pkg/types"
+	"github.com/coreos/ksched/pkg/util"
 	pb "github.com/coreos/ksched/proto"
 	"github.com/coreos/ksched/scheduling/flow/flowgraph"
 )
@@ -41,13 +42,20 @@ const (
 	CostModelNet
 )
 
+var ClusterAggregatorEC = util.HashBytesToEC([]byte("CLUSTER_AGG"))
+var MaxTasksPerPu uint64 = 10 // randomly picked up number
+
+// CostModeler provides APIs:
+// - Tell the cost of arcs so that graph manager can apply them in graph.
+// - Add, remove tasks, machines (resources) for the cost modeler to update
+//   knowledge. It should be refactored out.
+// - Stats related for cost calculation.
 type CostModeler interface {
 
 	// Get the cost from a task node to its unscheduled aggregator node.
 	// The method should return a monotonically increasing value upon subsequent
 	// calls. It is used to adjust the cost of leaving a task unscheduled after
 	// each iteration.
-
 	TaskToUnscheduledAggCost(types.TaskID) Cost
 	UnscheduledAggToSinkCost(types.JobID) Cost
 
@@ -67,25 +75,27 @@ type CostModeler interface {
 	TaskPreemptionCost(types.TaskID) Cost
 
 	// Get the cost of an arc from a task node to an equivalence class node.
-	TaskToEquivClassAggregator(types.TaskID) Cost
+	TaskToEquivClassAggregator(types.TaskID, types.EquivClass) Cost
 
-	// Get the cost of an arc from an equivalence class node to a resource node.
-	EquivClassToResourceNode(types.EquivClass, types.ResourceID) (Cost, uint64)
+	// Get the cost of an arc from an equivalence class node to a resource node,
+	// and free slots below this node in graph. The free slots information can be used to
+	// optimize network flow algorithm.
+	EquivClassToResourceNode(types.EquivClass, types.ResourceID) (Cost, uint64, error)
 
 	// Get the cost and the capacity of an arc from an equivalence class node to
 	// another equivalence class node.
 	// @param tec1 the source equivalence class
 	// @param tec2 the destination equivalence class
-	EquivClassToEquivClass(tec1, tec2 types.EquivClass) (Cost, uint64)
+	EquivClassToEquivClass(tec1, tec2 types.EquivClass) (Cost, uint64, error)
 
 	// Get the equivalence classes of a task.
 	// @param task_id the task id for which to get the equivalence classes
 	// @return a vector containing the task's equivalence classes
-	GetTaskEquivClasses(types.TaskID) []types.EquivClass
+	GetTaskEquivClasses(types.TaskID) ([]types.EquivClass, error)
 
 	// Get the resource ids to which an equivalence class has arcs.
-	// @param tec the equivalence class for which to get the resource ids
-	GetOutgoingEquivClassPrefArcs(types.ResourceID) []types.ResourceID
+	// @param ec the equivalence class for which to get the resource ids
+	GetOutgoingEquivClassPrefArcs(ec types.EquivClass) []types.ResourceID
 
 	// Get the resource preference arcs of a task.
 	// @param task_id the id of the task for which to get the preference arcs
@@ -97,7 +107,7 @@ type CostModeler interface {
 	GetEquivClassToEquivClassesArcs(types.EquivClass) []types.EquivClass
 
 	// Called by the flow_graph when a machine is added.
-	AddMachine(*pb.ResourceTopologyNodeDescriptor)
+	AddMachine(*pb.ResourceTopologyNodeDescriptor) error
 
 	// Called by the flow graph when a task is submitted.
 	AddTask(types.TaskID)
@@ -109,11 +119,11 @@ type CostModeler interface {
 
 	// Gathers statistics during reverse traversal of resource topology (from
 	// sink upwards). Called on pairs of connected nodes.
-	GatherStats(accumulator, other *flowgraph.Node)
+	GatherStats(accumulator, other *flowgraph.Node) (*flowgraph.Node, error)
 
 	// The default Prepare action is a no-op. Cost models can override this if
 	// they need to perform preparation actions before GatherStats is invoked.
-	PrepareStats(accumulator *flowgraph.Node)
+	PrepareStats(accumulator *flowgraph.Node) error
 
 	// Generates updates for arc costs in the resource topology.
 	UpdateStats(accumulator, other *flowgraph.Node) *flowgraph.Node
