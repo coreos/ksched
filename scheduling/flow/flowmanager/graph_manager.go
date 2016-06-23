@@ -15,8 +15,11 @@
 package flowmanager
 
 import (
+	"sync"
+
 	"github.com/coreos/ksched/pkg/types"
 	pb "github.com/coreos/ksched/proto"
+	"github.com/coreos/ksched/scheduling/flow/flowgraph"
 )
 
 // NOTE: GraphManager uses GraphChangeManager to change the graph.
@@ -66,4 +69,39 @@ type GraphManager interface {
 }
 
 type graphManager struct {
+	Preemption bool
+
+	mu         sync.Mutex
+	taskToNode map[types.TaskID]*flowgraph.Node
+	// Map storing the running arc for every task that is running.
+	taskToRunningArc map[types.TaskID]*flowgraph.Arc
+}
+
+func (gm *graphManager) TaskCompleted(id types.TaskID) uint64 {
+	gm.mu.Lock()
+	defer gm.mu.Unlock()
+
+	taskNode := gm.taskToNode[id]
+
+	if gm.Preemption {
+		// When we pin the task we reduce the capacity from the unscheduled
+		// aggrator to the sink. Hence, we only have to reduce the capacity
+		// when we support preemption.
+		gm.updateUnscheduledAggNode()
+	}
+
+	delete(gm.taskToRunningArc, id)
+	nodeID := gm.removeTaskNode(taskNode)
+
+	// NOTE: We do not remove the task from the cost_model because
+	// HandleTaskFinalReport still needs to get the task's  equivalence classes.
+	return nodeID
+}
+
+func (gm *graphManager) updateUnscheduledAggNode() {
+	panic("not implemented")
+}
+
+func (gm *graphManager) removeTaskNode(n *flowgraph.Node) uint64 {
+	panic("not implemented")
 }
