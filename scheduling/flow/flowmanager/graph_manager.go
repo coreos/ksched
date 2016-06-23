@@ -67,3 +67,16 @@ type GraphManager interface {
 
 type graphManager struct {
 }
+
+func (gm *graphManager) TaskMigrated(id types.TaskID, from, to types.ResourceID) {
+	gm.TaskEvicted(id, from)
+	gm.TaskScheduled(id, to)
+}
+
+func (gm *graphManager) TaskEvicted(id types.TaskID, rid types.ResourceID) {
+	panic("not implemented")
+}
+
+func (gm *graphManager) TaskScheduled(id types.TaskID, rid types.ResourceID) {
+	panic("not implemented")
+}
