@@ -20,3 +20,24 @@ func TestNodeAddArc(t *testing.T) {
 		t.Errorf("n0->n1 = %p, want %p", n0.outgoingArcMap[n1.ID] != arc)
 	}
 }
+
+func TestArcChange(t *testing.T) {
+	g := New(false)
+
+	n0 := g.AddNode()
+	n1 := g.AddNode()
+	arc := g.AddArc(n0, n1)
+	g.ChangeArc(arc, 0, 100, 42)
+
+	if arc.CapLowerBound != 0 || arc.CapUpperBound != 100 || arc.Cost != 42 {
+		t.Errorf("got %d, %d, %d, want %d, %d, %d",
+			arc.CapLowerBound, arc.CapUpperBound, arc.Cost,
+			0, 100, 42)
+	}
+
+	na := g.NumArcs()
+	g.ChangeArc(arc, 0, 0, 42)
+	if g.NumArcs() != na-1 {
+		t.Errorf("numArcs = %d, want %d", g.NumArcs(), na-1)
+	}
+}

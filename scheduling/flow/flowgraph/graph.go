@@ -72,6 +72,15 @@ func (fg *Graph) AddArc(src, dst *Node) *Arc {
 	return arc
 }
 
+func (fg *Graph) ChangeArc(arc *Arc, l, u uint64, c int64) {
+	if l == 0 && u == 0 {
+		delete(fg.arcSet, arc)
+	}
+	arc.CapLowerBound = l
+	arc.CapUpperBound = u
+	arc.Cost = c
+}
+
 func (fg *Graph) AddNode() *Node {
 	id := fg.NextId()
 	node := &Node{
