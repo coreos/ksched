@@ -88,6 +88,12 @@ type graphManager struct {
 	sinkNode *flowgraph.Node
 }
 
+func (gm *graphManager) JobCompleted(id types.JobID) {
+	// We don't have to do anything else here. The task nodes have already been
+	// removed.
+	gm.removeUnscheduledAggNode(jobID)
+}
+
 func (gm *graphManager) TaskCompleted(id types.TaskID) uint64 {
 	gm.mu.Lock()
 	defer gm.mu.Unlock()
