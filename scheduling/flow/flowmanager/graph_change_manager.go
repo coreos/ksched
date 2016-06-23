@@ -74,7 +74,7 @@ type changeManager struct {
 
 	flowGraph *flowgraph.Graph
 	// Vector storing the graph changes occured since the last scheduling round.
-	graphChanges []*dimacs.Change
+	graphChanges []dimacs.Change
 	dimacsStats  *dimacs.ChangeStats
 }
 
@@ -179,17 +179,17 @@ func (cm *changeManager) DeleteArc(arc *flowgraph.Arc, changeType dimacs.ChangeT
 	cm.flowGraph.DeleteArc(arc)
 }
 
-func (cm *changeManager) GetGraphChanges() []*dimacs.Change {
+func (cm *changeManager) GetGraphChanges() []dimacs.Change {
 	return cm.graphChanges
 }
 
-func (cm *changeManager) GetOptimizedGraphChanges() []*dimacs.Change {
+func (cm *changeManager) GetOptimizedGraphChanges() []dimacs.Change {
 	cm.optimizeChanges()
 	return cm.graphChanges
 }
 
 func (cm *changeManager) ResetChanges() {
-	cm.graphChanges = make([]*dimacs.Change, 0)
+	cm.graphChanges = make([]dimacs.Change, 0)
 }
 
 func (cm *changeManager) Graph() *flowgraph.Graph {
@@ -198,7 +198,10 @@ func (cm *changeManager) Graph() *flowgraph.Graph {
 
 // Private helper methods for change_manager internal use
 func (cm *changeManager) addGraphChange(change dimacs.Change) {
-
+	if change.Comment() == "" {
+		change.SetComment("addGraphChange: anonymous caller")
+	}
+	cm.graphChanges = append(cm.graphChanges, change)
 }
 
 func (cm *changeManager) optimizeChanges() {
