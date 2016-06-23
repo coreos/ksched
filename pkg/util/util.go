@@ -7,7 +7,7 @@ import (
 	"github.com/coreos/ksched/pkg/types"
 )
 
-func HashBytesToEC(b []byte) types.EquivClass {
+func HashBytesToEquivClass(b []byte) types.EquivClass {
 	h := fnv.New64()
 	h.Write(b)
 	return types.EquivClass(h.Sum64())

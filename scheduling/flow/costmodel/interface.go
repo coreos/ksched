@@ -42,8 +42,10 @@ const (
 	CostModelNet
 )
 
-var ClusterAggregatorEC = util.HashBytesToEC([]byte("CLUSTER_AGG"))
-var MaxTasksPerPu uint64 = 10 // randomly picked up number
+var (
+	ClusterAggregatorEC        = util.HashBytesToEquivClass([]byte("CLUSTER_AGG"))
+	MaxTasksPerPu       uint64 = 10 // randomly picked up number. Maybe set via flag?
+)
 
 // CostModeler provides APIs:
 // - Tell the cost of arcs so that graph manager can apply them in graph.
