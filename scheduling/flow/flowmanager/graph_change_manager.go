@@ -65,11 +65,6 @@ type GraphChangeManager interface {
 	Graph() *flowgraph.Graph
 }
 
-// Global flags needed by the changeManager methods
-var RemoveDuplicateChanges bool = true
-var MergeChangesToSameArc bool = true
-var PurgeChangesBeforeNodeRemoval bool = true
-
 // The change manager that should implement the ChangeMangerInterface
 type changeManager struct {
 	// Optimization options
