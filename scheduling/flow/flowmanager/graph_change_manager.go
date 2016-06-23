@@ -108,7 +108,7 @@ func (cm *changeManager) AddNode(t flowgraph.NodeType, excess int64, changet dim
 	var change dimacs.Change = dimacs.NewAddNodeChange(n)
 	change.SetComment(comment)
 	cm.addGraphChange(change)
-	cm.dimacsStats.UpdateStats(changeType)
+	cm.dimacsStats.UpdateStats(changet)
 	return n
 }
 
