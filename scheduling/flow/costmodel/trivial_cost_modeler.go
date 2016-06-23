@@ -65,29 +65,29 @@ func (t *trivialCostModeler) TaskToEquivClassAggregator(id types.TaskID, ec type
 	return 0
 }
 
-func (t *trivialCostModeler) EquivClassToResourceNode(ec types.EquivClass, id types.ResourceID) (Cost, uint64, error) {
+func (t *trivialCostModeler) EquivClassToResourceNode(ec types.EquivClass, id types.ResourceID) (Cost, uint64) {
 	rs := t.resourceMap.FindPtrOrNull(id)
 	if rs == nil {
-		return 0, 0, fmt.Errorf("couldn't find resource status for (%d)", id)
+		panic(fmt.Errorf("couldn't find resource status for (%d)", id))
 	}
 	freeSlotNum := rs.Descriptor().NumSlotsBelow - rs.Descriptor().NumRunningTasksBelow
-	return 0, freeSlotNum, nil
+	return 0, freeSlotNum
 }
 
-func (t *trivialCostModeler) EquivClassToEquivClass(tec1 types.EquivClass, tec2 types.EquivClass) (Cost, uint64, error) {
-	return 0, 0, nil
+func (t *trivialCostModeler) EquivClassToEquivClass(tec1 types.EquivClass, tec2 types.EquivClass) (Cost, uint64) {
+	return 0, 0
 }
 
-func (t *trivialCostModeler) GetTaskEquivClasses(id types.TaskID) ([]types.EquivClass, error) {
+func (t *trivialCostModeler) GetTaskEquivClasses(id types.TaskID) []types.EquivClass {
 	task := t.taskMap.FindPtrOrNull(id)
 	if task == nil {
-		return nil, fmt.Errorf("couldn't find task for (%d)", id)
+		panic(fmt.Errorf("couldn't find task for (%d)", id))
 	}
 	// A level 0 Task EC is the hash of the task binary name.
 	res := []types.EquivClass{util.HashBytesToEquivClass(task.Binary)}
 	// All tasks also have an arc to the cluster aggregator.
 	res = append(res, ClusterAggregatorEC)
-	return res, nil
+	return res
 }
 
 func (t *trivialCostModeler) GetOutgoingEquivClassPrefArcs(ec types.EquivClass) []types.ResourceID {
@@ -115,15 +115,14 @@ func (t *trivialCostModeler) GetEquivClassToEquivClassesArcs(types.EquivClass) [
 	return nil
 }
 
-func (t *trivialCostModeler) AddMachine(r *pb.ResourceTopologyNodeDescriptor) error {
+func (t *trivialCostModeler) AddMachine(r *pb.ResourceTopologyNodeDescriptor) {
 	id, err := util.ResourceIDFromString(r.ResourceDesc.Uuid)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	if _, ok := t.machineToResTopo[id]; !ok {
 		t.machineToResTopo[id] = r
 	}
-	return nil
 }
 
 func (t *trivialCostModeler) AddTask(types.TaskID) {}
@@ -134,36 +133,35 @@ func (t *trivialCostModeler) RemoveMachine(id types.ResourceID) {
 
 func (t *trivialCostModeler) RemoveTask(types.TaskID) {}
 
-func (t *trivialCostModeler) GatherStats(accumulator *flowgraph.Node, other *flowgraph.Node) (*flowgraph.Node, error) {
+func (t *trivialCostModeler) GatherStats(accumulator *flowgraph.Node, other *flowgraph.Node) *flowgraph.Node {
 	if !accumulator.IsResourceNode() {
-		return accumulator, nil
+		return accumulator
 	}
 	if !other.IsResourceNode() {
 		if other.Type == flowgraph.Sink {
 			accumulator.ResourceDescriptor.NumRunningTasksBelow = uint64(len(other.ResourceDescriptor.CurrentRunningTasks))
 			accumulator.ResourceDescriptor.NumSlotsBelow = MaxTasksPerPu
 		}
-		return accumulator, nil
+		return accumulator
 	}
 	if other.ResourceDescriptor == nil {
-		return nil, fmt.Errorf("the ResourceDescriptor of node (%d) is nil", other.ID)
+		panic(fmt.Errorf("the ResourceDescriptor of node (%d) is nil", other.ID))
 	}
 
 	accumulator.ResourceDescriptor.NumRunningTasksBelow += other.ResourceDescriptor.NumRunningTasksBelow
 	accumulator.ResourceDescriptor.NumSlotsBelow += other.ResourceDescriptor.NumSlotsBelow
-	return accumulator, nil
+	return accumulator
 }
 
-func (t *trivialCostModeler) PrepareStats(accumulator *flowgraph.Node) error {
+func (t *trivialCostModeler) PrepareStats(accumulator *flowgraph.Node) {
 	if accumulator.IsResourceNode() {
-		return nil
+		return
 	}
 	if accumulator.ResourceDescriptor == nil {
-		return fmt.Errorf("the ResourceDescriptor of node (%d) is nil", accumulator.ID)
+		panic(fmt.Errorf("the ResourceDescriptor of node (%d) is nil", accumulator.ID))
 	}
 	accumulator.ResourceDescriptor.NumRunningTasksBelow = 0
 	accumulator.ResourceDescriptor.NumSlotsBelow = 0
-	return nil
 }
 
 func (t *trivialCostModeler) UpdateStats(accumulator *flowgraph.Node, other *flowgraph.Node) *flowgraph.Node {

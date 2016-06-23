@@ -82,18 +82,18 @@ type CostModeler interface {
 	// Get the cost of an arc from an equivalence class node to a resource node,
 	// and free slots below this node in graph. The free slots information can be used to
 	// optimize network flow algorithm.
-	EquivClassToResourceNode(types.EquivClass, types.ResourceID) (Cost, uint64, error)
+	EquivClassToResourceNode(types.EquivClass, types.ResourceID) (Cost, uint64)
 
 	// Get the cost and the capacity of an arc from an equivalence class node to
 	// another equivalence class node.
 	// @param tec1 the source equivalence class
 	// @param tec2 the destination equivalence class
-	EquivClassToEquivClass(tec1, tec2 types.EquivClass) (Cost, uint64, error)
+	EquivClassToEquivClass(tec1, tec2 types.EquivClass) (Cost, uint64)
 
 	// Get the equivalence classes of a task.
 	// @param task_id the task id for which to get the equivalence classes
 	// @return a vector containing the task's equivalence classes
-	GetTaskEquivClasses(types.TaskID) ([]types.EquivClass, error)
+	GetTaskEquivClasses(types.TaskID) []types.EquivClass
 
 	// Get the resource ids to which an equivalence class has arcs.
 	// @param ec the equivalence class for which to get the resource ids
@@ -109,7 +109,7 @@ type CostModeler interface {
 	GetEquivClassToEquivClassesArcs(types.EquivClass) []types.EquivClass
 
 	// Called by the flow_graph when a machine is added.
-	AddMachine(*pb.ResourceTopologyNodeDescriptor) error
+	AddMachine(*pb.ResourceTopologyNodeDescriptor)
 
 	// Called by the flow graph when a task is submitted.
 	AddTask(types.TaskID)
@@ -121,11 +121,11 @@ type CostModeler interface {
 
 	// Gathers statistics during reverse traversal of resource topology (from
 	// sink upwards). Called on pairs of connected nodes.
-	GatherStats(accumulator, other *flowgraph.Node) (*flowgraph.Node, error)
+	GatherStats(accumulator, other *flowgraph.Node) *flowgraph.Node
 
 	// The default Prepare action is a no-op. Cost models can override this if
 	// they need to perform preparation actions before GatherStats is invoked.
-	PrepareStats(accumulator *flowgraph.Node) error
+	PrepareStats(accumulator *flowgraph.Node)
 
 	// Generates updates for arc costs in the resource topology.
 	UpdateStats(accumulator, other *flowgraph.Node) *flowgraph.Node
