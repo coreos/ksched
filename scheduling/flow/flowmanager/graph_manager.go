@@ -211,7 +211,7 @@ func (gm *graphManager) TaskEvicted(id types.TaskID, rid types.ResourceID) {
 	defer gm.mu.Unlock()
 
 	taskNode := gm.taskToNode[id]
-	taskNode.Type = flowgraph.UnscheduledTask
+	taskNode.Type = flowgraph.NodeTypeUnscheduledTask
 
 	arc := gm.taskToRunningArc[id]
 	delete(gm.taskToRunningArc, id)
@@ -255,7 +255,7 @@ func (gm *graphManager) TaskScheduled(id types.TaskID, rid types.ResourceID) {
 	defer gm.mu.Unlock()
 
 	taskNode := gm.taskToNode[id]
-	taskNode.Type = flowgraph.ScheduledTask
+	taskNode.Type = flowgraph.NodeTypeScheduledTask
 
 	resNode := gm.resourceToNode[rid]
 	gm.updateArcsForScheduledTask(taskNode, resNode)
@@ -287,7 +287,7 @@ func (gm *graphManager) addResourceNode(rd *pb.ResourceDescriptor) *flowgraph.No
 	}
 	gm.resourceToNode[rID] = resourceNode
 
-	if resourceNode.Type == flowgraph.Pu {
+	if resourceNode.Type == flowgraph.NodeTypePu {
 		gm.leafNodes[uint64(rID)] = struct{}{}
 		gm.leafResourceIDs[rID] = struct{}{}
 	}

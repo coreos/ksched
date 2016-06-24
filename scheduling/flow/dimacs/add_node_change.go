@@ -27,12 +27,12 @@ import (
 type NodeType int
 
 const (
-	Other NodeType = iota + 1
-	Task
-	Pu
-	Sink
-	Machine
-	IntermediateResource
+	NodeTypeOther NodeType = iota + 1
+	NodeTypeTask
+	NodeTypePu
+	NodeTypeSink
+	NodeTypeMachine
+	NodeTypeIntermediateResource
 )
 
 // AddNodeChange implements the Change interface from dimacschange.go
@@ -80,17 +80,17 @@ func (an *AddNodeChange) GenerateChange() string {
 
 func (an *AddNodeChange) GetNodeType() NodeType {
 	switch an.Typ {
-	case flowgraph.Pu:
-		return Pu
-	case flowgraph.Machine:
-		return Machine
-	case flowgraph.Sink:
-		return Sink
-	case flowgraph.NumaNode, flowgraph.Socket, flowgraph.Cache, flowgraph.Core:
-		return IntermediateResource
-	case flowgraph.UnscheduledTask, flowgraph.ScheduledTask, flowgraph.RootTask:
-		return Task
+	case flowgraph.NodeTypePu:
+		return NodeTypePu
+	case flowgraph.NodeTypeMachine:
+		return NodeTypeMachine
+	case flowgraph.NodeTypeSink:
+		return NodeTypeSink
+	case flowgraph.NodeTypeNuma, flowgraph.NodeTypeSocket, flowgraph.NodeTypeCache, flowgraph.NodeTypeCore:
+		return NodeTypeIntermediateResource
+	case flowgraph.NodeTypeUnscheduledTask, flowgraph.NodeTypeScheduledTask, flowgraph.NodeTypeRootTask:
+		return NodeTypeTask
 	default:
-		return Other
+		return NodeTypeOther
 	}
 }
