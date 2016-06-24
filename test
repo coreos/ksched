@@ -13,3 +13,5 @@ fi
 
 # Run all tests in all packages
 go test ./...
+
+echo "success!"

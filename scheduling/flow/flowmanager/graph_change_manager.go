@@ -53,9 +53,9 @@ type GraphChangeManager interface {
 
 	DeleteNode(arc *flowgraph.Node, changeType dimacs.ChangeType, comment string)
 
-	GetGraphChanges() []*dimacs.Change
+	GetGraphChanges() []dimacs.Change
 
-	GetOptimizedGraphChanges() []*dimacs.Change
+	GetOptimizedGraphChanges() []dimacs.Change
 
 	// ResetChanges resets the incremental changes that the manager keeps.
 	// This method should be called after consuming all the recent changes.
@@ -63,6 +63,8 @@ type GraphChangeManager interface {
 
 	// Graph returns flow graph instance for this manager.
 	Graph() *flowgraph.Graph
+
+	CheckNodeType(flowgraph.NodeID, flowgraph.NodeType) bool
 }
 
 // The change manager that should implement the ChangeMangerInterface
@@ -76,6 +78,10 @@ type changeManager struct {
 	// Vector storing the graph changes occured since the last scheduling round.
 	graphChanges []dimacs.Change
 	dimacsStats  *dimacs.ChangeStats
+}
+
+func (cm *changeManager) CheckNodeType(id flowgraph.NodeID, typ flowgraph.NodeType) bool {
+	return cm.flowGraph.Node(id).Type == typ
 }
 
 // Public Interface functions
