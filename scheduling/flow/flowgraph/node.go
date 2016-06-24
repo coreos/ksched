@@ -25,19 +25,19 @@ import (
 type NodeType int
 
 const (
-	RootTask NodeType = iota + 1
-	ScheduledTask
-	UnscheduledTask
-	JobAggregator
-	Sink
-	EquivalenceClass
-	Coordinator
-	Machine
-	NumaNode
-	Socket
-	Cache
-	Core
-	Pu
+	NodeTypeRootTask NodeType = iota + 1
+	NodeTypeScheduledTask
+	NodeTypeUnscheduledTask
+	NodeTypeJobAggregator
+	NodeTypeSink
+	NodeTypeEquivClass
+	NodeTypeCoordinator
+	NodeTypeMachine
+	NodeTypeNuma
+	NodeTypeSocket
+	NodeTypeCache
+	NodeTypeCore
+	NodeTypePu
 )
 
 // Represents a node in the scheduling flow graph.
@@ -98,23 +98,23 @@ func (n *Node) AddArc(arc *Arc) {
 }
 
 func (n *Node) IsEquivalenceClassNode() bool {
-	return n.Type == EquivalenceClass
+	return n.Type == NodeTypeEquivClass
 }
 
 func (n *Node) IsResourceNode() bool {
-	return n.Type == Coordinator ||
-		n.Type == Machine ||
-		n.Type == NumaNode ||
-		n.Type == Socket ||
-		n.Type == Cache ||
-		n.Type == Core ||
-		n.Type == Pu
+	return n.Type == NodeTypeCoordinator ||
+		n.Type == NodeTypeMachine ||
+		n.Type == NodeTypeNuma ||
+		n.Type == NodeTypeSocket ||
+		n.Type == NodeTypeCache ||
+		n.Type == NodeTypeCore ||
+		n.Type == NodeTypePu
 }
 
 func (n *Node) IsTaskNode() bool {
-	return n.Type == RootTask ||
-		n.Type == ScheduledTask ||
-		n.Type == UnscheduledTask
+	return n.Type == NodeTypeRootTask ||
+		n.Type == NodeTypeScheduledTask ||
+		n.Type == NodeTypeUnscheduledTask
 }
 
 func (n *Node) IsTaskAssignedOrRunning() bool {
@@ -130,11 +130,11 @@ func TransformToResourceNodeType(rdPtr *pb.ResourceDescriptor) NodeType {
 	resourceType := rdPtr.Type
 	switch resourceType {
 	case pb.ResourceDescriptor_ResourcePu:
-		return Pu
+		return NodeTypePu
 	case pb.ResourceDescriptor_ResourceCore:
-		return Core
+		return NodeTypeCore
 	case pb.ResourceDescriptor_ResourceCache:
-		return Cache
+		return NodeTypeCache
 	case pb.ResourceDescriptor_ResourceNic:
 		log.Fatalf("Node type not supported yet: %v", resourceType)
 	case pb.ResourceDescriptor_ResourceDisk:
@@ -142,15 +142,15 @@ func TransformToResourceNodeType(rdPtr *pb.ResourceDescriptor) NodeType {
 	case pb.ResourceDescriptor_ResourceSsd:
 		log.Fatalf("Node type not supported yet: %v", resourceType)
 	case pb.ResourceDescriptor_ResourceMachine:
-		return Machine
+		return NodeTypeMachine
 	case pb.ResourceDescriptor_ResourceLogical:
 		log.Fatalf("Node type not supported yet: %v", resourceType)
 	case pb.ResourceDescriptor_ResourceNumaNode:
-		return NumaNode
+		return NodeTypeNuma
 	case pb.ResourceDescriptor_ResourceSocket:
-		return Socket
+		return NodeTypeSocket
 	case pb.ResourceDescriptor_ResourceCoordinator:
-		return Coordinator
+		return NodeTypeCoordinator
 	default:
 		log.Fatalf("Unknown node type: %v", resourceType)
 	}

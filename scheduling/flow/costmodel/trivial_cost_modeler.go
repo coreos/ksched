@@ -138,7 +138,7 @@ func (t *trivialCostModeler) GatherStats(accumulator *flowgraph.Node, other *flo
 		return accumulator
 	}
 	if !other.IsResourceNode() {
-		if other.Type == flowgraph.Sink {
+		if other.Type == flowgraph.NodeTypeSink {
 			accumulator.ResourceDescriptor.NumRunningTasksBelow = uint64(len(other.ResourceDescriptor.CurrentRunningTasks))
 			accumulator.ResourceDescriptor.NumSlotsBelow = MaxTasksPerPu
 		}
