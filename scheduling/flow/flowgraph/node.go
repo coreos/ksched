@@ -61,7 +61,8 @@ type Node struct {
 	// The descriptor of the resource that this node represents.
 	ResourceDescriptor *pb.ResourceDescriptor
 	// the ID of the equivalence class represented by this node.
-	ecID types.EquivClass
+	// If it's nil, this is not a equivalence class node.
+	EquivClass *types.EquivClass
 
 	// Outgoing arcs from this node, keyed by destination node
 	outgoingArcMap map[uint64]*Arc

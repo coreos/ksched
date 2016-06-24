@@ -107,12 +107,22 @@ func (fg *Graph) NumArcs() int {
 	return len(fg.arcSet)
 }
 
+func (fg *Graph) Arcs() map[*Arc]struct{} {
+	// TODO: we should return a copy? Only after concurrency pattern is known.
+	return fg.arcSet
+}
+
 func (fg *Graph) Node(id uint64) *Node {
 	return fg.nodeMap[id]
 }
 
 func (fg *Graph) NumNodes() int {
 	return len(fg.nodeMap)
+}
+
+func (fg *Graph) Nodes() map[uint64]*Node {
+	// TODO: we should return a copy? Only after concurrency pattern is known.
+	return fg.nodeMap
 }
 
 func (fg *Graph) DeleteNode(node *Node) {
