@@ -155,6 +155,24 @@ func (gm *graphManager) AddOrUpdateJobNodes(jobs []pb.JobDescriptor) {
 	gm.updateFlowGraph(q, markedNodes)
 }
 
+func (gm *graphManager) AddResourceTopology(rtnd *pb.ResourceTopologyNodeDescriptor) {
+	rd := rtnd.ResourceDesc
+	gm.addResourceTopologyDFS(rtnd)
+	// Progapate the capacity increase to the root of the topology.
+	if rtnd.ParentId != "" {
+		// We start from rtnd's parent because in AddResourceTopologyDFS we
+		// already added an arc between rtnd and its parent.
+		rID, err := util.ResourceIDFromString(rtnd.ParentId)
+		if err != nil {
+			log.Panic(err)
+		}
+		currNode := gm.nodeForResourceID(rID)
+		runningTasksDelta := rd.NumRunningTasksBelow
+		capacityToParent := gm.capacityFromResNodeToParent(rd)
+		gm.updateResourceStatsUpToRoot(currNode, int64(capacityToParent), int64(rd.NumSlotsBelow), int64(runningTasksDelta))
+	}
+}
+
 func (gm *graphManager) JobCompleted(id types.JobID) {
 	// We don't have to do anything else here. The task nodes have already been
 	// removed.
@@ -483,15 +501,15 @@ func (gm *graphManager) visitTopologyChildren(rtnd *pb.ResourceTopologyNodeDescr
 }
 
 // Small helper functions, might not really be needed
-func (gm *graphManager) nodeForEquivClass(ec *types.EquivClass) *flowgraph.Node {
+func (gm *graphManager) nodeForEquivClass(ec types.EquivClass) *flowgraph.Node {
 	return nil
 }
 
-func (gm *graphManager) nodeForResourceID(resourceID *types.ResourceID) *flowgraph.Node {
+func (gm *graphManager) nodeForResourceID(resourceID types.ResourceID) *flowgraph.Node {
 	return nil
 }
 
-func (gm *graphManager) nodeForTaskID(taskID *types.TaskID) *flowgraph.Node {
+func (gm *graphManager) nodeForTaskID(taskID types.TaskID) *flowgraph.Node {
 	return nil
 }
 
