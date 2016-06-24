@@ -24,8 +24,8 @@ const (
 
 // Represents an arc in the scheduling flow graph.
 type Arc struct {
-	Src     uint64
-	Dst     uint64
+	Src     NodeID
+	Dst     NodeID
 	SrcNode *Node
 	DstNode *Node
 

@@ -22,13 +22,15 @@ import (
 	"github.com/coreos/ksched/pkg/util/queue"
 )
 
+type NodeID uint64
+
 type Graph struct {
 	// Next node id to use
-	nextID uint64
+	nextID NodeID
 	// Unordered set of arcs in graph
 	arcSet map[*Arc]struct{}
 	// Map of nodes keyed by nodeID
-	nodeMap map[uint64]*Node
+	nodeMap map[NodeID]*Node
 	// Queue storing the ids of the nodes we've previously removed.
 	unusedIDs queue.FIFO
 
@@ -43,7 +45,7 @@ type Graph struct {
 func New(randomizeNodeIDs bool) *Graph {
 	fg := &Graph{
 		arcSet:  make(map[*Arc]struct{}),
-		nodeMap: make(map[uint64]*Node),
+		nodeMap: make(map[NodeID]*Node),
 	}
 	fg.nextID = 1
 	fg.unusedIDs = queue.NewFIFO()
@@ -85,8 +87,8 @@ func (fg *Graph) AddNode() *Node {
 	id := fg.NextId()
 	node := &Node{
 		ID:             id,
-		incomingArcMap: make(map[uint64]*Arc),
-		outgoingArcMap: make(map[uint64]*Arc),
+		incomingArcMap: make(map[NodeID]*Arc),
+		outgoingArcMap: make(map[NodeID]*Arc),
 	}
 	// Insert into nodeMap, must not already be present
 	_, ok := fg.nodeMap[id]
@@ -112,7 +114,7 @@ func (fg *Graph) Arcs() map[*Arc]struct{} {
 	return fg.arcSet
 }
 
-func (fg *Graph) Node(id uint64) *Node {
+func (fg *Graph) Node(id NodeID) *Node {
 	return fg.nodeMap[id]
 }
 
@@ -120,7 +122,7 @@ func (fg *Graph) NumNodes() int {
 	return len(fg.nodeMap)
 }
 
-func (fg *Graph) Nodes() map[uint64]*Node {
+func (fg *Graph) Nodes() map[NodeID]*Node {
 	// TODO: we should return a copy? Only after concurrency pattern is known.
 	return fg.nodeMap
 }
@@ -160,26 +162,26 @@ func (fg *Graph) GetArc(src, dst *Node) *Arc {
 }
 
 // Returns the nextID to assign to a node
-func (fg *Graph) NextId() uint64 {
+func (fg *Graph) NextId() NodeID {
 	if fg.RandomizeNodeIDs {
 		if fg.unusedIDs.IsEmpty() {
 			fg.PopulateUnusedIds(fg.nextID * 2)
 		}
-		return fg.unusedIDs.Pop().(uint64)
+		return fg.unusedIDs.Pop().(NodeID)
 	}
 	if fg.unusedIDs.IsEmpty() {
 		newID := fg.nextID
 		fg.nextID++
 		return newID
 	}
-	return fg.unusedIDs.Pop().(uint64)
+	return fg.unusedIDs.Pop().(NodeID)
 }
 
 // Called if fg.RandomizeNodeIDs is true to generate a random shuffle of ids
-func (fg *Graph) PopulateUnusedIds(newNextID uint64) {
+func (fg *Graph) PopulateUnusedIds(newNextID NodeID) {
 	t := time.Now().UnixNano()
 	r := rand.New(rand.NewSource(t))
-	ids := make([]uint64, 0)
+	ids := make([]NodeID, 0)
 	for i := fg.nextID; i < newNextID; i++ {
 		ids = append(ids, i)
 	}

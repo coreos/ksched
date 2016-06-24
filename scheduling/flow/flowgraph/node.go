@@ -42,7 +42,7 @@ const (
 
 // Represents a node in the scheduling flow graph.
 type Node struct {
-	ID uint64
+	ID NodeID
 	// The supply of excess flow at this node. 0 for non-source/sink nodes
 	Excess int64
 	Type   NodeType
@@ -65,9 +65,9 @@ type Node struct {
 	EquivClass *types.EquivClass
 
 	// Outgoing arcs from this node, keyed by destination node
-	outgoingArcMap map[uint64]*Arc
+	outgoingArcMap map[NodeID]*Arc
 	// Incoming arcs to this node, keyed by source node
-	incomingArcMap map[uint64]*Arc
+	incomingArcMap map[NodeID]*Arc
 	// Field use to mark if the node has been visited in a graph traversal.
 	// TODO: Why is this a uint32 in the original code
 	visited uint32
@@ -75,7 +75,7 @@ type Node struct {
 
 // True indicates that an insert took place,
 // False indicates the key was already present.
-func insertIfNotPresent(m map[uint64]*Arc, k uint64, val *Arc) bool {
+func insertIfNotPresent(m map[NodeID]*Arc, k NodeID, val *Arc) bool {
 	_, ok := m[k]
 	if !ok {
 		m[k] = val
