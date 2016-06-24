@@ -303,7 +303,20 @@ func (gm *graphManager) addResourceTopologyDFS(rtnd *pb.ResourceTopologyNodeDesc
 }
 
 func (gm *graphManager) addTaskNode(jobID types.JobID, td *pb.TaskDescriptor) *flowgraph.Node {
-	return nil
+	// TODO:
+	// trace.traceGenerator.TaskSubmitted(td)
+	gm.costModeler.AddTask(types.TaskID(td.Uid))
+	taskNode := gm.cm.AddNode(flowgraph.NodeTypeUnscheduledTask, 1, dimacs.AddTaskNode, "AddTaskNode")
+	taskNode.Task = td
+	taskNode.JobID = jobID
+	gm.sinkNode.Excess--
+	// Insert mapping tast to node, must not already have mapping
+	_, ok := gm.taskToNode[types.TaskID(td.Uid)]
+	if ok {
+		log.Panicf("gm:addTaskNode Mapping for taskID:%v to node already present\n", td.Uid)
+	}
+	gm.taskToNode[types.TaskID(td.Uid)] = taskNode
+	return taskNode
 }
 
 func (gm *graphManager) addUnscheduledAggNode(jobID types.JobID) *flowgraph.Node {
