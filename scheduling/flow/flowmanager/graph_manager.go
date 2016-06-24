@@ -196,10 +196,6 @@ func (gm *graphManager) TaskScheduled(id types.TaskID, rid types.ResourceID) {
 }
 
 // Private Methods
-func (gm *graphManager) updateUnscheduledAggNode(unschedAggNode *flowgraph.Node, capDelta int64) {
-	panic("not implemented")
-}
-
 func (gm *graphManager) addEquivClassNode(ec types.EquivClass) *flowgraph.Node {
 	return nil
 }
