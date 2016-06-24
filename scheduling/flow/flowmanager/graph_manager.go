@@ -15,6 +15,7 @@
 package flowmanager
 
 import (
+	"log"
 	"sync"
 
 	"github.com/coreos/ksched/pkg/types"
@@ -92,6 +93,8 @@ type graphManager struct {
 	nodeToParentNode map[*flowgraph.Node]*flowgraph.Node
 	// Set of leaf resource IDs, i.e connected to sink node in flowgraph
 	leafResourceIDs map[types.ResourceID]struct{}
+	// The "node ID" for the job is currently the ID of the job's unscheduled node
+	leafNodes map[uint64]struct{}
 
 	dimacsStats *dimacs.ChangeStats
 	// Counter updated whenever we compute topology statistics. The counter is
@@ -246,7 +249,31 @@ func (gm *graphManager) addEquivClassNode(ec types.EquivClass) *flowgraph.Node {
 }
 
 func (gm *graphManager) addResourceNode(rd *pb.ResourceDescriptor) *flowgraph.Node {
-	return nil
+	comment := "AddResourceNode"
+	if rd.FriendlyName != "" {
+		comment = rd.FriendlyName
+	}
+
+	resourceNode := gm.cm.AddNode(flowgraph.TransformToResourceNodeType(rd),
+		0, dimacs.AddResourceNode, comment)
+	rID, err := util.ResourceIDFromString(rd.Uuid)
+	if err != nil {
+		panic(err)
+	}
+	resourceNode.ID = uint64(rID)
+	resourceNode.ResourceDescriptor = rd
+	// Insert mapping resource to node, must not already have mapping
+	_, ok := gm.resourceToNode[rID]
+	if ok {
+		log.Panicf("gm:addResourceNode Mapping for rID:%v to resourceNode already present\n", rID)
+	}
+	gm.resourceToNode[rID] = resourceNode
+
+	if resourceNode.Type == flowgraph.Pu {
+		gm.leafNodes[uint64(rID)] = struct{}{}
+		gm.leafResourceIDs[rID] = struct{}{}
+	}
+	return resourceNode
 }
 
 // Adds to the graph all the node from the subtree rooted at rtnd_ptr.

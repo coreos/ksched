@@ -125,7 +125,7 @@ func (n *Node) IsTaskAssignedOrRunning() bool {
 	return t.State == pb.TaskDescriptor_Assigned || t.State == pb.TaskDescriptor_Running
 }
 
-func (n *Node) TransformToResourceNodeType(rdPtr *pb.ResourceDescriptor) NodeType {
+func TransformToResourceNodeType(rdPtr *pb.ResourceDescriptor) NodeType {
 	// Using proto3 syntax
 	resourceType := rdPtr.Type
 	switch resourceType {
