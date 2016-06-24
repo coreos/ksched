@@ -16,6 +16,7 @@ package flowmanager
 
 import (
 	"log"
+	"strconv"
 	"sync"
 
 	"github.com/coreos/ksched/pkg/types"
@@ -307,7 +308,15 @@ func (gm *graphManager) addTaskNode(jobID types.JobID, td *pb.TaskDescriptor) *f
 }
 
 func (gm *graphManager) addUnscheduledAggNode(jobID types.JobID) *flowgraph.Node {
-	return nil
+	comment := "UNSCHED_AGG_for_" + strconv.FormatInt(int64(jobID), 10)
+	unschedAggNode := gm.cm.AddNode(flowgraph.NodeTypeJobAggregator, 0, dimacs.AddUnschedJobNode, comment)
+	// Insert mapping jobUnscheduled to node, must not already have mapping
+	_, ok := gm.jobUnschedToNode[jobID]
+	if ok {
+		log.Panicf("gm:addUnscheduledAggNode Mapping for unscheduled jobID:%v to node already present\n", jobID)
+	}
+	gm.jobUnschedToNode[jobID] = unschedAggNode
+	return unschedAggNode
 }
 
 func (gm *graphManager) capacityFromResNodeToParent(rd *pb.ResourceDescriptor) uint64 {
