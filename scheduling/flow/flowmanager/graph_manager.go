@@ -18,6 +18,7 @@ import (
 	"sync"
 
 	"github.com/coreos/ksched/pkg/types"
+	"github.com/coreos/ksched/pkg/util"
 	"github.com/coreos/ksched/pkg/util/queue"
 	pb "github.com/coreos/ksched/proto"
 	"github.com/coreos/ksched/scheduling/flow/costmodel"
@@ -105,6 +106,50 @@ type graphManager struct {
 type taskOrNode struct {
 	Node     *flowgraph.Node
 	TaskDesc *pb.TaskDescriptor
+}
+
+func (gm *graphManager) AddOrUpdateJobNodes(jobs []pb.JobDescriptor) {
+	// For each job:
+	// 1. Add/Update unscheduled agg node
+	// 2. Add its root task to the queue
+
+	q := queue.NewFIFO()
+	markedNodes := make(map[uint64]struct{})
+
+	for _, j := range jobs {
+		jid := util.MustJobIDFromString(j.Uuid)
+		// First add an unscheduled aggregator node for this job if none exists already.
+		unschedAggNode := gm.jobUnschedToNode[jid]
+		if unschedAggNode == nil {
+			unschedAggNode = gm.addUnscheduledAggNode(jid)
+		}
+
+		rootTD := j.RootTask
+		rootTaskNode := gm.taskToNode[types.TaskID(rootTD.Uid)]
+		if rootTaskNode != nil {
+			q.Push(&taskOrNode{Node: rootTaskNode, TaskDesc: rootTD})
+			markedNodes[rootTaskNode.ID] = struct{}{}
+			continue
+		}
+
+		if taskMustHaveNode(rootTD) {
+			rootTaskNode = gm.addTaskNode(jid, rootTD)
+			// Increment capacity from unsched agg node to sink.
+			gm.updateUnscheduledAggNode(unschedAggNode, 1)
+
+			q.Push(&taskOrNode{Node: rootTaskNode, TaskDesc: rootTD})
+			markedNodes[rootTaskNode.ID] = struct{}{}
+		} else {
+			// We don't have to add a new node for the task.
+			q.Push(&taskOrNode{TaskDesc: rootTD})
+			// We can't mark the task as visited because we don't have
+			// a node id for it. However, this is fine in practice because the
+			// tasks cannot be a DAG and so we will never visit them again.
+		}
+	}
+
+	// UpdateFlowGraph is responsible for making sure that the node_queue is empty upon completion.
+	gm.updateFlowGraph(q, markedNodes)
 }
 
 func (gm *graphManager) JobCompleted(id types.JobID) {
@@ -423,10 +468,12 @@ func (gm *graphManager) nodeForTaskID(taskID *types.TaskID) *flowgraph.Node {
 	return nil
 }
 
-func (gm *graphManager) taskMustHaveNode(taskDescriptor *pb.TaskDescriptor) bool {
-	return false
-}
-
 func (gm *graphManager) unschedAggNodeForJobID(jobID types.JobID) *flowgraph.Node {
 	return nil
+}
+
+func taskMustHaveNode(td *pb.TaskDescriptor) bool {
+	return td.State == pb.TaskDescriptor_Runnable ||
+		td.State == pb.TaskDescriptor_Running ||
+		td.State == pb.TaskDescriptor_Assigned
 }
