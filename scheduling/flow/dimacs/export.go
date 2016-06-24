@@ -18,7 +18,7 @@ func Export(g *flowgraph.Graph, w io.Writer) {
 	}
 
 	fmt.Fprint(w, "c === ALL ARCS FOLLOW ===\n")
-	for _, r := range g.Arcs() {
+	for r := range g.Arcs() {
 		generateArc(r, w)
 	}
 
