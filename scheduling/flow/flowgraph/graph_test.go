@@ -17,7 +17,7 @@ func TestNodeAddArc(t *testing.T) {
 		t.Errorf("number of arcs = %d, want %d", g.NumNodes(), 1)
 	}
 	if n0.outgoingArcMap[n1.ID] != arc {
-		t.Errorf("n0->n1 = %p, want %p", n0.outgoingArcMap[n1.ID] != arc)
+		t.Errorf("n0->n1 = %+v, want %+v", n0.outgoingArcMap[n1.ID], arc)
 	}
 }
 
