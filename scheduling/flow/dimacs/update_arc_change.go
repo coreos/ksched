@@ -22,10 +22,11 @@ import (
 
 // UpdateArcChange implements the Change interface from dimacschange.go
 type UpdateArcChange struct {
-	comment                                string
-	Src, Dst, CapLowerBound, CapUpperBound uint64
-	Cost, OldCost                          int64
-	Typ                                    flowgraph.ArcType
+	comment                      string
+	Src, Dst                     flowgraph.NodeID
+	CapLowerBound, CapUpperBound uint64
+	Cost, OldCost                int64
+	Typ                          flowgraph.ArcType
 }
 
 func NewUpdateArcChange(arc *flowgraph.Arc, oldCost int64) *UpdateArcChange {
@@ -61,8 +62,8 @@ func (uac *UpdateArcChange) GenerateChangeDescription() string {
 
 // Returns an update to the dimacs Arc Descriptor format
 func (uac *UpdateArcChange) GenerateChange() string {
-	return "x " + strconv.FormatUint(uac.Src, 10) +
-		" " + strconv.FormatUint(uac.Dst, 10) +
+	return "x " + strconv.FormatUint(uint64(uac.Src), 10) +
+		" " + strconv.FormatUint(uint64(uac.Dst), 10) +
 		" " + strconv.FormatUint(uac.CapLowerBound, 10) +
 		" " + strconv.FormatUint(uac.CapUpperBound, 10) +
 		" " + strconv.FormatInt(uac.Cost, 10) +

@@ -38,7 +38,7 @@ const (
 // AddNodeChange implements the Change interface from dimacschange.go
 type AddNodeChange struct {
 	comment      string
-	ID           uint64
+	ID           flowgraph.NodeID
 	Excess       int64
 	Typ          flowgraph.NodeType
 	ArcAdditions []CreateArcChange
@@ -73,7 +73,7 @@ func (an *AddNodeChange) GenerateChangeDescription() string {
 
 // Returns the dimacs Node Descriptor format
 func (an *AddNodeChange) GenerateChange() string {
-	return "n " + strconv.FormatUint(an.ID, 10) +
+	return "n " + strconv.FormatUint(uint64(an.ID), 10) +
 		" " + strconv.FormatInt(an.Excess, 10) +
 		" " + strconv.Itoa(int(an.GetNodeType())) + "\n"
 }
