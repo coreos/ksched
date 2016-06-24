@@ -75,20 +75,28 @@ type graphManager struct {
 	Preemption bool
 
 	cm          GraphChangeManager
+	sinkNode    *flowgraph.Node
 	costModeler costmodel.CostModeler
-
-	mu sync.Mutex
+	mu          sync.Mutex
 
 	// Resource and task mappings
 	resourceToNode map[types.ResourceID]*flowgraph.Node
 	taskToNode     map[types.TaskID]*flowgraph.Node
-	// Map storing the running arc for every task that is running.
-	taskToRunningArc map[types.TaskID]*flowgraph.Arc
-
+	// Mapping storing flow graph node for each task equivalence class.
+	taskECToNode map[types.EquivClass]*flowgraph.Node
 	// Mapping storing flow graph node for each unscheduled aggregator.
 	jobUnschedToNode map[types.JobID]*flowgraph.Node
+	// Mapping storing the running arc for every task that is running.
+	taskToRunningArc map[types.TaskID]*flowgraph.Arc
+	nodeToParentNode map[*flowgraph.Node]*flowgraph.Node
+	// Set of leaf resource IDs, i.e connected to sink node in flowgraph
+	leafResourceIDs map[types.ResourceID]struct{}
 
-	sinkNode *flowgraph.Node
+	dimacsStats *dimacs.ChangeStats
+	// Counter updated whenever we compute topology statistics. The counter is
+	// used as a marker in the resource topology traversal. It helps us to avoid
+	// having to reset the visited state before each traversal.
+	curTraversalCounter uint32
 }
 
 // TaskOrNode used by private methods
@@ -188,10 +196,6 @@ func (gm *graphManager) TaskScheduled(id types.TaskID, rid types.ResourceID) {
 }
 
 // Private Methods
-func (gm *graphManager) updateUnscheduledAggNode(unschedAggNode *flowgraph.Node, capDelta int64) {
-	panic("not implemented")
-}
-
 func (gm *graphManager) addEquivClassNode(ec types.EquivClass) *flowgraph.Node {
 	return nil
 }
@@ -381,4 +385,48 @@ func (gm *graphManager) updateTaskNode(taskNode *flowgraph.Node,
 func (gm *graphManager) updateTaskToEquivArcs(taskNode *flowgraph.Node,
 	nodeQueue queue.FIFO,
 	markedNodes map[uint64]struct{}) {
+}
+
+// Updates a task's preferences to resources.
+func (gm *graphManager) updateTaskToResArcs(taskNode *flowgraph.Node,
+	nodeQueue queue.FIFO,
+	markedNodes map[uint64]struct{}) {
+}
+
+// Updates the arc from a task to its unscheduled aggregator. The method
+// adds the unscheduled if it doesn't already exist.
+// returns the unscheduled aggregator node
+func (gm *graphManager) updateTaskToUnscheduledAggArc(taskNode *flowgraph.Node) *flowgraph.Node {
+	return nil
+}
+
+// Adjusts the capacity of the arc connecting the unscheduled agg to the sink
+// by cap_delta. The method also updates the cost if need be.
+// unschedAggNode is the unscheduled aggregator node
+// capDelta is the delta by which to change the capacity
+func (gm *graphManager) updateUnscheduledAggNode(unschedAggNode *flowgraph.Node, capDelta int64) {
+}
+
+func (gm *graphManager) visitTopologyChildren(rtnd *pb.ResourceTopologyNodeDescriptor) {
+}
+
+// Small helper functions, might not really be needed
+func (gm *graphManager) nodeForEquivClass(ec *types.EquivClass) *flowgraph.Node {
+	return nil
+}
+
+func (gm *graphManager) nodeForResourceID(resourceID *types.ResourceID) *flowgraph.Node {
+	return nil
+}
+
+func (gm *graphManager) nodeForTaskID(taskID *types.TaskID) *flowgraph.Node {
+	return nil
+}
+
+func (gm *graphManager) taskMustHaveNode(taskDescriptor *pb.TaskDescriptor) bool {
+	return false
+}
+
+func (gm *graphManager) unschedAggNodeForJobID(jobID types.JobID) *flowgraph.Node {
+	return nil
 }
