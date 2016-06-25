@@ -44,10 +44,12 @@ type GraphManager interface {
 
 	JobCompleted(id types.JobID)
 
-	NodeBindingToSchedulingDeltas(
-		taskNodeID, resourceNodeID uint64,
-		taskBindings map[types.TaskID]types.ResourceID,
-		deltas []pb.SchedulingDelta)
+	// Notes from xiang90: I modified the interface a little bit. Originally, the
+	// interface would modify the passed in delta array by appending the scheduling delta.
+	// This is not easy to be done in go. Rr it is not the common way to do it. We return
+	// the delta instead. Users can just append it to the delta array themselves.
+	NodeBindingToSchedulingDelta(taskNodeID, resourceNodeID uint64,
+		taskBindings map[types.TaskID]types.ResourceID) pb.SchedulingDelta
 
 	SchedulingDeltasForPreemptedTasks(taskMapping map[uint64]uint64, rmap types.ResourceMap, deltas []pb.SchedulingDelta)
 
@@ -62,7 +64,7 @@ type GraphManager interface {
 	//  updates the statistics of the nodes up to the root resource.
 	RemoveResourceTopology(rd pb.ResourceDescriptor) (removedPUs []uint64)
 
-	TaskCompleted(id types.TaskID) uint64
+	TaskCompleted(id types.TaskID) flowgraph.NodeID
 	TaskEvicted(id types.TaskID, rid types.ResourceID)
 	TaskFailed(id types.TaskID)
 	TaskKilled(id types.TaskID)
@@ -118,7 +120,7 @@ func (gm *graphManager) AddOrUpdateJobNodes(jobs []pb.JobDescriptor) {
 	// 2. Add its root task to the queue
 
 	q := queue.NewFIFO()
-	markedNodes := make(map[uint64]struct{})
+	markedNodes := make(map[flowgraph.NodeID]struct{})
 
 	for _, j := range jobs {
 		jid := util.MustJobIDFromString(j.Uuid)
@@ -174,13 +176,56 @@ func (gm *graphManager) AddResourceTopology(rtnd *pb.ResourceTopologyNodeDescrip
 	}
 }
 
+func (gm *graphManager) NodeBindingToSchedulingDelta(tid, rid flowgraph.NodeID, tb map[types.TaskID]types.ResourceID) *pb.SchedulingDelta {
+	taskNode := gm.cm.Graph().Node(tid)
+	if !taskNode.IsTaskNode() {
+		log.Panicf("unexpected non-task node %d\n", tid)
+	}
+	// Destination must be a PU node
+	resNode := gm.cm.Graph().Node(rid)
+	if resNode.Type != flowgraph.NodeTypePu {
+		log.Panicf("unexpected non-pu node %d\n", rid)
+	}
+
+	task := taskNode.Task
+	res := resNode.ResourceDescriptor
+
+	// Is the source (task) already placed elsewhere?
+	boundRes, ok := tb[types.TaskID(task.Uid)]
+	if !ok {
+		// Place the task.
+		log.Printf("flowmanager: place %v on %v", task.Uid, res.Uuid)
+		sd := &pb.SchedulingDelta{
+			Type:       pb.SchedulingDelta_PLACE,
+			TaskId:     task.Uid,
+			ResourceId: res.Uuid,
+		}
+		return sd
+	}
+
+	// Task already running somewhere.
+	if boundRes != util.MustResourceIDFromString(res.Uuid) {
+		log.Printf("flowmanager: migrate %v from %v to %v", task.Uid, boundRes, res.Uuid)
+		sd := &pb.SchedulingDelta{
+			Type:       pb.SchedulingDelta_MIGRATE,
+			TaskId:     task.Uid,
+			ResourceId: res.Uuid,
+		}
+		return sd
+	}
+
+	// We were already scheduled here. Add back the task_id to the resource's running tasks list.
+	res.CurrentRunningTasks = append(res.CurrentRunningTasks, task.Uid)
+	return nil
+}
+
 func (gm *graphManager) JobCompleted(id types.JobID) {
 	// We don't have to do anything else here. The task nodes have already been
 	// removed.
 	gm.removeUnscheduledAggNode(id)
 }
 
-func (gm *graphManager) TaskCompleted(id types.TaskID) uint64 {
+func (gm *graphManager) TaskCompleted(id types.TaskID) flowgraph.NodeID {
 	gm.mu.Lock()
 	defer gm.mu.Unlock()
 
@@ -279,7 +324,7 @@ func (gm *graphManager) addResourceNode(rd *pb.ResourceDescriptor) *flowgraph.No
 	if err != nil {
 		panic(err)
 	}
-	resourceNode.ID = uint64(rID)
+	resourceNode.ID = flowgraph.NodeID(rID)
 	resourceNode.ResourceDescriptor = rd
 	// Insert mapping resource to node, must not already have mapping
 	_, ok := gm.resourceToNode[rID]
@@ -369,7 +414,7 @@ func (gm *graphManager) removeResourceNode(resNode *flowgraph.Node) {
 
 }
 
-func (gm *graphManager) removeTaskNode(n *flowgraph.Node) uint64 {
+func (gm *graphManager) removeTaskNode(n *flowgraph.Node) flowgraph.NodeID {
 	taskNodeID := n.ID
 
 	// Increase the sink's excess and set this node's excess to zero.
@@ -436,7 +481,7 @@ func (gm *graphManager) updateEquivToResArcs(ecNode *flowgraph.Node,
 	markedNodes map[uint64]struct{}) {
 }
 
-func (gm *graphManager) updateFlowGraph(nodeQueue queue.FIFO, markedNodes map[uint64]struct{}) {
+func (gm *graphManager) updateFlowGraph(nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
 }
 
 func (gm *graphManager) updateResourceNode(resNode *flowgraph.Node,
