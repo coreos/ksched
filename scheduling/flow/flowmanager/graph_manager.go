@@ -51,10 +51,8 @@ type GraphManager interface {
 	NodeBindingToSchedulingDelta(taskNodeID, resourceNodeID uint64,
 		taskBindings map[types.TaskID]types.ResourceID) pb.SchedulingDelta
 
-	// NOTE(haseeb): The interface has been changed to accept a pointer to a slice,
-	// since there could be multiple scheduling deltas and we can't return them all
-	// for the user to append
-	SchedulingDeltasForPreemptedTasks(taskMapping types.MultiMap, rmap types.ResourceMap, deltas *[]pb.SchedulingDelta)
+	// NOTE(haseeb): Returns a slice of deltas for the user to append
+	SchedulingDeltasForPreemptedTasks(taskMapping types.MultiMap, rmap types.ResourceMap) []pb.SchedulingDelta
 
 	// As a result of task state change, preferences change or
 	// resource removal we may end up with unconnected equivalence
@@ -223,7 +221,11 @@ func (gm *graphManager) NodeBindingToSchedulingDelta(tid, rid flowgraph.NodeID, 
 	return nil
 }
 
-func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings types.MultiMap, rmap types.ResourceMap, deltas *[]pb.SchedulingDelta) {
+func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings types.MultiMap, rmap types.ResourceMap) []pb.SchedulingDelta {
+	deltas := make([]pb.SchedulingDelta, 0)
+	rmap.RWMu.RLock()
+	defer rmap.RWMu.RUnlock()
+
 	for resourceID, resourceStatus := range rmap.M {
 		rd := resourceStatus.Descriptor()
 		runningTasks := rd.CurrentRunningTasks
@@ -245,7 +247,7 @@ func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings types.Mul
 					ResourceId: rd.Uuid,
 					Type:       pb.SchedulingDelta_PREEMPT,
 				}
-				*deltas = append(*deltas, preemptDelta)
+				deltas = append(deltas, preemptDelta)
 			}
 		}
 		// We clear all the running tasks on the machine. The list is going to be
@@ -259,6 +261,7 @@ func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings types.Mul
 		// the CurrentRunningTasks have to be repopulated by whoever calls
 		// NodeBindingToSchedulingDeltas
 	}
+	return deltas
 }
 
 func (gm *graphManager) JobCompleted(id types.JobID) {
