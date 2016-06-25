@@ -116,7 +116,7 @@ func (cm *changeManager) DeleteNode(n *flowgraph.Node, changeType dimacs.ChangeT
 	cm.flowGraph.DeleteNode(n)
 
 	change := &dimacs.RemoveNodeChange{
-		ID: n.ID,
+		ID: uint64(n.ID),
 	}
 	change.SetComment(comment)
 	cm.addGraphChange(change)

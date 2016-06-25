@@ -25,3 +25,11 @@ func MustJobIDFromString(s string) types.JobID {
 	}
 	return types.JobID(i)
 }
+
+func MustResourceIDFromString(s string) types.ResourceID {
+	id, err := ResourceIDFromString(s)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
