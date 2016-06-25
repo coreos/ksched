@@ -51,7 +51,10 @@ type GraphManager interface {
 	NodeBindingToSchedulingDelta(taskNodeID, resourceNodeID uint64,
 		taskBindings map[types.TaskID]types.ResourceID) pb.SchedulingDelta
 
-	SchedulingDeltasForPreemptedTasks(taskMapping map[uint64]uint64, rmap types.ResourceMap, deltas []pb.SchedulingDelta)
+	// NOTE(haseeb): The interface has been changed to accept a pointer to a slice,
+	// since there could be multiple scheduling deltas and we can't return them all
+	// for the user to append
+	SchedulingDeltasForPreemptedTasks(taskMapping types.MultiMap, rmap types.ResourceMap, deltas *[]pb.SchedulingDelta)
 
 	// As a result of task state change, preferences change or
 	// resource removal we may end up with unconnected equivalence
@@ -218,6 +221,44 @@ func (gm *graphManager) NodeBindingToSchedulingDelta(tid, rid flowgraph.NodeID, 
 	// We were already scheduled here. Add back the task_id to the resource's running tasks list.
 	res.CurrentRunningTasks = append(res.CurrentRunningTasks, task.Uid)
 	return nil
+}
+
+func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings types.MultiMap, rmap types.ResourceMap, deltas *[]pb.SchedulingDelta) {
+	for resourceID, resourceStatus := range rmap.M {
+		rd := resourceStatus.Descriptor()
+		runningTasks := rd.CurrentRunningTasks
+		for taskID := range runningTasks {
+			taskNode := gm.nodeForTaskID(types.TaskID(taskID))
+			if taskNode == nil {
+				// There's no node for the task => we don't need to generate
+				// a PREEMPT delta because the task has finished.
+				continue
+			}
+
+			resNodeID := taskMappings[uint64(taskID)]
+			if resNodeID == nil {
+				// The task doesn't exist in the mappings => the task has been
+				// preempted.
+				log.Printf("PREEMPTION: take %v off %v\n", taskID, resourceID)
+				preemptDelta := pb.SchedulingDelta{
+					TaskId:     uint64(taskID),
+					ResourceId: rd.Uuid,
+					Type:       pb.SchedulingDelta_PREEMPT,
+				}
+				*deltas = append(*deltas, preemptDelta)
+			}
+		}
+		// We clear all the running tasks on the machine. The list is going to be
+		// populated again in NodeBindingToSchedulingDeltas and
+		// EventDrivenScheduler.
+		// It is easier and less expensive to clear it and populate it back again
+		// than making sure the preempted tasks are removed.
+		rd.CurrentRunningTasks = make([]uint64, 0)
+
+		// NOTE(haseeb): NodeBindingToSchedulingDeltas has been changed so,
+		// the CurrentRunningTasks have to be repopulated by whoever calls
+		// NodeBindingToSchedulingDeltas
+	}
 }
 
 func (gm *graphManager) JobCompleted(id types.JobID) {
