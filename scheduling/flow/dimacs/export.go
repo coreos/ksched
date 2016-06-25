@@ -35,13 +35,13 @@ func generateNode(n *flowgraph.Node, w io.Writer) {
 	// dimacs comments
 	switch {
 	case n.ResourceDescriptor != nil:
-		fmt.Fprint(w, "c nd Res_%s\n", n.ResourceDescriptor.Uuid)
+		fmt.Fprintf(w, "c nd Res_%s\n", n.ResourceDescriptor.Uuid)
 	case n.Task != nil:
-		fmt.Fprint(w, "c nd Task_%d\n", n.Task.Uid)
+		fmt.Fprintf(w, "c nd Task_%d\n", n.Task.Uid)
 	case n.EquivClass != nil:
-		fmt.Fprint(w, "c nd EC_%d\n", *n.EquivClass)
+		fmt.Fprintf(w, "c nd EC_%d\n", *n.EquivClass)
 	case n.Comment != "":
-		fmt.Fprint(w, "c nd %s\n", n.Comment)
+		fmt.Fprintf(w, "c nd %s\n", n.Comment)
 	}
 
 	// node type used by solver.

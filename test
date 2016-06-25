@@ -1,4 +1,19 @@
 #!/usr/bin/env bash
 
+set -eo pipefail
+
+vetres=`go vet ./... 2>&1`
+if [ ! -z "$vetres" ]; then
+	echo -e "govet checking failed:\n$vetres"
+	exit 1
+fi
+
+SRCS=`find . -name \*.go`
+fmtres=`gofmt -l -d -s $SRCS 2>&1`
+if [ ! -z "$fmtres" ]; then
+	echo -e "gofmt checking failed:\n$fmtres"
+	exit 1
+fi
+
 # Run all tests in all packages
 go test ./...
