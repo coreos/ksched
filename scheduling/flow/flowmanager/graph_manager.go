@@ -77,7 +77,8 @@ type GraphManager interface {
 }
 
 type graphManager struct {
-	Preemption bool
+	Preemption    bool
+	MaxTasksPerPu int64
 
 	cm          GraphChangeManager
 	sinkNode    *flowgraph.Node
@@ -345,6 +346,73 @@ func (gm *graphManager) addResourceNode(rd *pb.ResourceDescriptor) *flowgraph.No
 // num slots, num running tasks)
 // rtnd is the topology descriptor of the root node
 func (gm *graphManager) addResourceTopologyDFS(rtnd *pb.ResourceTopologyNodeDescriptor) {
+	// Steps:
+	// 1) Add new resource node and connect it to the sink if the new node is a
+	// PU node.
+	// 2) Add the node's subtree.
+	// 3) Connect the node to its parent.
+
+	// Not doing any nil checks. Will just panic
+	rd := rtnd.ResourceDesc
+	rID := util.MustResourceIDFromString(rd.Uuid)
+	resourceNode := gm.nodeForResourceID(rID)
+
+	addedNewResNode := false
+	if resourceNode == nil {
+		addedNewResNode = true
+		resourceNode = gm.addResourceNode(rd)
+		if resourceNode.Type == flowgraph.NodeTypePu {
+			gm.updateResToSinkArc(resourceNode)
+			if rd.NumSlotsBelow == 0 {
+				rd.NumSlotsBelow = uint64(gm.MaxTasksPerPu)
+				if rd.NumRunningTasksBelow == 0 {
+					rd.NumRunningTasksBelow = uint64(len(rd.CurrentRunningTasks))
+				}
+			}
+		} else {
+			if resourceNode.Type == flowgraph.NodeTypeMachine {
+				// TODO: gm.traceGenerator.AddMachine(rd);
+				gm.costModeler.AddMachine(rtnd)
+			}
+			rd.NumSlotsBelow = 0
+			rd.NumRunningTasksBelow = 0
+		}
+	} else {
+		rd.NumSlotsBelow = 0
+		rd.NumRunningTasksBelow = 0
+		// NOTE: This comment seems to be an issue with their coordinator implementation
+		// maybe not relevant to our purposes.
+		// TODO(ionel): The method continues even if we already had a node for the
+		// "new" resources. This is because the coordinator ends up calling twice
+		// RegisterResource for the same resource. Uncomment the LOG(FATAL) once
+		// the coordinator is fixed.
+		// (see https://github.com/ms705/firmament/issues/41)
+		// LOG(FATAL) << "Resource node for resource: " << res_id
+		//            << " already exists";
+	}
+
+	gm.visitTopologyChildren(rtnd)
+	if rtnd.ParentId == "" && rd.Type != pb.ResourceDescriptor_ResourceCoordinator {
+		log.Panicf("A resource node that is not a coordinator must have a parent")
+	}
+
+	if addedNewResNode {
+		// Connect the node to the parent
+		pID := util.MustResourceIDFromString(rtnd.ParentId)
+		parentNode := gm.nodeForResourceID(pID)
+
+		// Insert mapping to parentNode, must not already have a parent
+		_, ok := gm.nodeToParentNode[resourceNode]
+		if ok {
+			log.Panicf("gm:AddResourceTopologyDFS Mapping for resourceNode:%v to parent already present\n", rd.Uuid)
+		}
+		gm.nodeToParentNode[resourceNode] = parentNode
+
+		gm.cm.AddArc(parentNode, resourceNode,
+			0, gm.capacityFromResNodeToParent(rd),
+			int64(gm.costModeler.ResourceNodeToResourceNodeCost(parentNode.ResourceDescriptor, rd)),
+			flowgraph.Other, dimacs.AddArcBetweenRes, "AddResourceTopologyDFS")
+	}
 
 }
 
