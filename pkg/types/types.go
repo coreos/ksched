@@ -54,15 +54,15 @@ type TaskMap struct {
 type MultiMap map[uint64]map[uint64]struct{}
 
 // Expose Map for readonly purposes. To be used with Rlock() and RUnlock()
-func (rm *ResourceMap) Map() map[ResourceID]*rs.ResourceStatus {
+func (rm *ResourceMap) UnsafeGet() map[ResourceID]*rs.ResourceStatus {
 	return rm.m
 }
 
-func (jm *JobMap) Map() map[JobID]*pb.JobDescriptor {
+func (jm *JobMap) UnsafeGet() map[JobID]*pb.JobDescriptor {
 	return jm.m
 }
 
-func (tm *TaskMap) Map() map[TaskID]*pb.TaskDescriptor {
+func (tm *TaskMap) UnsafeGet() map[TaskID]*pb.TaskDescriptor {
 	return tm.m
 }
 
