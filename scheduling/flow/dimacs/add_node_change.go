@@ -37,7 +37,7 @@ const (
 
 // AddNodeChange implements the Change interface from dimacschange.go
 type AddNodeChange struct {
-	comment      string
+	commentChange
 	ID           flowgraph.NodeID
 	Excess       int64
 	Typ          flowgraph.NodeType
@@ -51,24 +51,6 @@ func NewAddNodeChange(n *flowgraph.Node) *AddNodeChange {
 		Typ:    n.Type,
 	}
 	return anc
-}
-
-// Get comment
-func (an *AddNodeChange) Comment() string {
-	return an.comment
-}
-
-// Set comment
-func (an *AddNodeChange) SetComment(comment string) {
-	an.comment = comment
-}
-
-// Generates the dimacs comment line for this change
-func (an *AddNodeChange) GenerateChangeDescription() string {
-	if an.comment != "" {
-		return "c " + an.comment + "\n"
-	}
-	return ""
 }
 
 // Returns the dimacs Node Descriptor format

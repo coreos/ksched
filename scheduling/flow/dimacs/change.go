@@ -19,10 +19,23 @@
 package dimacs
 
 type Change interface {
+	// Comment gets the change's comment
 	Comment() string
+	// SetComment sets the change's comment
 	SetComment(string)
-	// Generate dimacs comment line descriptor for this change
+	// GenerateChangeDescription generates a dimacs comment line descriptor for this change
 	GenerateChangeDescription() string
-	// Generate dimacs line descriptor for this change
+	// GenerateChange generates dimacs line descriptor for this change
 	GenerateChange() string
+}
+
+type commentChange struct{ comment string }
+
+func (cc *commentChange) Comment() string           { return cc.comment }
+func (cc *commentChange) SetComment(comment string) { cc.comment = comment }
+func (cc *commentChange) GenerateChangeDescription() string {
+	if cc.comment == "" {
+		return ""
+	}
+	return "c " + cc.comment + "\n"
 }

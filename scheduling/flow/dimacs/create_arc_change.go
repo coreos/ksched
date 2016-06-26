@@ -22,28 +22,10 @@ import (
 
 // CreateArcChange implements the Change interface from dimacschange.go
 type CreateArcChange struct {
-	comment                                string
+	commentChange
 	Src, Dst, CapLowerBound, CapUpperBound uint64
 	Cost                                   int64
 	Typ                                    flowgraph.ArcType
-}
-
-// Get comment
-func (cac *CreateArcChange) Comment() string {
-	return cac.comment
-}
-
-// Set comment
-func (cac *CreateArcChange) SetComment(comment string) {
-	cac.comment = comment
-}
-
-// Generates the dimacs comment line for this change
-func (cac *CreateArcChange) GenerateChangeDescription() string {
-	if cac.comment != "" {
-		return "c " + cac.comment + "\n"
-	}
-	return ""
 }
 
 // Returns the dimacs Arc Descriptor format

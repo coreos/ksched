@@ -18,26 +18,8 @@ import "strconv"
 
 // RemoveNodeChange implements the Change interface from dimacschange.go
 type RemoveNodeChange struct {
-	comment string
-	ID      uint64
-}
-
-// Get comment
-func (rn *RemoveNodeChange) Comment() string {
-	return rn.comment
-}
-
-// Set comment
-func (rn *RemoveNodeChange) SetComment(comment string) {
-	rn.comment = comment
-}
-
-// Generates the dimacs comment line for this change
-func (rn *RemoveNodeChange) GenerateChangeDescription() string {
-	if rn.comment != "" {
-		return "c " + rn.comment + "\n"
-	}
-	return ""
+	commentChange
+	ID uint64
 }
 
 // Returns an update to the dimacs Node Descriptor format
