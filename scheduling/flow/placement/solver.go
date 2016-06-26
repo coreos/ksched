@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
-	"sync"
 
 	"github.com/coreos/ksched/scheduling/flow/dimacs"
 	"github.com/coreos/ksched/scheduling/flow/flowgraph"
@@ -43,76 +42,61 @@ type Solver interface {
 }
 
 type flowlesslySolver struct {
-	once sync.Once
-	gm   flowmanager.GraphManager
-
-	toSolver   io.Writer
-	fromSolver io.Reader
+	isSolverStarted bool
+	gm              flowmanager.GraphManager
+	toSolver        io.Writer
+	fromSolver      io.Reader
 }
 
 // NOTE: assume we don't have debug flag
 // NOTE: assume we only do incremental flow
+// Note: assume we run Solve() iteratively and sequentially without concurrency.
 func (fs *flowlesslySolver) Solve() flowmanager.TaskMappings {
-	var tm flowmanager.TaskMappings
 	// Note: combine all the first time logic into this once function.
 	// This is different from original cpp code.
-	firstTime := false
-	fs.once.Do(func() {
-		firstTime = true
+	if !fs.isSolverStarted {
+		fs.isSolverStarted = true
 
-		binaryStr, args := solverConfig()
-		cmd := exec.Command(binaryStr, args...)
-		err := cmd.Start()
-		if err != nil {
-			panic(err)
-		}
-		fs.toSolver, err = cmd.StdinPipe()
-		if err != nil {
-			panic(err)
-		}
-		fs.fromSolver, err = cmd.StdoutPipe()
-		if err != nil {
-			panic(err)
-		}
-
+		fs.startSolver()
 		// We must export graph and read from STDOUT/STDERR in parallel
 		// Otherwise, the solver might block if STDOUT/STDERR buffer gets full.
 		// (For example, if it outputs lots of warnings on STDERR.)
-		done := fs.goExportGraph()
-		tm = fs.readOutput()
-		// Wait for exporter to complete. (Should already have happened when we
-		// get here, given we've finished reading the output.)
-		<-done
-	})
-	if firstTime {
+		go fs.exportGraph()
+		tm := fs.readOutput()
+		// Exporter should have already finished writing because reading goroutine
+		// have also finished.
 		return tm
 	}
 
 	fs.gm.UpdateAllCostsToUnscheduledAggs()
-	done := fs.goExportIncremental
-	tm = fs.readOutput()
-	<-done
+	go fs.exportIncremental()
+	tm := fs.readOutput()
 	return tm
 }
-
-func (fs *flowlesslySolver) goExportGraph() <-chan struct{} {
-	done := make(chan struct{})
-	go func() {
-		dimacs.Export(fs.gm.GraphChangeManager().Graph(), fs.toSolver)
-		fs.gm.GraphChangeManager().ResetChanges()
-		close(done)
-	}()
-	return done
+func (fs *flowlesslySolver) startSolver() {
+	binaryStr, args := fs.getBinConfig()
+	cmd := exec.Command(binaryStr, args...)
+	err := cmd.Start()
+	if err != nil {
+		panic(err)
+	}
+	fs.toSolver, err = cmd.StdinPipe()
+	if err != nil {
+		panic(err)
+	}
+	fs.fromSolver, err = cmd.StdoutPipe()
+	if err != nil {
+		panic(err)
+	}
+}
+func (fs *flowlesslySolver) exportGraph() {
+	dimacs.Export(fs.gm.GraphChangeManager().Graph(), fs.toSolver)
+	fs.gm.GraphChangeManager().ResetChanges()
 }
 
-func (fs *flowlesslySolver) goExportIncremental() <-chan struct{} {
-	done := make(chan struct{})
-	go func() {
-		dimacs.ExportIncremental(fs.gm.GraphChangeManager().GetOptimizedGraphChanges(), fs.toSolver)
-		fs.gm.GraphChangeManager().ResetChanges()
-		close(done)
-	}()
-	return done
+func (fs *flowlesslySolver) exportIncremental() {
+	dimacs.ExportIncremental(fs.gm.GraphChangeManager().GetOptimizedGraphChanges(), fs.toSolver)
+	fs.gm.GraphChangeManager().ResetChanges()
 }
 
 func (fs *flowlesslySolver) readOutput() flowmanager.TaskMappings {
@@ -214,28 +198,35 @@ func (fs *flowlesslySolver) getMappings(extractedFlow map[flowgraph.NodeID]flowP
 	return flowmanager.TaskMappings(taskToPu)
 }
 
-// Note: assume we only use flowlessly solver
-func solverConfig() (string, []string) {
+// TODO: We can definitely make it cleaner. But currently we just copy the code.
+func (fs *flowlesslySolver) getBinConfig() (string, []string) {
 	args := []string{"--graph_has_node_types=true"}
+
 	args = append(args, fmt.Sprintf("--algorithm=%s", FlowlesslyAlgorithm))
+
 	if OnlyReadAssignmentChanges {
 		args = append(args, "--print_assignments=true")
 	} else {
 		args = append(args, "--print_assignments=false")
 	}
+
 	if FlowlesslyInitialRunsAlgorithm == "" {
 		args = append(args, fmt.Sprintf("--algorithm_initial_solver_runs=%s", FlowlesslyInitialRunsAlgorithm))
 		args = append(args, fmt.Sprintf("--algorithm_number_initial_runs=%d", FlowlesslyNumberInitialRuns))
 	}
+
 	if FlowlesslyFlipAlgorithms {
 		args = append(args, "--flip_algorithms")
 	}
+
 	if FlowlesslyBestAlgorithm {
 		args = append(args, "--best_flowlessly_algorithm")
 	}
+
 	if FlowlesslyRunCostScalingAndRelax {
 		args = append(args, "--run_cost_scaling_and_relax")
 	}
+
 	args = append(args, fmt.Sprintf("--alpha_scaling_factor=%d", FlowlesslyAlphaFactor))
 	return FlowlesslyBinary, args
 }
