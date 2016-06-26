@@ -56,7 +56,7 @@ type GraphManager interface {
 		taskBindings map[types.TaskID]types.ResourceID) pb.SchedulingDelta
 
 	// NOTE(haseeb): Returns a slice of deltas for the user to append
-	SchedulingDeltasForPreemptedTasks(taskMapping TaskMappings, rmap types.ResourceMap) []pb.SchedulingDelta
+	SchedulingDeltasForPreemptedTasks(taskMapping TaskMapping, rmap types.ResourceMap) []pb.SchedulingDelta
 
 	// As a result of task state change, preferences change or
 	// resource removal we may end up with unconnected equivalence
@@ -236,7 +236,7 @@ func (gm *graphManager) NodeBindingToSchedulingDelta(tid, rid flowgraph.NodeID, 
 	return nil
 }
 
-func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings TaskMappings, rmap *types.ResourceMap) []pb.SchedulingDelta {
+func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings TaskMapping, rmap *types.ResourceMap) []pb.SchedulingDelta {
 	deltas := make([]pb.SchedulingDelta, 0)
 	// Need to lock the map before iterating over it
 	rmap.RLock()

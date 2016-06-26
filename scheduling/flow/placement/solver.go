@@ -30,7 +30,7 @@ var (
 	FlowlesslyAlgorithm              = "fast_cost_scaling"
 	FlowlesslyInitialRunsAlgorithm   = ""
 	FlowlesslyNumberInitialRuns      = 0
-	OnlyReadAssignmentChanges        = false
+	OnlyReadTaskAssignmentChanges    = false
 	FlowlesslyFlipAlgorithms         = false
 	FlowlesslyBestAlgorithm          = false
 	FlowlesslyRunCostScalingAndRelax = false
@@ -38,7 +38,7 @@ var (
 )
 
 type Solver interface {
-	Solve() flowmanager.TaskMappings
+	Solve() flowmanager.TaskMapping
 }
 
 type flowlesslySolver struct {
@@ -51,7 +51,7 @@ type flowlesslySolver struct {
 // NOTE: assume we don't have debug flag
 // NOTE: assume we only do incremental flow
 // Note: assume we run Solve() iteratively and sequentially without concurrency.
-func (fs *flowlesslySolver) Solve() flowmanager.TaskMappings {
+func (fs *flowlesslySolver) Solve() flowmanager.TaskMapping {
 	// Note: combine all the first time logic into this once function.
 	// This is different from original cpp code.
 	if !fs.isSolverStarted {
@@ -62,7 +62,7 @@ func (fs *flowlesslySolver) Solve() flowmanager.TaskMappings {
 		// Otherwise, the solver might block if STDOUT/STDERR buffer gets full.
 		// (For example, if it outputs lots of warnings on STDERR.)
 		go fs.exportGraph()
-		tm := fs.readOutput()
+		tm := fs.readTaskMapping()
 		// Exporter should have already finished writing because reading goroutine
 		// have also finished.
 		return tm
@@ -70,7 +70,7 @@ func (fs *flowlesslySolver) Solve() flowmanager.TaskMappings {
 
 	fs.gm.UpdateAllCostsToUnscheduledAggs()
 	go fs.exportIncremental()
-	tm := fs.readOutput()
+	tm := fs.readTaskMapping()
 	return tm
 }
 func (fs *flowlesslySolver) startSolver() {
@@ -99,9 +99,9 @@ func (fs *flowlesslySolver) exportIncremental() {
 	fs.gm.GraphChangeManager().ResetChanges()
 }
 
-func (fs *flowlesslySolver) readOutput() flowmanager.TaskMappings {
+func (fs *flowlesslySolver) readTaskMapping() flowmanager.TaskMapping {
 	extractedFlow := fs.readFlowGraph()
-	return fs.getMappings(extractedFlow)
+	return fs.parseFlowToMapping(extractedFlow)
 }
 
 // readFlowGraph returns a map of dst to a list of its corresponding src and flow capacity.
@@ -112,8 +112,8 @@ func (fs *flowlesslySolver) readFlowGraph() map[flowgraph.NodeID]flowPairList {
 		line := scanner.Text()
 		switch line[0] {
 		case 'f':
-			var src, dst, flow uint64
-			n, err := fmt.Sscanf(line, "%*c %d %d %d", &src, &dst, &flow)
+			var src, dst, flowCap uint64
+			n, err := fmt.Sscanf(line, "%*c %d %d %d", &src, &dst, &flowCap)
 			if err != nil {
 				panic(err)
 			}
@@ -121,8 +121,8 @@ func (fs *flowlesslySolver) readFlowGraph() map[flowgraph.NodeID]flowPairList {
 				panic("expected reading 3 items")
 			}
 
-			if flow > 0 {
-				pair := &flowPair{flowgraph.NodeID(src), flow}
+			if flowCap > 0 {
+				pair := &flowPair{flowgraph.NodeID(src), flowCap}
 				adjList[flowgraph.NodeID(dst)].Insert(pair)
 			}
 		case 'c':
@@ -142,14 +142,16 @@ func (fs *flowlesslySolver) readFlowGraph() map[flowgraph.NodeID]flowPairList {
 
 // Maps worker|root tasks to leaves. It expects a extracted_flow containing
 // only the arcs with positive flow (i.e. what ReadFlowGraph returns).
-func (fs *flowlesslySolver) getMappings(extractedFlow map[flowgraph.NodeID]flowPairList) flowmanager.TaskMappings {
-	taskToPu := make(map[flowgraph.NodeID][]flowgraph.NodeID)
+func (fs *flowlesslySolver) parseFlowToMapping(extractedFlow map[flowgraph.NodeID]flowPairList) flowmanager.TaskMapping {
+	taskToPU := flowmanager.TaskMapping{}
+	// Note:
 	puIDs := make(map[flowgraph.NodeID][]flowgraph.NodeID)
 	graph := fs.gm.GraphChangeManager().Graph()
-	visited := make([]bool, graph.NumNodes()+1) // assuming node ID is 1 to N.
-	toVisit := make([]flowgraph.NodeID, 0)
+	visited := make([]bool, graph.NumNodes()+1) // assuming node ID range is 1 to N.
+	toVisit := make([]flowgraph.NodeID, 0)      // fifo queue
 	leafIDs := fs.gm.LeafNodeIDs()
 	sink := fs.gm.SinkNode()
+
 	for leafID := range leafIDs {
 		visited[leafID] = true
 		flow, ok := extractedFlow[sink.ID].Find(leafID)
@@ -162,42 +164,58 @@ func (fs *flowlesslySolver) getMappings(extractedFlow map[flowgraph.NodeID]flowP
 		toVisit = append(toVisit, leafID)
 	}
 
+	// a variant of breath-frist search
 	for len(toVisit) != 0 {
 		nodeID := toVisit[0]
 		toVisit = toVisit[1:]
 		visited[nodeID] = true
-		if fs.gm.GraphChangeManager().CheckNodeType(nodeID, flowgraph.NodeTypeRootTask) ||
-			fs.gm.GraphChangeManager().CheckNodeType(nodeID, flowgraph.NodeTypeUnscheduledTask) ||
-			fs.gm.GraphChangeManager().CheckNodeType(nodeID, flowgraph.NodeTypeScheduledTask) {
+
+		if fs.isTaskNode(nodeID) {
 			// It's a task node.
 			for _, puID := range puIDs[nodeID] {
-				taskToPu[nodeID] = append(taskToPu[nodeID], puID)
+				taskToPU.Insert(nodeID, puID)
 			}
-		} else {
-			iter := 0
-			for _, srcFlow := range extractedFlow[nodeID] {
-				assignedAllPus := false
-				for srcFlow.capacity > 0 {
-					if iter == len(puIDs[nodeID]) {
-						assignedAllPus = true
-						break
-					}
-					puIDs[srcFlow.nodeID] = append(puIDs[srcFlow.nodeID], puIDs[nodeID][iter])
-					iter++
-					srcFlow.capacity--
-				}
-				if !visited[srcFlow.nodeID] {
-					toVisit = append(toVisit, srcFlow.nodeID)
-					visited[srcFlow.nodeID] = true
-				}
-				if assignedAllPus {
-					break
-				}
-			}
+			continue
 		}
+
+		addPUToSourceNodes(extractedFlow, puIDs, nodeID, visited, toVisit)
 	}
 
-	return flowmanager.TaskMappings(taskToPu)
+	return taskToPU
+}
+
+func addPUToSourceNodes(extractedFlow map[flowgraph.NodeID]flowPairList, puIDs map[flowgraph.NodeID][]flowgraph.NodeID, nodeID flowgraph.NodeID, visited []bool, toVisit []flowgraph.NodeID) {
+	iter := 0
+	// search each source and assign all its downstream PUs to them.
+	for _, srcFlow := range extractedFlow[nodeID] {
+		// Populate the PUs vector at the source of the arc with as many PU
+		// entries from the incoming set of PU IDs as there's flow on the arc.
+		for ; srcFlow.capacity > 0; srcFlow.capacity-- {
+			if iter == len(puIDs[nodeID]) {
+				break
+			}
+			// It's an incoming arc with flow on it.
+			// Add the PU to the PUs vector of the source node.
+			puIDs[srcFlow.nodeID] = append(puIDs[srcFlow.nodeID], puIDs[nodeID][iter])
+			iter++
+		}
+		if !visited[srcFlow.nodeID] {
+			toVisit = append(toVisit, srcFlow.nodeID)
+			visited[srcFlow.nodeID] = true
+		}
+
+		if iter == len(puIDs[nodeID]) {
+			// No more PUs left to assign
+			break
+		}
+	}
+}
+
+func (fs *flowlesslySolver) isTaskNode(nodeID flowgraph.NodeID) bool {
+	// TODO: We need to make sure locking on graph change manager.
+	return fs.gm.GraphChangeManager().CheckNodeType(nodeID, flowgraph.NodeTypeRootTask) ||
+		fs.gm.GraphChangeManager().CheckNodeType(nodeID, flowgraph.NodeTypeUnscheduledTask) ||
+		fs.gm.GraphChangeManager().CheckNodeType(nodeID, flowgraph.NodeTypeScheduledTask)
 }
 
 // TODO: We can definitely make it cleaner. But currently we just copy the code.
@@ -206,7 +224,7 @@ func (fs *flowlesslySolver) getBinConfig() (string, []string) {
 
 	args = append(args, fmt.Sprintf("--algorithm=%s", FlowlesslyAlgorithm))
 
-	if OnlyReadAssignmentChanges {
+	if OnlyReadTaskAssignmentChanges {
 		args = append(args, "--print_assignments=true")
 	} else {
 		args = append(args, "--print_assignments=false")
