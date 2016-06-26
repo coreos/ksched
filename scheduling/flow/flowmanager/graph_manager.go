@@ -221,7 +221,7 @@ func (gm *graphManager) NodeBindingToSchedulingDelta(tid, rid flowgraph.NodeID, 
 	return nil
 }
 
-func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings types.MultiMap, rmap types.ResourceMap) []pb.SchedulingDelta {
+func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings types.MultiMap, rmap *types.ResourceMap) []pb.SchedulingDelta {
 	deltas := make([]pb.SchedulingDelta, 0)
 	// Need to lock the map before iterating over it
 	rmap.RLock()
