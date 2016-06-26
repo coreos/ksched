@@ -2,11 +2,7 @@
 
 set -eo pipefail
 
-vetres=`go vet ./... 2>&1`
-if [ ! -z "$vetres" ]; then
-	echo -e "govet checking failed:\n$vetres"
-	exit 1
-fi
+go vet ./... 2>&1
 
 SRCS=`find . -name \*.go`
 fmtres=`gofmt -l -d -s $SRCS 2>&1`
