@@ -22,7 +22,7 @@ import (
 
 // UpdateArcChange implements the Change interface from dimacschange.go
 type UpdateArcChange struct {
-	comment                      string
+	commentChange
 	Src, Dst                     flowgraph.NodeID
 	CapLowerBound, CapUpperBound uint64
 	Cost, OldCost                int64
@@ -40,24 +40,6 @@ func NewUpdateArcChange(arc *flowgraph.Arc, oldCost int64) *UpdateArcChange {
 		OldCost:       oldCost,
 	}
 	return uac
-}
-
-// Get comment
-func (uac *UpdateArcChange) Comment() string {
-	return uac.comment
-}
-
-// Set comment
-func (uac *UpdateArcChange) SetComment(comment string) {
-	uac.comment = comment
-}
-
-// Generates the dimacs comment line for this change
-func (uac *UpdateArcChange) GenerateChangeDescription() string {
-	if uac.comment != "" {
-		return "c " + uac.comment + "\n"
-	}
-	return ""
 }
 
 // Returns an update to the dimacs Arc Descriptor format
