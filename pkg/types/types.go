@@ -36,37 +36,69 @@ type (
 // When initializing the map type, make sure to make map
 // NOTE: These maps only take pointer values, so change wherever a direct struct is passed below
 type ResourceMap struct {
-	RWMu sync.RWMutex
-	M    map[ResourceID]*rs.ResourceStatus
+	rwMu sync.RWMutex
+	m    map[ResourceID]*rs.ResourceStatus
 }
 
 type JobMap struct {
-	RWMu sync.RWMutex
-	M    map[JobID]*pb.JobDescriptor
-	// NOTE: changing to be a pointer to JobDescriptor since
-	// you cannot have pointers to map values
+	rwMu sync.RWMutex
+	m    map[JobID]*pb.JobDescriptor
 }
 
 type TaskMap struct {
-	RWMu sync.RWMutex
-	M    map[TaskID]*pb.TaskDescriptor
+	rwMu sync.RWMutex
+	m    map[TaskID]*pb.TaskDescriptor
 }
 
 // Multimap: multiple values can map to a single key
 type MultiMap map[uint64]map[uint64]struct{}
 
-// Maps utility functions used by Firmament
-// Implemented as generic templates in C++
-// See: https://github.com/camsas/firmament/blob/master/src/misc/map-util.h
-// TODO: Decide later what to do with this redundant mess
+// Expose Map
+func (rm *ResourceMap) Map() map[ResourceID]*rs.ResourceStatus {
+	return rm.m
+}
+
+func (jm *JobMap) Map() map[JobID]*pb.JobDescriptor {
+	return jm.m
+}
+
+func (tm *TaskMap) Map() map[TaskID]*pb.TaskDescriptor {
+	return tm.m
+}
+
+// Expose read lock, need to be careful not to deadlock
+func (rm *ResourceMap) RLock() {
+	rm.rwMu.RLock()
+}
+
+func (jm *JobMap) RLock() {
+	jm.rwMu.RLock()
+}
+
+func (tm *TaskMap) RLock() {
+	tm.rwMu.RLock()
+}
+
+// Expose read unlock
+func (rm *ResourceMap) RUnlock() {
+	rm.rwMu.RUnlock()
+}
+
+func (jm *JobMap) RUnlock() {
+	jm.rwMu.RUnlock()
+}
+
+func (tm *TaskMap) RUnlock() {
+	tm.rwMu.RUnlock()
+}
 
 // Perform a lookup in a map.
 // If the key is present in the map then the value associated with that
 // key is returned, otherwise the value passed as a default is returned.
 func (rm *ResourceMap) FindWithDefault(k ResourceID, dV *rs.ResourceStatus) *rs.ResourceStatus {
-	rm.RWMu.RLock()
-	defer rm.RWMu.RUnlock()
-	v, ok := rm.M[k]
+	rm.rwMu.RLock()
+	defer rm.rwMu.RUnlock()
+	v, ok := rm.m[k]
 	if !ok {
 		v = dV
 	}
@@ -74,9 +106,9 @@ func (rm *ResourceMap) FindWithDefault(k ResourceID, dV *rs.ResourceStatus) *rs.
 }
 
 func (jm *JobMap) FindWithDefault(k JobID, dV *pb.JobDescriptor) *pb.JobDescriptor {
-	jm.RWMu.RLock()
-	defer jm.RWMu.RUnlock()
-	v, ok := jm.M[k]
+	jm.rwMu.RLock()
+	defer jm.rwMu.RUnlock()
+	v, ok := jm.m[k]
 	if !ok {
 		v = dV
 	}
@@ -84,9 +116,9 @@ func (jm *JobMap) FindWithDefault(k JobID, dV *pb.JobDescriptor) *pb.JobDescript
 }
 
 func (tm *TaskMap) FindWithDefault(k TaskID, dV *pb.TaskDescriptor) *pb.TaskDescriptor {
-	tm.RWMu.RLock()
-	defer tm.RWMu.RUnlock()
-	v, ok := tm.M[k]
+	tm.rwMu.RLock()
+	defer tm.rwMu.RUnlock()
+	v, ok := tm.m[k]
 	if !ok {
 		v = dV
 	}
@@ -107,23 +139,23 @@ func (tm *TaskMap) FindWithDefault(k TaskID, dV *pb.TaskDescriptor) *pb.TaskDesc
 // This function does not distinguish between a missing key and a key mapped
 // to a NULL value.
 func (rm *ResourceMap) FindPtrOrNull(k ResourceID) *rs.ResourceStatus {
-	rm.RWMu.RLock()
-	defer rm.RWMu.RUnlock()
-	v := rm.M[k] // Should be nil for missing keys by default
+	rm.rwMu.RLock()
+	defer rm.rwMu.RUnlock()
+	v := rm.m[k] // Should be nil for missing keys by default
 	return v
 }
 
 func (jm *JobMap) FindPtrOrNull(k JobID) *pb.JobDescriptor {
-	jm.RWMu.RLock()
-	defer jm.RWMu.RUnlock()
-	v := jm.M[k]
+	jm.rwMu.RLock()
+	defer jm.rwMu.RUnlock()
+	v := jm.m[k]
 	return v
 }
 
 func (tm *TaskMap) FindPtrOrNull(k TaskID) *pb.TaskDescriptor {
-	tm.RWMu.RLock()
-	defer tm.RWMu.RUnlock()
-	v := tm.M[k]
+	tm.rwMu.RLock()
+	defer tm.rwMu.RUnlock()
+	v := tm.m[k]
 	return v
 }
 
@@ -132,26 +164,26 @@ func (tm *TaskMap) FindPtrOrNull(k TaskID) *pb.TaskDescriptor {
 // otherwise the value is updated to be a copy of the value provided.
 // True indicates that an insert took place, false indicates an update.
 func (rm *ResourceMap) InsertOrUpdate(k ResourceID, val *rs.ResourceStatus) bool {
-	rm.RWMu.Lock()
-	defer rm.RWMu.Unlock()
-	_, ok := rm.M[k]
-	rm.M[k] = val
+	rm.rwMu.Lock()
+	defer rm.rwMu.Unlock()
+	_, ok := rm.m[k]
+	rm.m[k] = val
 	return !ok
 }
 
 func (jm *JobMap) InsertOrUpdate(k JobID, val *pb.JobDescriptor) bool {
-	jm.RWMu.Lock()
-	defer jm.RWMu.Unlock()
-	_, ok := jm.M[k]
-	jm.M[k] = val
+	jm.rwMu.Lock()
+	defer jm.rwMu.Unlock()
+	_, ok := jm.m[k]
+	jm.m[k] = val
 	return !ok
 }
 
 func (tm *TaskMap) InsertOrUpdate(k TaskID, val *pb.TaskDescriptor) bool {
-	tm.RWMu.Lock()
-	defer tm.RWMu.Unlock()
-	_, ok := tm.M[k]
-	tm.M[k] = val
+	tm.rwMu.Lock()
+	defer tm.rwMu.Unlock()
+	_, ok := tm.m[k]
+	tm.m[k] = val
 	return !ok
 }
 
@@ -160,31 +192,31 @@ func (tm *TaskMap) InsertOrUpdate(k TaskID, val *pb.TaskDescriptor) bool {
 // inserted, otherwise nothing happens. True indicates that an insert
 // took place, false indicates the key was already present.
 func (rm *ResourceMap) InsertIfNotPresent(k ResourceID, val *rs.ResourceStatus) bool {
-	rm.RWMu.Lock()
-	defer rm.RWMu.Unlock()
-	_, ok := rm.M[k]
+	rm.rwMu.Lock()
+	defer rm.rwMu.Unlock()
+	_, ok := rm.m[k]
 	if !ok {
-		rm.M[k] = val
+		rm.m[k] = val
 	}
 	return !ok
 }
 
 func (jm *JobMap) InsertIfNotPresent(k JobID, val *pb.JobDescriptor) bool {
-	jm.RWMu.Lock()
-	defer jm.RWMu.Unlock()
-	_, ok := jm.M[k]
+	jm.rwMu.Lock()
+	defer jm.rwMu.Unlock()
+	_, ok := jm.m[k]
 	if !ok {
-		jm.M[k] = val
+		jm.m[k] = val
 	}
 	return !ok
 }
 
 func (tm *TaskMap) InsertIfNotPresent(k TaskID, val *pb.TaskDescriptor) bool {
-	tm.RWMu.Lock()
-	defer tm.RWMu.Unlock()
-	_, ok := tm.M[k]
+	tm.rwMu.Lock()
+	defer tm.rwMu.Unlock()
+	_, ok := tm.m[k]
 	if !ok {
-		tm.M[k] = val
+		tm.m[k] = val
 	}
 	return !ok
 }
@@ -193,9 +225,9 @@ func (tm *TaskMap) InsertIfNotPresent(k TaskID, val *pb.TaskDescriptor) bool {
 // If the key is present and value is non-NULL then a copy of the value
 // associated with the key is made into *val. Returns whether key was present.
 func (rm *ResourceMap) FindCopy(k ResourceID, val *rs.ResourceStatus) bool {
-	rm.RWMu.RLock()
-	defer rm.RWMu.RUnlock()
-	v, ok := rm.M[k]
+	rm.rwMu.RLock()
+	defer rm.rwMu.RUnlock()
+	v, ok := rm.m[k]
 	if ok && (v != nil) {
 		*val = *v // since we know that the values are pointers for all maps
 	}
@@ -203,9 +235,9 @@ func (rm *ResourceMap) FindCopy(k ResourceID, val *rs.ResourceStatus) bool {
 }
 
 func (jm *JobMap) FindCopy(k JobID, val *pb.JobDescriptor) bool {
-	jm.RWMu.RLock()
-	defer jm.RWMu.RUnlock()
-	v, ok := jm.M[k]
+	jm.rwMu.RLock()
+	defer jm.rwMu.RUnlock()
+	v, ok := jm.m[k]
 	if ok && (v != nil) {
 		*val = *v // since we know that the values are pointers for all maps
 	}
@@ -213,9 +245,9 @@ func (jm *JobMap) FindCopy(k JobID, val *pb.JobDescriptor) bool {
 }
 
 func (tm *TaskMap) FindCopy(k TaskID, val *pb.TaskDescriptor) bool {
-	tm.RWMu.RLock()
-	defer tm.RWMu.RUnlock()
-	v, ok := tm.M[k]
+	tm.rwMu.RLock()
+	defer tm.rwMu.RUnlock()
+	v, ok := tm.m[k]
 	if ok && (v != nil) {
 		*val = *v // since we know that the values are pointers for all maps
 	}
@@ -225,22 +257,22 @@ func (tm *TaskMap) FindCopy(k TaskID, val *pb.TaskDescriptor) bool {
 // Test to see if a map contains a particular key.
 // Returns true if the key is in the collection.
 func (rm *ResourceMap) ContainsKey(k ResourceID) bool {
-	rm.RWMu.RLock()
-	defer rm.RWMu.RUnlock()
-	_, ok := rm.M[k]
+	rm.rwMu.RLock()
+	defer rm.rwMu.RUnlock()
+	_, ok := rm.m[k]
 	return ok
 }
 
 func (jm *JobMap) ContainsKey(k JobID) bool {
-	jm.RWMu.RLock()
-	defer jm.RWMu.RUnlock()
-	_, ok := jm.M[k]
+	jm.rwMu.RLock()
+	defer jm.rwMu.RUnlock()
+	_, ok := jm.m[k]
 	return ok
 }
 
 func (tm *TaskMap) ContainsKey(k TaskID) bool {
-	tm.RWMu.RLock()
-	defer tm.RWMu.RUnlock()
-	_, ok := tm.M[k]
+	tm.rwMu.RLock()
+	defer tm.rwMu.RUnlock()
+	_, ok := tm.m[k]
 	return ok
 }
