@@ -78,8 +78,9 @@ type GraphManager interface {
 }
 
 type graphManager struct {
-	Preemption    bool
-	MaxTasksPerPu int64
+	Preemption           bool
+	MaxTasksPerPu        int64
+	flowSchedulingSolver string
 
 	cm          GraphChangeManager
 	sinkNode    *flowgraph.Node
@@ -456,7 +457,7 @@ func (gm *graphManager) addResourceTopologyDFS(rtnd *pb.ResourceTopologyNodeDesc
 		gm.cm.AddArc(parentNode, resourceNode,
 			0, gm.capacityFromResNodeToParent(rd),
 			int64(gm.costModeler.ResourceNodeToResourceNodeCost(parentNode.ResourceDescriptor, rd)),
-			flowgraph.Other, dimacs.AddArcBetweenRes, "AddResourceTopologyDFS")
+			flowgraph.ArcTypeOther, dimacs.AddArcBetweenRes, "AddResourceTopologyDFS")
 	}
 
 }
@@ -495,7 +496,50 @@ func (gm *graphManager) capacityFromResNodeToParent(rd *pb.ResourceDescriptor) u
 }
 
 func (gm *graphManager) pinTaskToNode(taskNode, resourceNode *flowgraph.Node) {
+	var runningArc *flowgraph.Arc
+	addedRunningArc := false
+	lowBoundCapacity := uint64(1)
+	if gm.flowSchedulingSolver == "custom" {
+		// XXX(ionel): RelaxIV doesn't print the flow on the arcs on which
+		// the lower capacity bound is equal to the upper capacity bound.
+		// We work around this by simply not setting the lower bound capacity
+		// for custom solvers.
+		lowBoundCapacity = 0
+	}
 
+	for dstNodeID, arc := range taskNode.OutgoingArcMap {
+		// Delete any arc not pointing to the desired resource node
+		if dstNodeID != resourceNode.ID {
+			// TODO(ionel): This doesn't correctly compute the type of changes. The
+			// arcs we are deleting can point to unscheduled or equiv classes as well.
+			gm.cm.DeleteArc(arc, dimacs.DelArcTaskToEquivClass, "PinTaskNode")
+			continue
+		}
+
+		// This preference arc connects the same nodes as the running arc. Hence,
+		// we just transform it into the running arc.
+		addedRunningArc = true
+		newCost := gm.costModeler.TaskContinuationCost(types.TaskID(taskNode.Task.Uid))
+		arc.Type = flowgraph.ArcTypeRunning
+		gm.cm.ChangeArc(arc, lowBoundCapacity, 1, int64(newCost), dimacs.ChgArcRunningTask, "PinTaskToNode: transform to running arc")
+		runningArc = arc
+	}
+
+	// Decrement capacity from unsched agg node to sink.
+	gm.updateUnscheduledAggNode(gm.unschedAggNodeForJobID(taskNode.JobID), -1)
+	if !addedRunningArc {
+		// Add a single arc from the task to the resource node
+		newCost := gm.costModeler.TaskContinuationCost(types.TaskID(taskNode.Task.Uid))
+		newArc := gm.cm.AddArc(taskNode, resourceNode, lowBoundCapacity, 1, int64(newCost), flowgraph.ArcTypeRunning, dimacs.AddArcRunningTask, "PinTaskToNode: add running arc")
+		runningArc = newArc
+	}
+
+	// Insert mapping for Task to RunningArc, must not already exist
+	_, ok := gm.taskToRunningArc[types.TaskID(taskNode.ID)]
+	if ok {
+		log.Panicf("gm:pintTaskToNode Mapping for taskID:%v to running arc already present\n", taskNode.ID)
+	}
+	gm.taskToRunningArc[types.TaskID(taskNode.ID)] = runningArc
 }
 
 func (gm *graphManager) removeEquivClassNode(ecNode *flowgraph.Node) {

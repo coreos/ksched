@@ -87,8 +87,8 @@ func (fg *Graph) AddNode() *Node {
 	id := fg.NextId()
 	node := &Node{
 		ID:             id,
-		incomingArcMap: make(map[NodeID]*Arc),
-		outgoingArcMap: make(map[NodeID]*Arc),
+		IncomingArcMap: make(map[NodeID]*Arc),
+		OutgoingArcMap: make(map[NodeID]*Arc),
 	}
 	// Insert into nodeMap, must not already be present
 	_, ok := fg.nodeMap[id]
@@ -100,8 +100,8 @@ func (fg *Graph) AddNode() *Node {
 }
 
 func (fg *Graph) DeleteArc(arc *Arc) {
-	delete(arc.SrcNode.outgoingArcMap, arc.DstNode.ID)
-	delete(arc.DstNode.incomingArcMap, arc.SrcNode.ID)
+	delete(arc.SrcNode.OutgoingArcMap, arc.DstNode.ID)
+	delete(arc.DstNode.IncomingArcMap, arc.SrcNode.ID)
 	delete(fg.arcSet, arc)
 }
 
@@ -131,25 +131,25 @@ func (fg *Graph) DeleteNode(node *Node) {
 	// Reuse this ID for later
 	fg.unusedIDs.Push(node.ID)
 	// First remove all outgoing arcs
-	for dstID, arc := range node.outgoingArcMap {
+	for dstID, arc := range node.OutgoingArcMap {
 		if dstID != arc.Dst {
 			log.Fatalf("graph: DeleteNode error, dstID:%d != arc.Dst:%d\n", dstID, arc.Dst)
 		}
 		if node.ID != arc.Src {
 			log.Fatalf("graph: DeleteNode error, node.ID:%d != arc.Src:%d\n", node.ID, arc.Src)
 		}
-		delete(arc.DstNode.incomingArcMap, arc.Src)
+		delete(arc.DstNode.IncomingArcMap, arc.Src)
 		fg.DeleteArc(arc)
 	}
 	// Remove all incoming arcs
-	for srcID, arc := range node.incomingArcMap {
+	for srcID, arc := range node.IncomingArcMap {
 		if srcID != arc.Dst {
 			log.Fatalf("graph: DeleteNode error, srcID:%d != arc.Src:%d\n", srcID, arc.Src)
 		}
 		if node.ID != arc.Dst {
 			log.Fatalf("graph: DeleteNode error, node.ID:%d != arc.Dst:%d\n", node.ID, arc.Dst)
 		}
-		delete(arc.SrcNode.outgoingArcMap, arc.Dst)
+		delete(arc.SrcNode.OutgoingArcMap, arc.Dst)
 		fg.DeleteArc(arc)
 	}
 	// Remove node from nodeMap
@@ -158,7 +158,7 @@ func (fg *Graph) DeleteNode(node *Node) {
 
 // Returns nil if arc not found
 func (fg *Graph) GetArc(src, dst *Node) *Arc {
-	return src.outgoingArcMap[dst.ID]
+	return src.OutgoingArcMap[dst.ID]
 }
 
 // Returns the nextID to assign to a node
