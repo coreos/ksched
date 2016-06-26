@@ -43,8 +43,6 @@ type ResourceMap struct {
 type JobMap struct {
 	rwMu sync.RWMutex
 	m    map[JobID]*pb.JobDescriptor
-	// NOTE: changing to be a pointer to JobDescriptor since
-	// you cannot have pointers to map values
 }
 
 type TaskMap struct {
@@ -52,10 +50,47 @@ type TaskMap struct {
 	m    map[TaskID]*pb.TaskDescriptor
 }
 
-// Maps utility functions used by Firmament
-// Implemented as generic templates in C++
-// See: https://github.com/camsas/firmament/blob/master/src/misc/map-util.h
-// TODO: Decide later what to do with this redundant mess
+// Multimap: multiple values can map to a single key
+type MultiMap map[uint64]map[uint64]struct{}
+
+// Expose Map for readonly purposes. To be used with Rlock() and RUnlock()
+func (rm *ResourceMap) Map() map[ResourceID]*rs.ResourceStatus {
+	return rm.m
+}
+
+func (jm *JobMap) Map() map[JobID]*pb.JobDescriptor {
+	return jm.m
+}
+
+func (tm *TaskMap) Map() map[TaskID]*pb.TaskDescriptor {
+	return tm.m
+}
+
+// Expose read lock, need to be careful not to deadlock
+func (rm *ResourceMap) RLock() {
+	rm.rwMu.RLock()
+}
+
+func (jm *JobMap) RLock() {
+	jm.rwMu.RLock()
+}
+
+func (tm *TaskMap) RLock() {
+	tm.rwMu.RLock()
+}
+
+// Expose read unlock
+func (rm *ResourceMap) RUnlock() {
+	rm.rwMu.RUnlock()
+}
+
+func (jm *JobMap) RUnlock() {
+	jm.rwMu.RUnlock()
+}
+
+func (tm *TaskMap) RUnlock() {
+	tm.rwMu.RUnlock()
+}
 
 // Perform a lookup in a map.
 // If the key is present in the map then the value associated with that

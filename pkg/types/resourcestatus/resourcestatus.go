@@ -26,6 +26,8 @@ type ResourceStatus struct {
 	lastHeartbeat uint64
 }
 
+// TODO: Get rid of the getters and setters below and access fields directly
+
 // In C++:
 // inline const ResourceDescriptor& descriptor() { return *descriptor_; }
 // NOTE: mutable_descriptor() and descriptor() are the same thing in Go as const is not allowed in go
