@@ -495,6 +495,12 @@ func (gm *graphManager) capacityFromResNodeToParent(rd *pb.ResourceDescriptor) u
 	return 0
 }
 
+// Pins the task (taskNode) to the resource (resourceNode).
+// This ensures that the task can only be scheduled on that particular resource(machine,core etc).
+// It does this by removing all arcs from this task node that do not point to the desired resource node.
+// If an arc from the task node to the resource node does not already exist then a new arc will be added.
+// This arc is the running arc, indicating where this particular will run and it's cost is assigned as a TaskContinuationCost
+// from the cost model.
 func (gm *graphManager) pinTaskToNode(taskNode, resourceNode *flowgraph.Node) {
 	var runningArc *flowgraph.Arc
 	addedRunningArc := false
