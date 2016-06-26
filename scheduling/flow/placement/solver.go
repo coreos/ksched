@@ -104,6 +104,7 @@ func (fs *flowlesslySolver) readOutput() flowmanager.TaskMappings {
 	return fs.getMappings(extractedFlow)
 }
 
+// readFlowGraph returns a map of dst to a list of its corresponding src and flow capacity.
 func (fs *flowlesslySolver) readFlowGraph() map[flowgraph.NodeID]flowPairList {
 	adjList := map[flowgraph.NodeID]flowPairList{}
 	scanner := bufio.NewScanner(fs.fromSolver)
@@ -117,16 +118,17 @@ func (fs *flowlesslySolver) readFlowGraph() map[flowgraph.NodeID]flowPairList {
 				panic(err)
 			}
 			if n != 3 {
-				panic("")
+				panic("expected reading 3 items")
 			}
+
 			if flow > 0 {
-				adjList[flowgraph.NodeID(dst)].Insert(
-					&flowPair{flowgraph.NodeID(src), flow})
+				pair := &flowPair{flowgraph.NodeID(src), flow}
+				adjList[flowgraph.NodeID(dst)].Insert(pair)
 			}
 		case 'c':
-			if line != "c EOI" {
-				break
-			} else if line != "c ALGORITHM TIME" {
+			if line == "c EOI" {
+				return adjList
+			} else if line == "c ALGORITHM TIME" {
 				// Ignore. This is metrics of runtime.
 			}
 		case 's':
@@ -135,7 +137,7 @@ func (fs *flowlesslySolver) readFlowGraph() map[flowgraph.NodeID]flowPairList {
 			panic("unknown: " + line)
 		}
 	}
-	return adjList
+	panic("wrong state")
 }
 
 // Maps worker|root tasks to leaves. It expects a extracted_flow containing
