@@ -146,7 +146,7 @@ func (fs *flowlesslySolver) readFlowGraph() map[flowgraph.NodeID]flowPairList {
 // only the arcs with positive flow (i.e. what ReadFlowGraph returns).
 func (fs *flowlesslySolver) parseFlowToMapping(extractedFlow map[flowgraph.NodeID]flowPairList) flowmanager.TaskMapping {
 	taskToPU := flowmanager.TaskMapping{}
-	// Note:
+	// Note: recording a node's PUs so that a node can assign the PUs to its source itself
 	puIDs := make(map[flowgraph.NodeID][]flowgraph.NodeID)
 	graph := fs.gm.GraphChangeManager().Graph()
 	visited := make([]bool, graph.NumNodes()+1) // assuming node ID range is 1 to N.
