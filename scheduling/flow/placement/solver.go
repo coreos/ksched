@@ -61,7 +61,7 @@ func (fs *flowlesslySolver) Solve() flowmanager.TaskMapping {
 		// We must export graph and read from STDOUT/STDERR in parallel
 		// Otherwise, the solver might block if STDOUT/STDERR buffer gets full.
 		// (For example, if it outputs lots of warnings on STDERR.)
-		go fs.exportGraph()
+		go fs.writeGraph()
 		tm := fs.readTaskMapping()
 		// Exporter should have already finished writing because reading goroutine
 		// have also finished.
@@ -69,10 +69,11 @@ func (fs *flowlesslySolver) Solve() flowmanager.TaskMapping {
 	}
 
 	fs.gm.UpdateAllCostsToUnscheduledAggs()
-	go fs.exportIncremental()
+	go fs.writeIncremental()
 	tm := fs.readTaskMapping()
 	return tm
 }
+
 func (fs *flowlesslySolver) startSolver() {
 	binaryStr, args := fs.getBinConfig()
 	cmd := exec.Command(binaryStr, args...)
@@ -89,12 +90,13 @@ func (fs *flowlesslySolver) startSolver() {
 		panic(err)
 	}
 }
-func (fs *flowlesslySolver) exportGraph() {
+
+func (fs *flowlesslySolver) writeGraph() {
 	dimacs.Export(fs.gm.GraphChangeManager().Graph(), fs.toSolver)
 	fs.gm.GraphChangeManager().ResetChanges()
 }
 
-func (fs *flowlesslySolver) exportIncremental() {
+func (fs *flowlesslySolver) writeIncremental() {
 	dimacs.ExportIncremental(fs.gm.GraphChangeManager().GetOptimizedGraphChanges(), fs.toSolver)
 	fs.gm.GraphChangeManager().ResetChanges()
 }
