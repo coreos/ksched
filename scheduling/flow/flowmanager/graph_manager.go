@@ -42,6 +42,7 @@ type GraphManager interface {
 	// also updates the statistics of the nodes up to the root resource.
 	AddResourceTopology(topo pb.ResourceTopologyNodeDescriptor)
 
+	// TODO: do we really need this method? this is just a wrapper around AddOrUpdateJobNodes
 	UpdateResourceTopology(topo pb.ResourceTopologyNodeDescriptor)
 
 	// TODO: ComputeTopologyStatistics(...)
@@ -174,6 +175,11 @@ func (gm *graphManager) AddOrUpdateJobNodes(jobs []pb.JobDescriptor) {
 
 	// UpdateFlowGraph is responsible for making sure that the node_queue is empty upon completion.
 	gm.updateFlowGraph(q, markedNodes)
+}
+
+// TODO: do we really need this method? this is just a wrapper around AddOrUpdateJobNodes
+func (gm *graphManager) UpdateTimeDependentCosts(jobs []pb.JobDescriptor) {
+	gm.AddOrUpdateJobNodes(jobs)
 }
 
 func (gm *graphManager) AddResourceTopology(rtnd *pb.ResourceTopologyNodeDescriptor) {
