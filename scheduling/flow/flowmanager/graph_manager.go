@@ -639,7 +639,14 @@ func (gm *graphManager) removeInvalidPrefResArcs(node *flowgraph.Node, prefResou
 }
 
 func (gm *graphManager) removeResourceNode(resNode *flowgraph.Node) {
-
+	if _, ok := gm.nodeToParentNode[resNode]; !ok {
+		log.Printf("Warning: Removing root resource node\n")
+	}
+	delete(gm.nodeToParentNode, resNode)
+	delete(gm.leafNodeIDs, resNode.ID)
+	delete(gm.leafResourceIDs, resNode.ID)
+	delete(gm.resourceToNode, resNode.ID)
+	gm.cm.DeleteNode(resNode, dimacs.DelResourceNode, "RemoveResourceNode")
 }
 
 func (gm *graphManager) removeTaskNode(n *flowgraph.Node) flowgraph.NodeID {
