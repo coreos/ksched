@@ -68,7 +68,7 @@ type GraphManager interface {
 
 	//  Removes the entire resource topology tree rooted at rd. The method also
 	//  updates the statistics of the nodes up to the root resource.
-	RemoveResourceTopology(rd pb.ResourceDescriptor) (removedPUs []uint64)
+	RemoveResourceTopology(rd pb.ResourceDescriptor, removedPUs map[uint64]struct{})
 
 	TaskCompleted(id types.TaskID) flowgraph.NodeID
 	TaskEvicted(id types.TaskID, rid types.ResourceID)
@@ -303,6 +303,31 @@ func (gm *graphManager) PurgeUnconnectedEquivClassNodes() {
 			gm.removeEquivClassNode(node)
 		}
 	}
+}
+
+func (gm *graphManager) RemoveResourceTopology(rd pb.ResourceDescriptor, removedPUs map[uint64]struct{}) {
+	rID := util.MustResourceIDFromString(rd.Uuid)
+	rNode := gm.nodeForResourceID(rID)
+	capDelta := int64(0)
+	if rNode == nil {
+		log.Panic("gm/RemoveResourceTopology: resourceNode cannot be nil\n")
+	}
+	// Delete the children nodes.
+	for _, arc := range rNode.OutgoingArcMap {
+		capDelta = int64(arc.CapUpperBound)
+		if arc.DstNode.ResourceID != 0 {
+			gm.traverseAndRemoveTopology(arc.DstNode, removedPUs)
+		}
+	}
+	// Propagate the stats update up to the root resource.
+	gm.updateResourceStatsUpToRoot(rNode, capDelta, int64(rNode.ResourceDescriptor.NumSlotsBelow), int64(rNode.ResourceDescriptor.NumRunningTasksBelow))
+	// Delete the node.
+	if rNode.Type == flowgraph.NodeTypePu {
+		removedPUs[uint64(rNode.ID)] = struct{}{}
+	} else if rNode.Type == flowgraph.NodeTypeMachine {
+		gm.costModeler.RemoveMachine(rNode.ResourceID)
+	}
+	gm.removeResourceNode(rNode)
 }
 
 func (gm *graphManager) TaskCompleted(id types.TaskID) flowgraph.NodeID {
