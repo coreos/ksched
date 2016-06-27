@@ -719,7 +719,19 @@ func (gm *graphManager) removeUnscheduledAggNode(jobID types.JobID) {
 // resNode: The root of the topology tree to remove
 // returns: The set of PUs that need to be removed by the caller of this function
 func (gm *graphManager) traverseAndRemoveTopology(resNode *flowgraph.Node) []flowgraph.NodeID {
-	return nil
+	removedPUs := make([]flowgraph.NodeID, 0)
+	for _, arc := range resNode.OutgoingArcMap {
+		if arc.DstNode.ResourceID != 0 {
+			removedPUs = append(removedPUs, gm.traverseAndRemoveTopology(arc.DstNode)...)
+		}
+	}
+	if resNode.Type == flowgraph.NodeTypePu {
+		removedPUs = append(removedPUs, resNode.ID)
+	} else if resNode.Type == flowgraph.NodeTypeMachine {
+		gm.costModeler.RemoveMachine(resNode.ResourceID)
+	}
+	gm.removeResourceNode(resNode)
+	return removedPUs
 }
 
 // Updates the arc of a newly scheduled task.
