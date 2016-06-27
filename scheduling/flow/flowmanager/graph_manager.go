@@ -293,6 +293,18 @@ func (gm *graphManager) JobCompleted(id types.JobID) {
 	gm.removeUnscheduledAggNode(id)
 }
 
+func (gm *graphManager) PurgeUnconnectedEquivClassNodes() {
+	// NOTE: we could have a subgraph consisting of equiv class nodes.
+	// They would likely not end up being removed in a single
+	// PurgeUnconnectedEquivClassNodes call. However, this is fine
+	// because we will finish removing all of them in future calls.
+	for _, node := range gm.taskECToNode {
+		if len(node.IncomingArcMap) == 0 {
+			gm.removeEquivClassNode(node)
+		}
+	}
+}
+
 func (gm *graphManager) TaskCompleted(id types.TaskID) flowgraph.NodeID {
 	gm.mu.Lock()
 	defer gm.mu.Unlock()
