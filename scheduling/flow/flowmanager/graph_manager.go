@@ -644,8 +644,8 @@ func (gm *graphManager) removeResourceNode(resNode *flowgraph.Node) {
 	}
 	delete(gm.nodeToParentNode, resNode)
 	delete(gm.leafNodeIDs, resNode.ID)
-	delete(gm.leafResourceIDs, resNode.ID)
-	delete(gm.resourceToNode, resNode.ID)
+	delete(gm.leafResourceIDs, resNode.ResourceID)
+	delete(gm.resourceToNode, resNode.ResourceID)
 	gm.cm.DeleteNode(resNode, dimacs.DelResourceNode, "RemoveResourceNode")
 }
 
