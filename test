@@ -12,6 +12,6 @@ if [ ! -z "$fmtres" ]; then
 fi
 
 # Run all tests in all packages
-go test ./...
+go test ./... --race
 
 echo "success!"
