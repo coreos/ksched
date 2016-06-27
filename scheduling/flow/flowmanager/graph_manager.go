@@ -505,13 +505,7 @@ func (gm *graphManager) pinTaskToNode(taskNode, resourceNode *flowgraph.Node) {
 	var runningArc *flowgraph.Arc
 	addedRunningArc := false
 	lowBoundCapacity := uint64(1)
-	if gm.flowSchedulingSolver == "custom" {
-		// XXX(ionel): RelaxIV doesn't print the flow on the arcs on which
-		// the lower capacity bound is equal to the upper capacity bound.
-		// We work around this by simply not setting the lower bound capacity
-		// for custom solvers.
-		lowBoundCapacity = 0
-	}
+	// TODO: Address the lower capacity issue on custom solvers, see original
 
 	for dstNodeID, arc := range taskNode.OutgoingArcMap {
 		// Delete any arc not pointing to the desired resource node
