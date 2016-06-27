@@ -65,9 +65,9 @@ type Node struct {
 	EquivClass *types.EquivClass
 
 	// Outgoing arcs from this node, keyed by destination node
-	outgoingArcMap map[NodeID]*Arc
+	OutgoingArcMap map[NodeID]*Arc
 	// Incoming arcs to this node, keyed by source node
-	incomingArcMap map[NodeID]*Arc
+	IncomingArcMap map[NodeID]*Arc
 	// Field use to mark if the node has been visited in a graph traversal.
 	// TODO: Why is this a uint32 in the original code
 	visited uint32
@@ -89,11 +89,11 @@ func (n *Node) AddArc(arc *Arc) {
 		log.Fatalf("AddArc Error: arc.Src:%v != node:%v\n", arc.Src, n.ID)
 	}
 	//Add arc to outgoing arc map from current node, must not already be present
-	if !insertIfNotPresent(n.outgoingArcMap, arc.Dst, arc) {
+	if !insertIfNotPresent(n.OutgoingArcMap, arc.Dst, arc) {
 		log.Fatalf("AddArc Error: arc:%v already present in node:%v outgoingArcMap\n", arc, n.ID)
 	}
 	//Add arc to incoming arc map at dst node, must not already be present
-	if !insertIfNotPresent(arc.DstNode.incomingArcMap, arc.Src, arc) {
+	if !insertIfNotPresent(arc.DstNode.IncomingArcMap, arc.Src, arc) {
 		log.Fatalf("AddArc Error: arc:%v already present in node:%v incomingArcMap\n", arc, arc.DstNode.ID)
 	}
 }

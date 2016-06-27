@@ -18,8 +18,8 @@ package flowgraph
 type ArcType int
 
 const (
-	Other ArcType = iota + 1
-	Running
+	ArcTypeOther ArcType = iota + 1
+	ArcTypeRunning
 )
 
 // Represents an arc in the scheduling flow graph.
