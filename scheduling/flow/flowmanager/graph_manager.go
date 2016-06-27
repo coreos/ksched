@@ -655,7 +655,14 @@ func (gm *graphManager) removeTaskNode(n *flowgraph.Node) flowgraph.NodeID {
 }
 
 func (gm *graphManager) removeUnscheduledAggNode(jobID types.JobID) {
-
+	unschedAggNode := gm.unschedAggNodeForJobID(jobID)
+	if unschedAggNode == nil {
+		log.Panicf("gm/removeUnscheduledAggNode: unschedAggNode for jobID:%v cannot be nil\n", jobID)
+	}
+	if _, ok := gm.jobUnschedToNode[jobID]; !ok {
+		log.Panicf("gm/removeUnscheduledAggNode: unscheduled jobID:%v has no aggregator node\n", jobID)
+	}
+	gm.cm.DeleteNode(unschedAggNode, dimacs.DelUnschedJobNode, "RemoveUnscheduledAggNode")
 }
 
 // Remove the resource topology rooted at resourceNode.
