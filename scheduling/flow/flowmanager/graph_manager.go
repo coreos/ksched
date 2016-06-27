@@ -68,7 +68,7 @@ type GraphManager interface {
 
 	//  Removes the entire resource topology tree rooted at rd. The method also
 	//  updates the statistics of the nodes up to the root resource.
-	RemoveResourceTopology(rd pb.ResourceDescriptor, removedPUs map[uint64]struct{})
+	RemoveResourceTopology(rd pb.ResourceDescriptor) []uint64
 
 	TaskCompleted(id types.TaskID) flowgraph.NodeID
 	TaskEvicted(id types.TaskID, rid types.ResourceID)
@@ -305,29 +305,31 @@ func (gm *graphManager) PurgeUnconnectedEquivClassNodes() {
 	}
 }
 
-func (gm *graphManager) RemoveResourceTopology(rd pb.ResourceDescriptor, removedPUs map[uint64]struct{}) {
+func (gm *graphManager) RemoveResourceTopology(rd pb.ResourceDescriptor) []uint64 {
 	rID := util.MustResourceIDFromString(rd.Uuid)
 	rNode := gm.nodeForResourceID(rID)
-	capDelta := int64(0)
 	if rNode == nil {
 		log.Panic("gm/RemoveResourceTopology: resourceNode cannot be nil\n")
 	}
+	removedPUs := make([]uint64, 0)
+	capDelta := int64(0)
 	// Delete the children nodes.
 	for _, arc := range rNode.OutgoingArcMap {
 		capDelta = int64(arc.CapUpperBound)
 		if arc.DstNode.ResourceID != 0 {
-			gm.traverseAndRemoveTopology(arc.DstNode, removedPUs)
+			removedPUs = append(removedPUs, gm.traverseAndRemoveTopology(arc.DstNode)...)
 		}
 	}
 	// Propagate the stats update up to the root resource.
 	gm.updateResourceStatsUpToRoot(rNode, capDelta, int64(rNode.ResourceDescriptor.NumSlotsBelow), int64(rNode.ResourceDescriptor.NumRunningTasksBelow))
 	// Delete the node.
 	if rNode.Type == flowgraph.NodeTypePu {
-		removedPUs[uint64(rNode.ID)] = struct{}{}
+		removedPUs = append(removedPUs, uint64(rNode.ID))
 	} else if rNode.Type == flowgraph.NodeTypeMachine {
 		gm.costModeler.RemoveMachine(rNode.ResourceID)
 	}
 	gm.removeResourceNode(rNode)
+	return removedPUs
 }
 
 func (gm *graphManager) TaskCompleted(id types.TaskID) flowgraph.NodeID {
@@ -684,11 +686,10 @@ func (gm *graphManager) removeUnscheduledAggNode(jobID types.JobID) {
 }
 
 // Remove the resource topology rooted at resourceNode.
-// resNode the root of the topology tree to remove
-// pusRemoved is the set that gets updated whenever we remove a PU
-func (gm *graphManager) traverseAndRemoveTopology(resNode *flowgraph.Node,
-	pusRemoved map[uint64]struct{}) {
-
+// resNode: The root of the topology tree to remove
+// returns: The set of PUs that need to be removed by the caller of this function
+func (gm *graphManager) traverseAndRemoveTopology(resNode *flowgraph.Node) []uint64 {
+	return nil
 }
 
 // Updates the arc of a newly scheduled task.
@@ -701,7 +702,6 @@ func (gm *graphManager) traverseAndRemoveTopology(resNode *flowgraph.Node,
 // resourceNode is the node of the resource to which the task has been
 // scheduled
 func (gm *graphManager) updateArcsForScheduledTask(taskNode, resourceNode *flowgraph.Node) {
-
 }
 
 // Adds the children tasks of the nodeless current task to the node queue.
