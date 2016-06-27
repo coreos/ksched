@@ -254,8 +254,8 @@ func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings TaskMappi
 				continue
 			}
 
-			resNodeID := taskMappings[flowgraph.NodeID(taskID)]
-			if resNodeID == nil {
+			_, ok := taskMappings[flowgraph.NodeID(taskID)]
+			if !ok {
 				// The task doesn't exist in the mappings => the task has been
 				// preempted.
 				log.Printf("PREEMPTION: take %v off %v\n", taskID, resourceID)
