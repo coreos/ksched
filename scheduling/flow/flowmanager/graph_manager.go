@@ -68,6 +68,7 @@ type GraphManager interface {
 
 	//  Removes the entire resource topology tree rooted at rd. The method also
 	//  updates the statistics of the nodes up to the root resource.
+	//  NOTE: Interface changed to return a slice of PUs to be removed by the caller
 	RemoveResourceTopology(rd pb.ResourceDescriptor) []uint64
 
 	TaskCompleted(id types.TaskID) flowgraph.NodeID
