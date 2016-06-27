@@ -30,6 +30,10 @@ import (
 
 // NOTE: GraphManager uses GraphChangeManager to change the graph.
 type GraphManager interface {
+	LeafNodeIDs() map[flowgraph.NodeID]struct{}
+	SinkNode() *flowgraph.Node
+	GraphChangeManager() GraphChangeManager
+
 	AddOrUpdateJobNodes(jobs []pb.JobDescriptor)
 
 	UpdateTimeDependentCosts(jobs []pb.JobDescriptor)
@@ -52,7 +56,7 @@ type GraphManager interface {
 		taskBindings map[types.TaskID]types.ResourceID) pb.SchedulingDelta
 
 	// NOTE(haseeb): Returns a slice of deltas for the user to append
-	SchedulingDeltasForPreemptedTasks(taskMapping types.MultiMap, rmap types.ResourceMap) []pb.SchedulingDelta
+	SchedulingDeltasForPreemptedTasks(taskMapping TaskMapping, rmap types.ResourceMap) []pb.SchedulingDelta
 
 	// As a result of task state change, preferences change or
 	// resource removal we may end up with unconnected equivalence
@@ -99,7 +103,7 @@ type graphManager struct {
 	// Set of leaf resource IDs, i.e connected to sink node in flowgraph
 	leafResourceIDs map[types.ResourceID]struct{}
 	// The "node ID" for the job is currently the ID of the job's unscheduled node
-	leafNodes map[uint64]struct{}
+	leafNodeIDs map[flowgraph.NodeID]struct{}
 
 	dimacsStats *dimacs.ChangeStats
 	// Counter updated whenever we compute topology statistics. The counter is
@@ -114,6 +118,17 @@ type graphManager struct {
 type taskOrNode struct {
 	Node     *flowgraph.Node
 	TaskDesc *pb.TaskDescriptor
+}
+
+func (gm *graphManager) GraphChangeManager() GraphChangeManager {
+	return gm.cm
+}
+func (gm *graphManager) SinkNode() *flowgraph.Node {
+	return gm.sinkNode
+}
+
+func (gm *graphManager) LeafNodeIDs() map[flowgraph.NodeID]struct{} {
+	return gm.leafNodeIDs
 }
 
 func (gm *graphManager) AddOrUpdateJobNodes(jobs []pb.JobDescriptor) {
@@ -221,7 +236,7 @@ func (gm *graphManager) NodeBindingToSchedulingDelta(tid, rid flowgraph.NodeID, 
 	return nil
 }
 
-func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings types.MultiMap, rmap *types.ResourceMap) []pb.SchedulingDelta {
+func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings TaskMapping, rmap *types.ResourceMap) []pb.SchedulingDelta {
 	deltas := make([]pb.SchedulingDelta, 0)
 	// Need to lock the map before iterating over it
 	rmap.RLock()
@@ -238,7 +253,7 @@ func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings types.Mul
 				continue
 			}
 
-			resNodeID := taskMappings[uint64(taskID)]
+			resNodeID := taskMappings[flowgraph.NodeID(taskID)]
 			if resNodeID == nil {
 				// The task doesn't exist in the mappings => the task has been
 				// preempted.
@@ -380,7 +395,7 @@ func (gm *graphManager) addResourceNode(rd *pb.ResourceDescriptor) *flowgraph.No
 	gm.resourceToNode[rID] = resourceNode
 
 	if resourceNode.Type == flowgraph.NodeTypePu {
-		gm.leafNodes[uint64(rID)] = struct{}{}
+		gm.leafNodeIDs[flowgraph.NodeID(rID)] = struct{}{}
 		gm.leafResourceIDs[rID] = struct{}{}
 	}
 	return resourceNode

@@ -50,9 +50,6 @@ type TaskMap struct {
 	m    map[TaskID]*pb.TaskDescriptor
 }
 
-// Multimap: multiple values can map to a single key
-type MultiMap map[uint64]map[uint64]struct{}
-
 // Expose Map for readonly purposes. To be used with Rlock() and RUnlock()
 func (rm *ResourceMap) UnsafeGet() map[ResourceID]*rs.ResourceStatus {
 	return rm.m
