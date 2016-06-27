@@ -614,8 +614,10 @@ func (gm *graphManager) removeInvalidPrefResArcs(node *flowgraph.Node, prefResou
 	// If yes, remove that arc
 	for _, arc := range node.OutgoingArcMap {
 		rID := arc.DstNode.ResourceID
-		_, ok := prefResSet[rID]
-		if rID != 0 && !ok {
+		if rID == 0 {
+			continue
+		}
+		if _, ok := prefResSet[rID]; !ok {
 			log.Printf("Deleting no-longer-current arc to resource:%v", rID)
 			gm.cm.DeleteArc(arc, changeType, "RemoveInvalidResPrefArcs")
 		}
