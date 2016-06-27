@@ -50,7 +50,7 @@ type flowlesslySolver struct {
 
 // NOTE: assume we don't have debug flag
 // NOTE: assume we only do incremental flow
-// Note: assume we run Solve() iteratively and sequentially without concurrency.
+// Note: assume Solve() is called iteratively and sequentially without concurrency.
 func (fs *flowlesslySolver) Solve() flowmanager.TaskMapping {
 	// Note: combine all the first time logic into this once function.
 	// This is different from original cpp code.
@@ -92,16 +92,19 @@ func (fs *flowlesslySolver) startSolver() {
 }
 
 func (fs *flowlesslySolver) writeGraph() {
+	// TODO: make sure proper locking on graph, manager
 	dimacs.Export(fs.gm.GraphChangeManager().Graph(), fs.toSolver)
 	fs.gm.GraphChangeManager().ResetChanges()
 }
 
 func (fs *flowlesslySolver) writeIncremental() {
+	// TODO: make sure proper locking on graph, manager
 	dimacs.ExportIncremental(fs.gm.GraphChangeManager().GetOptimizedGraphChanges(), fs.toSolver)
 	fs.gm.GraphChangeManager().ResetChanges()
 }
 
 func (fs *flowlesslySolver) readTaskMapping() flowmanager.TaskMapping {
+	// TODO: make sure proper locking on graph, manager
 	extractedFlow := fs.readFlowGraph()
 	return fs.parseFlowToMapping(extractedFlow)
 }
@@ -172,8 +175,8 @@ func (fs *flowlesslySolver) parseFlowToMapping(extractedFlow map[flowgraph.NodeI
 		toVisit = toVisit[1:]
 		visited[nodeID] = true
 
-		if fs.isTaskNode(nodeID) {
-			// It's a task node.
+		if fs.gm.GraphChangeManager().Graph().Node(nodeID).IsTaskNode() {
+			// record the task mapping between task node and PU.
 			for _, puID := range puIDs[nodeID] {
 				taskToPU.Insert(nodeID, puID)
 			}
@@ -211,13 +214,6 @@ func addPUToSourceNodes(extractedFlow map[flowgraph.NodeID]flowPairList, puIDs m
 			break
 		}
 	}
-}
-
-func (fs *flowlesslySolver) isTaskNode(nodeID flowgraph.NodeID) bool {
-	// TODO: We need to make sure locking on graph change manager.
-	return fs.gm.GraphChangeManager().CheckNodeType(nodeID, flowgraph.NodeTypeRootTask) ||
-		fs.gm.GraphChangeManager().CheckNodeType(nodeID, flowgraph.NodeTypeUnscheduledTask) ||
-		fs.gm.GraphChangeManager().CheckNodeType(nodeID, flowgraph.NodeTypeScheduledTask)
 }
 
 // TODO: We can definitely make it cleaner. But currently we just copy the code.
