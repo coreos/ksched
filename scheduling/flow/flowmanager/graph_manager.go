@@ -744,6 +744,37 @@ func (gm *graphManager) traverseAndRemoveTopology(resNode *flowgraph.Node) []flo
 // resourceNode is the node of the resource to which the task has been
 // scheduled
 func (gm *graphManager) updateArcsForScheduledTask(taskNode, resourceNode *flowgraph.Node) {
+	if !gm.Preemption {
+		gm.pinTaskToNode(taskNode, resourceNode)
+		return
+	}
+
+	// With preemption we do not remove any old arcs. We only add/change a running arc to
+	// the resource.
+	taskID := types.TaskID(taskNode.Task.Uid)
+	newCost := gm.costModeler.TaskContinuationCost(taskID)
+	runningArc := gm.taskToRunningArc[taskID]
+
+	if runningArc != nil {
+		// The running arc points to the same destination as a preference arc.
+		// We just modify the preference arc because the graph doesn't currently
+		// support multi-arcs.
+		runningArc.Type = flowgraph.ArcTypeRunning
+		gm.cm.ChangeArc(runningArc, 0, 1, int64(newCost), dimacs.ChgArcRunningTask, "UpdateArcsForScheduledTask: transform to running arc")
+		gm.updateRunningTaskToUnscheduledAggArc(taskNode)
+		return
+	}
+
+	// No running arc was found
+	runningArc = gm.cm.AddArc(taskNode, resourceNode, 0, 1, int64(newCost),
+		flowgraph.ArcTypeRunning, dimacs.AddArcRunningTask, "UpdateArcsForScheduledTask: add running arc")
+	// Insert mapping for task to running arc, must not already exist
+	_, ok := gm.taskToRunningArc[taskID]
+	if ok {
+		log.Panicf("gm:updateArcsForScheduledTask Mapping for tID:%v to running arc already present\n", taskID)
+	}
+	gm.taskToRunningArc[taskID] = runningArc
+	gm.updateRunningTaskToUnscheduledAggArc(taskNode)
 }
 
 // Adds the children tasks of the nodeless current task to the node queue.
