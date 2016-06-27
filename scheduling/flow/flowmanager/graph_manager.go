@@ -371,7 +371,16 @@ func (gm *graphManager) TaskScheduled(id types.TaskID, rid types.ResourceID) {
 
 // Private Methods
 func (gm *graphManager) addEquivClassNode(ec types.EquivClass) *flowgraph.Node {
-	return nil
+	ecNode := gm.cm.AddNode(flowgraph.NodeTypeEquivClass, 0, dimacs.AddEquivClassNode, "AddEquivClassNode")
+	ecNode.EquivClass = &ec
+	// Insert mapping taskEquivalenceClass to node, must not already exist
+	_, ok := gm.taskECToNode[ec]
+	if ok {
+		log.Panicf("gm:addEquivClassNode Mapping for ec:%v to node already present\n", ec)
+	}
+	gm.taskECToNode[ec] = ecNode
+	return ecNode
+
 }
 
 func (gm *graphManager) addResourceNode(rd *pb.ResourceDescriptor) *flowgraph.Node {
@@ -558,7 +567,8 @@ func (gm *graphManager) pinTaskToNode(taskNode, resourceNode *flowgraph.Node) {
 }
 
 func (gm *graphManager) removeEquivClassNode(ecNode *flowgraph.Node) {
-
+	delete(gm.taskECToNode, *ecNode.EquivClass)
+	gm.cm.DeleteNode(ecNode, dimacs.DelEquivClassNode, "RemoveEquivClassNode")
 }
 
 // Remove invalid preference arcs from node to equivalence class nodes.
