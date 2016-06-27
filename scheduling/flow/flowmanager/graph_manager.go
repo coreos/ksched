@@ -614,14 +614,28 @@ func (gm *graphManager) removeInvalidECPrefArcs(node *flowgraph.Node, prefEcs []
 }
 
 // Remove invalid preference arcs from node to resource nodes.
-// node the node for which to remove its invalid preference arcs to
-// resources
-// prefResources is the node's current preferred resources
-// changeType is the type of the change
-func (gm *graphManager) removeInvalidPrefResArcs(node *flowgraph.Node,
-	prefResources []types.ResourceID,
-	changeType dimacs.ChangeType) {
+// node the node for which to remove its invalid preference arcs to resources
+// prefResources: is the node's current preferred resources
+// changeType: is the type of the change
+func (gm *graphManager) removeInvalidPrefResArcs(node *flowgraph.Node, prefResources []types.ResourceID, changeType dimacs.ChangeType) {
+	// Make a set of the preferred resources
+	prefResSet := make(map[types.ResourceID]struct{})
+	for rID := range prefResources {
+		prefResSet[types.ResourceID(rID)] = struct{}{}
+	}
 
+	// For each arc, check if the dst node is actually a preferred resource node and that it's not in the preferred resource slice
+	// If yes, remove that arc
+	for _, arc := range node.OutgoingArcMap {
+		rID := arc.DstNode.ResourceID
+		if rID == 0 {
+			continue
+		}
+		if _, ok := prefResSet[rID]; !ok {
+			log.Printf("Deleting no-longer-current arc to resource:%v", rID)
+			gm.cm.DeleteArc(arc, changeType, "RemoveInvalidResPrefArcs")
+		}
+	}
 }
 
 func (gm *graphManager) removeResourceNode(resNode *flowgraph.Node) {
