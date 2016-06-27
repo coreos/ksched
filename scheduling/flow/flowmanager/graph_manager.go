@@ -69,7 +69,7 @@ type GraphManager interface {
 	//  Removes the entire resource topology tree rooted at rd. The method also
 	//  updates the statistics of the nodes up to the root resource.
 	//  NOTE: Interface changed to return a slice of PUs to be removed by the caller
-	RemoveResourceTopology(rd pb.ResourceDescriptor) []uint64
+	RemoveResourceTopology(rd pb.ResourceDescriptor) []flowgraph.NodeID
 
 	TaskCompleted(id types.TaskID) flowgraph.NodeID
 	TaskEvicted(id types.TaskID, rid types.ResourceID)
@@ -306,13 +306,13 @@ func (gm *graphManager) PurgeUnconnectedEquivClassNodes() {
 	}
 }
 
-func (gm *graphManager) RemoveResourceTopology(rd pb.ResourceDescriptor) []uint64 {
+func (gm *graphManager) RemoveResourceTopology(rd pb.ResourceDescriptor) []flowgraph.NodeID {
 	rID := util.MustResourceIDFromString(rd.Uuid)
 	rNode := gm.nodeForResourceID(rID)
 	if rNode == nil {
 		log.Panic("gm/RemoveResourceTopology: resourceNode cannot be nil\n")
 	}
-	removedPUs := make([]uint64, 0)
+	removedPUs := make([]flowgraph.NodeID, 0)
 	capDelta := int64(0)
 	// Delete the children nodes.
 	for _, arc := range rNode.OutgoingArcMap {
@@ -325,7 +325,7 @@ func (gm *graphManager) RemoveResourceTopology(rd pb.ResourceDescriptor) []uint6
 	gm.updateResourceStatsUpToRoot(rNode, capDelta, int64(rNode.ResourceDescriptor.NumSlotsBelow), int64(rNode.ResourceDescriptor.NumRunningTasksBelow))
 	// Delete the node.
 	if rNode.Type == flowgraph.NodeTypePu {
-		removedPUs = append(removedPUs, uint64(rNode.ID))
+		removedPUs = append(removedPUs, rNode.ID)
 	} else if rNode.Type == flowgraph.NodeTypeMachine {
 		gm.costModeler.RemoveMachine(rNode.ResourceID)
 	}
@@ -689,7 +689,7 @@ func (gm *graphManager) removeUnscheduledAggNode(jobID types.JobID) {
 // Remove the resource topology rooted at resourceNode.
 // resNode: The root of the topology tree to remove
 // returns: The set of PUs that need to be removed by the caller of this function
-func (gm *graphManager) traverseAndRemoveTopology(resNode *flowgraph.Node) []uint64 {
+func (gm *graphManager) traverseAndRemoveTopology(resNode *flowgraph.Node) []flowgraph.NodeID {
 	return nil
 }
 
