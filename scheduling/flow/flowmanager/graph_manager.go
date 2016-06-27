@@ -510,7 +510,6 @@ func (gm *graphManager) pinTaskToNode(taskNode, resourceNode *flowgraph.Node) {
 func (gm *graphManager) removeEquivClassNode(ecNode *flowgraph.Node) {
 	delete(gm.taskECToNode, *ecNode.EquivClass)
 	gm.cm.DeleteNode(ecNode, dimacs.DelEquivClassNode, "RemoveEquivClassNode")
-
 }
 
 // Remove invalid preference arcs from node to equivalence class nodes.
