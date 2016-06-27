@@ -415,6 +415,21 @@ func (gm *graphManager) TaskScheduled(id types.TaskID, rid types.ResourceID) {
 	gm.updateArcsForScheduledTask(taskNode, resNode)
 }
 
+func (gm *graphManager) UpdateAllCostsToUnscheduledAggs() {
+	for _, node := range gm.jobUnschedToNode {
+		if node == nil {
+			log.Panicf("gm/UpdateAllCostsToUnscheduledAggs: node for jobID:%v cannot be nil", node)
+		}
+		for _, arc := range node.IncomingArcMap {
+			if arc.SrcNode.IsTaskAssignedOrRunning() {
+				gm.updateRunningTaskNode(arc.SrcNode, false, nil, nil)
+			} else {
+				gm.updateTaskToUnscheduledAggArc(arc.SrcNode)
+			}
+		}
+	}
+}
+
 // Private Methods
 func (gm *graphManager) addEquivClassNode(ec types.EquivClass) *flowgraph.Node {
 	ecNode := gm.cm.AddNode(flowgraph.NodeTypeEquivClass, 0, dimacs.AddEquivClassNode, "AddEquivClassNode")
