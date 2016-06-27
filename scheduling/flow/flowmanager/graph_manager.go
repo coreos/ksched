@@ -590,13 +590,27 @@ func (gm *graphManager) removeEquivClassNode(ecNode *flowgraph.Node) {
 }
 
 // Remove invalid preference arcs from node to equivalence class nodes.
-// node the node for which to remove its invalid peference arcs
+// node: the node for which to remove its invalid peference arcs
 // to equivalence classes
-// prefEcs is the node's current preferred equivalence classes
-// changeType is the type of the change
-func (gm *graphManager) removeInvalidECPrefArcs(node *flowgraph.Node, prefEcs []types.EquivClass,
-	changeType dimacs.ChangeType) {
+// prefEcs: is the node's current preferred equivalence classes
+// changeType: is the type of the change
+func (gm *graphManager) removeInvalidECPrefArcs(node *flowgraph.Node, prefEcs []types.EquivClass, changeType dimacs.ChangeType) {
+	// Make a set of the preferred equivalence classes
+	prefECSet := make(map[types.EquivClass]struct{})
+	for ec := range prefEcs {
+		prefECSet[types.EquivClass(ec)] = struct{}{}
+	}
 
+	// For each arc, check if the preferredEC is actually an EC node and that it's not in the preferences slice(prefEC)
+	// If yes, remove that arc
+	for _, arc := range node.OutgoingArcMap {
+		prefEC := *arc.DstNode.EquivClass
+		_, ok := prefECSet[prefEC]
+		if prefEC != 0 && !ok {
+			log.Printf("Deleting no-longer-current arc to EC:%v", prefEC)
+			gm.cm.DeleteArc(arc, changeType, "RemoveInvalidECPrefArcs")
+		}
+	}
 }
 
 // Remove invalid preference arcs from node to resource nodes.
