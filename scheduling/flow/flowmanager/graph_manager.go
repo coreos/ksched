@@ -794,14 +794,14 @@ func (gm *graphManager) updateChildrenTasks(td *pb.TaskDescriptor,
 		// If childTaskNode does not have a marked node
 		if childTaskNode != nil {
 			if _, ok := markedNodes[childTaskNode.ID]; !ok {
-				nodeQueue.Push(taskOrNode{Node: childTaskNode, TaskDesc: childTask})
+				nodeQueue.Push(&taskOrNode{Node: childTaskNode, TaskDesc: childTask})
 				markedNodes[childTaskNode.ID] = struct{}{}
 			}
 		}
 
 		// ChildTask has no node
 		if !taskMustHaveNode(childTask) {
-			nodeQueue.Push(taskOrNode{Node: nil, TaskDesc: childTask})
+			nodeQueue.Push(&taskOrNode{Node: nil, TaskDesc: childTask})
 		}
 
 		// ChildTask must have node
@@ -809,7 +809,7 @@ func (gm *graphManager) updateChildrenTasks(td *pb.TaskDescriptor,
 		childTaskNode = gm.addTaskNode(jobID, childTask)
 		// Increment capacity from unsched agg node to sink.
 		gm.updateUnscheduledAggNode(gm.unschedAggNodeForJobID(jobID), 1)
-		nodeQueue.Push(taskOrNode{Node: childTaskNode, TaskDesc: childTask})
+		nodeQueue.Push(&taskOrNode{Node: childTaskNode, TaskDesc: childTask})
 		markedNodes[childTaskNode.ID] = struct{}{}
 	}
 }
@@ -849,7 +849,7 @@ func (gm *graphManager) updateEquivToEquivArcs(ecNode *flowgraph.Node, nodeQueue
 		if _, ok := markedNodes[prefECNode.ID]; !ok {
 			// Add the EC node to the queue if it hasn't been marked yet.
 			markedNodes[prefECNode.ID] = struct{}{}
-			nodeQueue.Push(taskOrNode{Node: prefECNode, TaskDesc: prefECNode.Task})
+			nodeQueue.Push(&taskOrNode{Node: prefECNode, TaskDesc: prefECNode.Task})
 		}
 	}
 	gm.removeInvalidECPrefArcs(ecNode, prefECs, dimacs.DelArcBetweenEquivClass)
