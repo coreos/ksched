@@ -786,9 +786,9 @@ func (gm *graphManager) updateChildrenTasks(td *pb.TaskDescriptor,
 	markedNodes map[uint64]struct{}) {
 }
 
-func (gm *graphManager) updateEquivClassNode(ecNode *flowgraph.Node,
-	nodeQueue queue.FIFO,
-	markedNodes map[uint64]struct{}) {
+func (gm *graphManager) updateEquivClassNode(ecNode *flowgraph.Node, nodeQueue queue.FIFO, markedNodes map[uint64]struct{}) {
+	gm.updateEquivToEquivArcs(ecNode, nodeQueue, markedNodes)
+	gm.updateEquivToResArcs(ecNode, nodeQueue, markedNodes)
 }
 
 // Updates an EC's outgoing arcs to other ECs. If the EC has new outgoing arcs
