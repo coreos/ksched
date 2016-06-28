@@ -976,9 +976,22 @@ func (gm *graphManager) updateResourceTopologyDFS(rtnd *pb.ResourceTopologyNodeD
 	}
 }
 
-func (gm *graphManager) updateResOutgoingArcs(resNode *flowgraph.Node,
-	nodeQueue queue.FIFO,
-	markedNodes map[flowgraph.NodeID]struct{}) {
+func (gm *graphManager) updateResOutgoingArcs(resNode *flowgraph.Node, nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
+	for _, arc := range resNode.OutgoingArcMap {
+		if arc.DstNode.ResourceID == 0 {
+			// Connected to sink
+			gm.updateResToSinkArc(resNode)
+			continue
+		}
+
+		cost := gm.costModeler.ResourceNodeToResourceNodeCost(resNode.ResourceDescriptor, arc.DstNode.ResourceDescriptor)
+		gm.cm.ChangeArcCost(arc, int64(cost), dimacs.ChgArcBetweenRes, "UpdateResOutgoingArcs")
+		if _, ok := markedNodes[arc.DstNode.ID]; !ok {
+			// Add the dst node to the queue if it hasn't been marked yet.
+			markedNodes[arc.DstNode.ID] = struct{}{}
+			nodeQueue.Push(taskOrNode{Node: arc.DstNode, TaskDesc: arc.DstNode.Task})
+		}
+	}
 }
 
 // Updates the arc connecting a resource to the sink. It requires the resource
