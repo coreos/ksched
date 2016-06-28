@@ -784,7 +784,7 @@ func (gm *graphManager) updateArcsForScheduledTask(taskNode, resourceNode *flowg
 // a pointer to its task descriptor.
 func (gm *graphManager) updateChildrenTasks(td *pb.TaskDescriptor,
 	nodeQueue queue.FIFO,
-	markedNodes map[uint64]struct{}) {
+	markedNodes map[flowgraph.NodeID]struct{}) {
 	// We do actually need to push tasks even if they are already completed,
 	// failed or running, since they may have children eligible for
 	// scheduling.
@@ -793,9 +793,9 @@ func (gm *graphManager) updateChildrenTasks(td *pb.TaskDescriptor,
 
 		// If childTaskNode does not have a marked node
 		if childTaskNode != nil {
-			if _, ok := markedNodes[uint64(childTaskNode.ID)]; !ok {
+			if _, ok := markedNodes[childTaskNode.ID]; !ok {
 				nodeQueue.Push(taskOrNode{Node: childTaskNode, TaskDesc: childTask})
-				markedNodes[uint64(childTaskNode.ID)] = struct{}{}
+				markedNodes[childTaskNode.ID] = struct{}{}
 			}
 		}
 
@@ -810,11 +810,11 @@ func (gm *graphManager) updateChildrenTasks(td *pb.TaskDescriptor,
 		// Increment capacity from unsched agg node to sink.
 		gm.updateUnscheduledAggNode(gm.unschedAggNodeForJobID(jobID), 1)
 		nodeQueue.Push(taskOrNode{Node: childTaskNode, TaskDesc: childTask})
-		markedNodes[uint64(childTaskNode.ID)] = struct{}{}
+		markedNodes[childTaskNode.ID] = struct{}{}
 	}
 }
 
-func (gm *graphManager) updateEquivClassNode(ecNode *flowgraph.Node, nodeQueue queue.FIFO, markedNodes map[uint64]struct{}) {
+func (gm *graphManager) updateEquivClassNode(ecNode *flowgraph.Node, nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
 	gm.updateEquivToEquivArcs(ecNode, nodeQueue, markedNodes)
 	gm.updateEquivToResArcs(ecNode, nodeQueue, markedNodes)
 }
@@ -825,14 +825,14 @@ func (gm *graphManager) updateEquivClassNode(ecNode *flowgraph.Node, nodeQueue q
 
 func (gm *graphManager) updateEquivToEquivArcs(ecNode *flowgraph.Node,
 	nodeQueue queue.FIFO,
-	markedNodes map[uint64]struct{}) {
+	markedNodes map[flowgraph.NodeID]struct{}) {
 }
 
 // Updates the resource preference arcs an equivalence class has.
 // ecNode is that node for which to update its preferences
 func (gm *graphManager) updateEquivToResArcs(ecNode *flowgraph.Node,
 	nodeQueue queue.FIFO,
-	markedNodes map[uint64]struct{}) {
+	markedNodes map[flowgraph.NodeID]struct{}) {
 }
 
 func (gm *graphManager) updateFlowGraph(nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
@@ -840,7 +840,7 @@ func (gm *graphManager) updateFlowGraph(nodeQueue queue.FIFO, markedNodes map[fl
 
 func (gm *graphManager) updateResourceNode(resNode *flowgraph.Node,
 	nodeQueue queue.FIFO,
-	markedNodes map[uint64]struct{}) {
+	markedNodes map[flowgraph.NodeID]struct{}) {
 }
 
 // Update resource related stats (e.g., arc capacities, num slots,
@@ -854,7 +854,7 @@ func (gm *graphManager) updateResourceTopologyDFS(rtnd *pb.ResourceTopologyNodeD
 
 func (gm *graphManager) updateResOutgoingArcs(resNode *flowgraph.Node,
 	nodeQueue queue.FIFO,
-	markedNodes map[uint64]struct{}) {
+	markedNodes map[flowgraph.NodeID]struct{}) {
 }
 
 // Updates the arc connecting a resource to the sink. It requires the resource
@@ -875,7 +875,7 @@ func (gm *graphManager) updateResToSinkArc(resNode *flowgraph.Node) {
 func (gm *graphManager) updateRunningTaskNode(taskNode *flowgraph.Node,
 	updatePreferences bool,
 	nodeQueue queue.FIFO,
-	markedNodes map[uint64]struct{}) {
+	markedNodes map[flowgraph.NodeID]struct{}) {
 }
 
 // Updates the cost of the arc connecting a running task with its unscheduled
@@ -887,7 +887,7 @@ func (gm *graphManager) updateRunningTaskToUnscheduledAggArc(taskNode *flowgraph
 
 func (gm *graphManager) updateTaskNode(taskNode *flowgraph.Node,
 	nodeQueue queue.FIFO,
-	markedNodes map[uint64]struct{}) {
+	markedNodes map[flowgraph.NodeID]struct{}) {
 }
 
 // Updates a task's outgoing arcs to ECs. If the task has new outgoing arcs
@@ -895,13 +895,13 @@ func (gm *graphManager) updateTaskNode(taskNode *flowgraph.Node,
 // EC nodes that have not yet been marked are appended to the queue.
 func (gm *graphManager) updateTaskToEquivArcs(taskNode *flowgraph.Node,
 	nodeQueue queue.FIFO,
-	markedNodes map[uint64]struct{}) {
+	markedNodes map[flowgraph.NodeID]struct{}) {
 }
 
 // Updates a task's preferences to resources.
 func (gm *graphManager) updateTaskToResArcs(taskNode *flowgraph.Node,
 	nodeQueue queue.FIFO,
-	markedNodes map[uint64]struct{}) {
+	markedNodes map[flowgraph.NodeID]struct{}) {
 }
 
 // Updates the arc from a task to its unscheduled aggregator. The method
