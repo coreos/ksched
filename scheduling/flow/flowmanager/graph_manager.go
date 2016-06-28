@@ -865,9 +865,8 @@ func (gm *graphManager) updateEquivToResArcs(ecNode *flowgraph.Node,
 func (gm *graphManager) updateFlowGraph(nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
 }
 
-func (gm *graphManager) updateResourceNode(resNode *flowgraph.Node,
-	nodeQueue queue.FIFO,
-	markedNodes map[flowgraph.NodeID]struct{}) {
+func (gm *graphManager) updateResourceNode(resNode *flowgraph.Node, nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
+	gm.updateResOutgoingArcs(resNode, nodeQueue, markedNodes)
 }
 
 // Update resource related stats (e.g., arc capacities, num slots,
