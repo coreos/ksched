@@ -904,7 +904,6 @@ func (gm *graphManager) updateResourceTopologyDFS(rtnd *pb.ResourceTopologyNodeD
 		parentArc := gm.cm.Graph().GetArc(parentNode, currNode)
 		gm.cm.ChangeArcCapacity(parentArc, gm.capacityFromResNodeToParent(rd), dimacs.ChgArcBetweenRes, "UpdateResourceTopologyDFS")
 	}
-
 }
 
 func (gm *graphManager) updateResOutgoingArcs(resNode *flowgraph.Node,
