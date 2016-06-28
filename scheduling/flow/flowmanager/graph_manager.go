@@ -995,11 +995,24 @@ func (gm *graphManager) updateResToSinkArc(resNode *flowgraph.Node) {
 // taskNode is the node for which to update the arcs
 // updatePreferences is true if the method should update the resource and
 // equivalence preferences
+func (gm *graphManager) updateRunningTaskNode(taskNode *flowgraph.Node, updatePreferences bool, nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
+	taskID := types.TaskID(taskNode.Task.Uid)
+	runningArc := gm.taskToRunningArc[taskID]
+	if runningArc == nil {
+		log.Panicf("gm/updateRunningTaskNode: running arc for taskNode.Task.Uid:%v must exist\n", taskNode.Task.Uid)
+	}
+	newCost := int64(gm.costModeler.TaskContinuationCost(taskID))
+	gm.cm.ChangeArcCost(runningArc, newCost, dimacs.ChgArcTaskToRes, "UpdateRunningTaskNode: continuation cost")
+	if gm.Preemption == false {
+		return
+	}
 
-func (gm *graphManager) updateRunningTaskNode(taskNode *flowgraph.Node,
-	updatePreferences bool,
-	nodeQueue queue.FIFO,
-	markedNodes map[flowgraph.NodeID]struct{}) {
+	gm.updateRunningTaskToUnscheduledAggArc(taskNode)
+	if updatePreferences {
+		// nodeQueue and markedNodes must not be nil at this point
+		gm.updateTaskToResArcs(taskNode, nodeQueue, markedNodes)
+		gm.updateTaskToEquivArcs(taskNode, nodeQueue, markedNodes)
+	}
 }
 
 // Updates the cost of the arc connecting a running task with its unscheduled
