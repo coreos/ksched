@@ -871,8 +871,26 @@ func (gm *graphManager) updateResourceNode(resNode *flowgraph.Node, nodeQueue qu
 
 // Update resource related stats (e.g., arc capacities, num slots,
 // num running tasks) on every arc/node up to the root resource.
-func (gm *graphManager) updateResourceStatsUpToRoot(currNode *flowgraph.Node,
-	capDelta, slotsDelta, runningTasksDelta int64) {
+func (gm *graphManager) updateResourceStatsUpToRoot(currNode *flowgraph.Node, capDelta, slotsDelta, runningTasksDelta int64) {
+	for {
+		parentNode := gm.nodeToParentNode[currNode]
+		if parentNode == nil {
+			// The node is the root of the topology.
+			return
+		}
+
+		parentArc := gm.cm.Graph().GetArc(parentNode, currNode)
+		if parentArc == nil {
+			log.Panicf("gm/updateResourceStatsUpToRoot: parent:%v to currNode:%v arc cannot be nil", parentNode.ID, currNode.ID)
+		}
+
+		newCapacity := uint64(int64(parentArc.CapUpperBound) + capDelta)
+		gm.cm.ChangeArcCapacity(parentArc, newCapacity, dimacs.ChgArcBetweenRes, "UpdateCapacityUpToRoot")
+		parentNode.ResourceDescriptor.NumSlotsBelow = uint64(int64(parentNode.ResourceDescriptor.NumSlotsBelow) + slotsDelta)
+		parentNode.ResourceDescriptor.NumRunningTasksBelow = uint64(int64(parentNode.ResourceDescriptor.NumRunningTasksBelow) + runningTasksDelta)
+
+		currNode = parentNode
+	}
 }
 
 func (gm *graphManager) updateResourceTopologyDFS(rtnd *pb.ResourceTopologyNodeDescriptor) {
