@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# This script should be called from 'ksched' root dir.
+
 set -eo pipefail
 
 go vet ./... 2>&1
