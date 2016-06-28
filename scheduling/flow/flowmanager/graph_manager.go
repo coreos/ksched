@@ -862,7 +862,7 @@ func (gm *graphManager) updateEquivToResArcs(ecNode *flowgraph.Node,
 		if _, ok := markedNodes[prefResNode.ID]; !ok {
 			// Add the res node to the queue if it hasn't been marked yet.
 			markedNodes[prefResNode.ID] = struct{}{}
-			nodeQueue.Push(taskOrNode{Node: prefResNode, TaskDesc: prefResNode.Task})
+			nodeQueue.Push(&taskOrNode{Node: prefResNode, TaskDesc: prefResNode.Task})
 		}
 	}
 	gm.removeInvalidPrefResArcs(ecNode, prefResources, dimacs.DelArcEquivClassToRes)
