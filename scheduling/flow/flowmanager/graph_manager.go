@@ -777,13 +777,41 @@ func (gm *graphManager) updateArcsForScheduledTask(taskNode, resourceNode *flowg
 	gm.updateRunningTaskToUnscheduledAggArc(taskNode)
 }
 
+// NOTE(haseeb): This functions modifies the input queue and map parameters, which is contrary to Go style
 // Adds the children tasks of the nodeless current task to the node queue.
 // If a child task doesn't need to have a graph node (e.g., task is not
-// RUNNABLE, RUNNING or ASSIGNED) then its TDOrNodeWrapper will only contain
+// RUNNABLE, RUNNING or ASSIGNED) then its taskOrNode struct will only contain
 // a pointer to its task descriptor.
 func (gm *graphManager) updateChildrenTasks(td *pb.TaskDescriptor,
 	nodeQueue queue.FIFO,
 	markedNodes map[uint64]struct{}) {
+	// We do actually need to push tasks even if they are already completed,
+	// failed or running, since they may have children eligible for
+	// scheduling.
+	for _, childTask := range td.Spawned {
+		childTaskNode := gm.nodeForTaskID(types.TaskID(childTask.Uid))
+
+		// If childTaskNode does not have a marked node
+		if childTaskNode != nil {
+			if _, ok := markedNodes[uint64(childTaskNode.ID)]; !ok {
+				nodeQueue.Push(taskOrNode{Node: childTaskNode, TaskDesc: childTask})
+				markedNodes[uint64(childTaskNode.ID)] = struct{}{}
+			}
+		}
+
+		// ChildTask has no node
+		if !taskMustHaveNode(childTask) {
+			nodeQueue.Push(taskOrNode{Node: nil, TaskDesc: childTask})
+		}
+
+		// ChildTask must have node
+		jobID := util.MustJobIDFromString(childTask.JobID)
+		childTaskNode = gm.addTaskNode(jobID, childTask)
+		// Increment capacity from unsched agg node to sink.
+		gm.updateUnscheduledAggNode(gm.unschedAggNodeForJobID(jobID), 1)
+		nodeQueue.Push(taskOrNode{Node: childTaskNode, TaskDesc: childTask})
+		markedNodes[uint64(childTaskNode.ID)] = struct{}{}
+	}
 }
 
 func (gm *graphManager) updateEquivClassNode(ecNode *flowgraph.Node, nodeQueue queue.FIFO, markedNodes map[uint64]struct{}) {
