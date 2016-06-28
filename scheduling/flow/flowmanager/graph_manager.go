@@ -85,7 +85,7 @@ type GraphManager interface {
 
 type graphManager struct {
 	Preemption           bool
-	MaxTasksPerPu        int64
+	MaxTasksPerPu        uint64
 	flowSchedulingSolver string
 
 	cm          GraphChangeManager
@@ -876,6 +876,35 @@ func (gm *graphManager) updateResourceStatsUpToRoot(currNode *flowgraph.Node,
 }
 
 func (gm *graphManager) updateResourceTopologyDFS(rtnd *pb.ResourceTopologyNodeDescriptor) {
+	rd := rtnd.ResourceDesc
+	rd.NumSlotsBelow = 0
+	rd.NumRunningTasksBelow = 0
+	if rd.Type == pb.ResourceDescriptor_ResourcePu {
+		// Base case
+		rd.NumSlotsBelow = gm.MaxTasksPerPu
+		rd.NumRunningTasksBelow = uint64(len(rd.CurrentRunningTasks))
+	}
+
+	for _, rtndChild := range rtnd.Children {
+		gm.updateResourceTopologyDFS(rtndChild)
+		rd.NumSlotsBelow += rtndChild.ResourceDesc.NumSlotsBelow
+		rd.NumRunningTasksBelow += rtndChild.ResourceDesc.NumRunningTasksBelow
+	}
+
+	if rtnd.ParentId != "" {
+		// Update the arc to the parent.
+		currNode := gm.nodeForResourceID(util.MustResourceIDFromString(rd.Uuid))
+		if currNode == nil {
+			log.Panicf("gm/updateResourceTopologyDFS: node for resource.Uuid:%v cannot be nil\n", rd.Uuid)
+		}
+		parentNode := gm.nodeToParentNode[currNode]
+		if parentNode == nil {
+			log.Panicf("gm/updateResourceTopologyDFS: parentNode for node.ID:%v cannot be nil\n", currNode.ID)
+		}
+		parentArc := gm.cm.Graph().GetArc(parentNode, currNode)
+		gm.cm.ChangeArcCapacity(parentArc, gm.capacityFromResNodeToParent(rd), dimacs.ChgArcBetweenRes, "UpdateResourceTopologyDFS")
+	}
+
 }
 
 func (gm *graphManager) updateResOutgoingArcs(resNode *flowgraph.Node,
