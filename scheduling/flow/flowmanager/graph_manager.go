@@ -863,6 +863,25 @@ func (gm *graphManager) updateEquivToResArcs(ecNode *flowgraph.Node,
 }
 
 func (gm *graphManager) updateFlowGraph(nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
+	for !nodeQueue.IsEmpty() {
+		taskOrNode := nodeQueue.Pop().(taskOrNode)
+		node := taskOrNode.Node
+		task := taskOrNode.TaskDesc
+		switch {
+		case node == nil:
+			// We're handling a task that doesn't have an associated flow graph node.
+			gm.updateChildrenTasks(task, nodeQueue, markedNodes)
+		case node.IsTaskNode():
+			gm.updateTaskNode(node, nodeQueue, markedNodes)
+			gm.updateChildrenTasks(task, nodeQueue, markedNodes)
+		case node.IsEquivalenceClassNode():
+			gm.updateEquivClassNode(node, nodeQueue, markedNodes)
+		case node.IsResourceNode():
+			gm.updateResourceNode(node, nodeQueue, markedNodes)
+		default:
+			log.Panicf("gm/updateFlowGraph: Unexpected node type: %v", node.Type)
+		}
+	}
 }
 
 func (gm *graphManager) updateResourceNode(resNode *flowgraph.Node, nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
