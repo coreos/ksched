@@ -827,6 +827,7 @@ func (gm *graphManager) updateEquivToEquivArcs(ecNode *flowgraph.Node, nodeQueue
 	if prefECs == nil {
 		noPrefEC := make([]types.EquivClass, 0)
 		gm.removeInvalidECPrefArcs(ecNode, noPrefEC, dimacs.DelArcBetweenEquivClass)
+		return
 	}
 
 	for _, prefECID := range prefECs {
