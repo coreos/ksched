@@ -988,9 +988,6 @@ func (gm *graphManager) updateResToSinkArc(resNode *flowgraph.Node) {
 	if resNode.Type != flowgraph.NodeTypePu {
 		log.Panicf("gm:updateResToSinkArc: Updating an arc from a non-PU to the sink")
 	}
-	if gm.sinkNode == nil {
-		log.Panicf("gm:updateResToSinkArc: Sink is not set")
-	}
 
 	resArcSink := gm.cm.Graph().GetArc(resNode, gm.sinkNode)
 	cost := int64(gm.costModeler.LeafResourceNodeToSinkCost(resNode.ResourceID))
