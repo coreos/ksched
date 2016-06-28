@@ -985,6 +985,20 @@ func (gm *graphManager) updateResOutgoingArcs(resNode *flowgraph.Node,
 // to be a PU.
 // resourceNode is the resource node for which to update its arc to the sink
 func (gm *graphManager) updateResToSinkArc(resNode *flowgraph.Node) {
+	if resNode.Type != flowgraph.NodeTypePu {
+		log.Panicf("gm:updateResToSinkArc: Updating an arc from a non-PU to the sink")
+	}
+	if gm.sinkNode == nil {
+		log.Panicf("gm:updateResToSinkArc: Sink is not set")
+	}
+
+	resArcSink := gm.cm.Graph().GetArc(resNode, gm.sinkNode)
+	cost := int64(gm.costModeler.LeafResourceNodeToSinkCost(resNode.ResourceID))
+	if resArcSink != nil {
+		gm.cm.ChangeArcCost(resArcSink, cost, dimacs.ChgArcResToSink, "UpdateResToSinkArc")
+		return
+	}
+	gm.cm.AddArc(resNode, gm.sinkNode, 0, gm.MaxTasksPerPu, cost, flowgraph.ArcTypeOther, dimacs.AddArcResToSink, "UpdateResToSinkArc")
 }
 
 // Updates the cost on running arc of the task. If preemption is enabled then
