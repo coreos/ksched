@@ -833,6 +833,39 @@ func (gm *graphManager) updateEquivToEquivArcs(ecNode *flowgraph.Node,
 func (gm *graphManager) updateEquivToResArcs(ecNode *flowgraph.Node,
 	nodeQueue queue.FIFO,
 	markedNodes map[flowgraph.NodeID]struct{}) {
+
+	prefResources := gm.costModeler.GetOutgoingEquivClassPrefArcs(*ecNode.EquivClass)
+	if prefResources == nil {
+		noPrefRes := make([]types.ResourceID, 0)
+		gm.removeInvalidPrefResArcs(ecNode, noPrefRes, dimacs.DelArcEquivClassToRes)
+		return
+	}
+
+	for _, prefRID := range prefResources {
+		prefResNode := gm.nodeForResourceID(prefRID)
+		// The resource node should already exist because the cost models cannot
+		// prefer a resource before it is added to the graph.
+		if prefResNode == nil {
+			log.Panicf("gm/updateEquivToResArcs: preferred resource node cannot be nil")
+		}
+
+		cost, capUpper := gm.costModeler.EquivClassToResourceNode(*ecNode.EquivClass, prefRID)
+		prefResArc := gm.cm.Graph().GetArc(ecNode, prefResNode)
+
+		if prefResArc != nil {
+			gm.cm.ChangeArc(prefResArc, prefResArc.CapLowerBound, capUpper, int64(cost), dimacs.ChgArcEquivClassToRes, "UpdateEquivToResArcs")
+		}
+
+		// Create arc if it doesn't exist
+		gm.cm.AddArc(ecNode, prefResNode, 0, capUpper, int64(cost), flowgraph.ArcTypeOther, dimacs.AddArcEquivClassToRes, "UpdateEquivToResArcs")
+
+		if _, ok := markedNodes[prefResNode.ID]; !ok {
+			// Add the res node to the queue if it hasn't been marked yet.
+			markedNodes[prefResNode.ID] = struct{}{}
+			nodeQueue.Push(taskOrNode{Node: prefResNode, TaskDesc: prefResNode.Task})
+		}
+	}
+	gm.removeInvalidPrefResArcs(ecNode, prefResources, dimacs.DelArcEquivClassToRes)
 }
 
 func (gm *graphManager) updateFlowGraph(nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
