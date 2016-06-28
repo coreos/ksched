@@ -26,15 +26,8 @@ import (
 )
 
 var (
-	FlowlesslyBinary                 = "bin/flowlessly/flow_scheduler"
-	FlowlesslyAlgorithm              = "fast_cost_scaling"
-	FlowlesslyInitialRunsAlgorithm   = ""
-	FlowlesslyNumberInitialRuns      = 0
-	OnlyReadTaskAssignmentChanges    = false
-	FlowlesslyFlipAlgorithms         = false
-	FlowlesslyBestAlgorithm          = false
-	FlowlesslyRunCostScalingAndRelax = false
-	FlowlesslyAlphaFactor            = 9
+	FlowlesslyBinary    = "bin/flowlessly/flow_scheduler"
+	FlowlesslyAlgorithm = "successive_shortest_path"
 )
 
 type Solver interface {
@@ -76,17 +69,18 @@ func (fs *flowlesslySolver) Solve() flowmanager.TaskMapping {
 
 func (fs *flowlesslySolver) startSolver() {
 	binaryStr, args := fs.getBinConfig()
+
+	var err error
 	cmd := exec.Command(binaryStr, args...)
-	err := cmd.Start()
-	if err != nil {
-		panic(err)
-	}
 	fs.toSolver, err = cmd.StdinPipe()
 	if err != nil {
 		panic(err)
 	}
 	fs.fromSolver, err = cmd.StdoutPipe()
 	if err != nil {
+		panic(err)
+	}
+	if err := cmd.Start(); err != nil {
 		panic(err)
 	}
 }
@@ -218,33 +212,11 @@ func addPUToSourceNodes(extractedFlow map[flowgraph.NodeID]flowPairList, puIDs m
 
 // TODO: We can definitely make it cleaner. But currently we just copy the code.
 func (fs *flowlesslySolver) getBinConfig() (string, []string) {
-	args := []string{"--graph_has_node_types=true"}
-
-	args = append(args, fmt.Sprintf("--algorithm=%s", FlowlesslyAlgorithm))
-
-	if OnlyReadTaskAssignmentChanges {
-		args = append(args, "--print_assignments=true")
-	} else {
-		args = append(args, "--print_assignments=false")
+	args := []string{
+		"--graph_has_node_types=true",
+		fmt.Sprintf("--algorithm=%s", FlowlesslyAlgorithm),
+		"--print_assignments=false",
 	}
 
-	if FlowlesslyInitialRunsAlgorithm == "" {
-		args = append(args, fmt.Sprintf("--algorithm_initial_solver_runs=%s", FlowlesslyInitialRunsAlgorithm))
-		args = append(args, fmt.Sprintf("--algorithm_number_initial_runs=%d", FlowlesslyNumberInitialRuns))
-	}
-
-	if FlowlesslyFlipAlgorithms {
-		args = append(args, "--flip_algorithms")
-	}
-
-	if FlowlesslyBestAlgorithm {
-		args = append(args, "--best_flowlessly_algorithm")
-	}
-
-	if FlowlesslyRunCostScalingAndRelax {
-		args = append(args, "--run_cost_scaling_and_relax")
-	}
-
-	args = append(args, fmt.Sprintf("--alpha_scaling_factor=%d", FlowlesslyAlphaFactor))
 	return FlowlesslyBinary, args
 }
