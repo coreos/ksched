@@ -830,13 +830,13 @@ func (gm *graphManager) updateEquivToEquivArcs(ecNode *flowgraph.Node, nodeQueue
 		return
 	}
 
-	for _, prefECID := range prefECs {
-		prefECNode := gm.nodeForEquivClass(prefECID)
+	for _, prefEC := range prefECs {
+		prefECNode := gm.nodeForEquivClass(prefEC)
 		if prefECNode == nil {
-			prefECNode = gm.addEquivClassNode(prefECID)
+			prefECNode = gm.addEquivClassNode(prefEC)
 		}
 
-		cost, capUpper := gm.costModeler.EquivClassToEquivClass(*ecNode.EquivClass, prefECID)
+		cost, capUpper := gm.costModeler.EquivClassToEquivClass(*ecNode.EquivClass, prefEC)
 		prefECArc := gm.cm.Graph().GetArc(ecNode, prefECNode)
 
 		if prefECArc != nil {
