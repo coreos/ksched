@@ -32,7 +32,7 @@ message TaskDescriptor {
   uint64 uid = 1;
   string name = 2;
   TaskState state = 3;
-  string job_id = 4;
+  string jobID = 4;
   uint64 index = 5;
   // Inputs/outputs 
   repeated ReferenceDescriptor dependencies = 6;
