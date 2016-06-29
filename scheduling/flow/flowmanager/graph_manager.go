@@ -1072,9 +1072,9 @@ func (gm *graphManager) updateTaskNode(taskNode *flowgraph.Node,
 // EC nodes that have not yet been marked are appended to the queue.
 func (gm *graphManager) updateTaskToEquivArcs(taskNode *flowgraph.Node, nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
 	prefECs := gm.costModeler.GetTaskEquivClasses(types.TaskID(taskNode.Task.Uid))
-	if prefECs == nil {
-		noPrefECs := make([]types.EquivClass, 0)
-		gm.removeInvalidECPrefArcs(taskNode, noPrefECs, dimacs.DelArcTaskToEquivClass)
+	// Empty slice means no preferences
+	if len(prefECs) == 0 {
+		gm.removeInvalidECPrefArcs(taskNode, prefECs, dimacs.DelArcTaskToEquivClass)
 		return
 	}
 
