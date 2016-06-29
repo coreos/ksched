@@ -1190,21 +1190,21 @@ func (gm *graphManager) updateUnscheduledAggNode(unschedAggNode *flowgraph.Node,
 func (gm *graphManager) visitTopologyChildren(rtnd *pb.ResourceTopologyNodeDescriptor) {
 }
 
-// Small helper functions, might not really be needed
+// Small helper functions
 func (gm *graphManager) nodeForEquivClass(ec types.EquivClass) *flowgraph.Node {
-	return nil
+	return gm.taskECToNode[ec]
 }
 
 func (gm *graphManager) nodeForResourceID(resourceID types.ResourceID) *flowgraph.Node {
-	return nil
+	return gm.resourceToNode[resourceID]
 }
 
 func (gm *graphManager) nodeForTaskID(taskID types.TaskID) *flowgraph.Node {
-	return nil
+	return gm.taskToNode[taskID]
 }
 
 func (gm *graphManager) unschedAggNodeForJobID(jobID types.JobID) *flowgraph.Node {
-	return nil
+	return gm.jobUnschedToNode[jobID]
 }
 
 func taskMustHaveNode(td *pb.TaskDescriptor) bool {
