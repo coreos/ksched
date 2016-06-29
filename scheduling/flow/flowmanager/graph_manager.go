@@ -606,9 +606,9 @@ func (gm *graphManager) pinTaskToNode(taskNode, resourceNode *flowgraph.Node) {
 		// This preference arc connects the same nodes as the running arc. Hence,
 		// we just transform it into the running arc.
 		addedRunningArc = true
-		newCost := gm.costModeler.TaskContinuationCost(types.TaskID(taskNode.Task.Uid))
+		newCost := int64(gm.costModeler.TaskContinuationCost(types.TaskID(taskNode.Task.Uid)))
 		arc.Type = flowgraph.ArcTypeRunning
-		gm.cm.ChangeArc(arc, lowBoundCapacity, 1, int64(newCost), dimacs.ChgArcRunningTask, "PinTaskToNode: transform to running arc")
+		gm.cm.ChangeArc(arc, lowBoundCapacity, 1, newCost, dimacs.ChgArcRunningTask, "PinTaskToNode: transform to running arc")
 		runningArc = arc
 	}
 
@@ -616,8 +616,8 @@ func (gm *graphManager) pinTaskToNode(taskNode, resourceNode *flowgraph.Node) {
 	gm.updateUnscheduledAggNode(gm.unschedAggNodeForJobID(taskNode.JobID), -1)
 	if !addedRunningArc {
 		// Add a single arc from the task to the resource node
-		newCost := gm.costModeler.TaskContinuationCost(types.TaskID(taskNode.Task.Uid))
-		newArc := gm.cm.AddArc(taskNode, resourceNode, lowBoundCapacity, 1, int64(newCost), flowgraph.ArcTypeRunning, dimacs.AddArcRunningTask, "PinTaskToNode: add running arc")
+		newCost := int64(gm.costModeler.TaskContinuationCost(types.TaskID(taskNode.Task.Uid)))
+		newArc := gm.cm.AddArc(taskNode, resourceNode, lowBoundCapacity, 1, newCost, flowgraph.ArcTypeRunning, dimacs.AddArcRunningTask, "PinTaskToNode: add running arc")
 		runningArc = newArc
 	}
 
@@ -754,7 +754,7 @@ func (gm *graphManager) updateArcsForScheduledTask(taskNode, resourceNode *flowg
 	// With preemption we do not remove any old arcs. We only add/change a running arc to
 	// the resource.
 	taskID := types.TaskID(taskNode.Task.Uid)
-	newCost := gm.costModeler.TaskContinuationCost(taskID)
+	newCost := int64(gm.costModeler.TaskContinuationCost(taskID))
 	runningArc := gm.taskToRunningArc[taskID]
 
 	if runningArc != nil {
@@ -762,13 +762,13 @@ func (gm *graphManager) updateArcsForScheduledTask(taskNode, resourceNode *flowg
 		// We just modify the preference arc because the graph doesn't currently
 		// support multi-arcs.
 		runningArc.Type = flowgraph.ArcTypeRunning
-		gm.cm.ChangeArc(runningArc, 0, 1, int64(newCost), dimacs.ChgArcRunningTask, "UpdateArcsForScheduledTask: transform to running arc")
+		gm.cm.ChangeArc(runningArc, 0, 1, newCost, dimacs.ChgArcRunningTask, "UpdateArcsForScheduledTask: transform to running arc")
 		gm.updateRunningTaskToUnscheduledAggArc(taskNode)
 		return
 	}
 
 	// No running arc was found
-	runningArc = gm.cm.AddArc(taskNode, resourceNode, 0, 1, int64(newCost),
+	runningArc = gm.cm.AddArc(taskNode, resourceNode, 0, 1, newCost,
 		flowgraph.ArcTypeRunning, dimacs.AddArcRunningTask, "UpdateArcsForScheduledTask: add running arc")
 	// Insert mapping for task to running arc, must not already exist
 	_, ok := gm.taskToRunningArc[taskID]
@@ -988,8 +988,8 @@ func (gm *graphManager) updateResOutgoingArcs(resNode *flowgraph.Node, nodeQueue
 			continue
 		}
 
-		cost := gm.costModeler.ResourceNodeToResourceNodeCost(resNode.ResourceDescriptor, arc.DstNode.ResourceDescriptor)
-		gm.cm.ChangeArcCost(arc, int64(cost), dimacs.ChgArcBetweenRes, "UpdateResOutgoingArcs")
+		cost := int64(gm.costModeler.ResourceNodeToResourceNodeCost(resNode.ResourceDescriptor, arc.DstNode.ResourceDescriptor))
+		gm.cm.ChangeArcCost(arc, cost, dimacs.ChgArcBetweenRes, "UpdateResOutgoingArcs")
 		if _, ok := markedNodes[arc.DstNode.ID]; !ok {
 			// Add the dst node to the queue if it hasn't been marked yet.
 			markedNodes[arc.DstNode.ID] = struct{}{}
@@ -1093,13 +1093,13 @@ func (gm *graphManager) updateTaskToEquivArcs(taskNode *flowgraph.Node, nodeQueu
 		if prefECNode == nil {
 			prefECNode = gm.addEquivClassNode(prefEC)
 		}
-		newCost := gm.costModeler.TaskToEquivClassAggregator(types.TaskID(taskNode.Task.Uid), prefEC)
+		newCost := int64(gm.costModeler.TaskToEquivClassAggregator(types.TaskID(taskNode.Task.Uid), prefEC))
 		prefECArc := gm.cm.Graph().GetArc(taskNode, prefECNode)
 
 		if prefECArc == nil {
-			gm.cm.AddArc(taskNode, prefECNode, 0, 1, int64(newCost), flowgraph.ArcTypeOther, dimacs.AddArcTaskToEquivClass, "UpdateTaskToEquivArcs")
+			gm.cm.AddArc(taskNode, prefECNode, 0, 1, newCost, flowgraph.ArcTypeOther, dimacs.AddArcTaskToEquivClass, "UpdateTaskToEquivArcs")
 		} else {
-			gm.cm.ChangeArc(prefECArc, prefECArc.CapLowerBound, prefECArc.CapUpperBound, int64(newCost), dimacs.ChgArcTaskToEquivClass, "UpdateTaskToEquivArcs")
+			gm.cm.ChangeArc(prefECArc, prefECArc.CapLowerBound, prefECArc.CapUpperBound, newCost, dimacs.ChgArcTaskToEquivClass, "UpdateTaskToEquivArcs")
 		}
 
 		if _, ok := markedNodes[prefECNode.ID]; !ok {
@@ -1172,6 +1172,19 @@ func (gm *graphManager) updateTaskToUnscheduledAggArc(taskNode *flowgraph.Node) 
 // unschedAggNode is the unscheduled aggregator node
 // capDelta is the delta by which to change the capacity
 func (gm *graphManager) updateUnscheduledAggNode(unschedAggNode *flowgraph.Node, capDelta int64) {
+	unschedAggSinkArc := gm.cm.Graph().GetArc(unschedAggNode, gm.sinkNode)
+	newCost := int64(gm.costModeler.UnscheduledAggToSinkCost(unschedAggNode.JobID))
+	if unschedAggSinkArc != nil {
+		newCapacity := uint64(int64(unschedAggSinkArc.CapUpperBound) + capDelta)
+		gm.cm.ChangeArc(unschedAggSinkArc, unschedAggSinkArc.CapLowerBound, newCapacity, newCost, dimacs.ChgArcFromUnsched, "UpdateUnscheduledAggNode")
+		return
+	}
+
+	if capDelta < 1 {
+		log.Panicf("gb/updateUnscheduledAggNode: capDelta:%v must be >= 1\n", capDelta)
+	}
+
+	gm.cm.AddArc(unschedAggNode, gm.sinkNode, 0, uint64(capDelta), newCost, flowgraph.ArcTypeOther, dimacs.AddArcFromUnsched, "UpdateUnscheduledAggNode")
 }
 
 func (gm *graphManager) visitTopologyChildren(rtnd *pb.ResourceTopologyNodeDescriptor) {
