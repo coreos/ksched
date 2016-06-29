@@ -826,9 +826,9 @@ func (gm *graphManager) updateEquivClassNode(ecNode *flowgraph.Node, nodeQueue q
 // EC nodes that have not yet been marked are appended to the queue.
 func (gm *graphManager) updateEquivToEquivArcs(ecNode *flowgraph.Node, nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
 	prefECs := gm.costModeler.GetEquivClassToEquivClassesArcs(*ecNode.EquivClass)
-	if prefECs == nil {
-		noPrefEC := make([]types.EquivClass, 0)
-		gm.removeInvalidECPrefArcs(ecNode, noPrefEC, dimacs.DelArcBetweenEquivClass)
+	// Empty slice means no preferences
+	if len(prefECs) == 0 {
+		gm.removeInvalidECPrefArcs(ecNode, prefECs, dimacs.DelArcBetweenEquivClass)
 		return
 	}
 
@@ -864,9 +864,9 @@ func (gm *graphManager) updateEquivToResArcs(ecNode *flowgraph.Node,
 	markedNodes map[flowgraph.NodeID]struct{}) {
 
 	prefResources := gm.costModeler.GetOutgoingEquivClassPrefArcs(*ecNode.EquivClass)
-	if prefResources == nil {
-		noPrefRes := make([]types.ResourceID, 0)
-		gm.removeInvalidPrefResArcs(ecNode, noPrefRes, dimacs.DelArcEquivClassToRes)
+	// Empty slice means no preferences
+	if len(prefResources) == 0 {
+		gm.removeInvalidPrefResArcs(ecNode, prefResources, dimacs.DelArcEquivClassToRes)
 		return
 	}
 
