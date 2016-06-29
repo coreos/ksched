@@ -1070,9 +1070,35 @@ func (gm *graphManager) updateTaskNode(taskNode *flowgraph.Node,
 // Updates a task's outgoing arcs to ECs. If the task has new outgoing arcs
 // to new EC nodes then the method appends them to the nodeQueue. Similarly,
 // EC nodes that have not yet been marked are appended to the queue.
-func (gm *graphManager) updateTaskToEquivArcs(taskNode *flowgraph.Node,
-	nodeQueue queue.FIFO,
-	markedNodes map[flowgraph.NodeID]struct{}) {
+func (gm *graphManager) updateTaskToEquivArcs(taskNode *flowgraph.Node, nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
+	prefECs := gm.costModeler.GetTaskEquivClasses(types.TaskID(taskNode.Task.Uid))
+	if prefECs == nil {
+		noPrefECs := make([]types.EquivClass, 0)
+		gm.removeInvalidECPrefArcs(taskNode, noPrefECs, dimacs.DelArcTaskToEquivClass)
+		return
+	}
+
+	for _, prefEC := range prefECs {
+		prefECNode := gm.nodeForEquivClass(prefEC)
+		if prefECNode == nil {
+			prefECNode = gm.addEquivClassNode(prefEC)
+		}
+		newCost := gm.costModeler.TaskToEquivClassAggregator(types.TaskID(taskNode.Task.Uid), prefEC)
+		prefECArc := gm.cm.Graph().GetArc(taskNode, prefECNode)
+
+		if prefECArc == nil {
+			gm.cm.AddArc(taskNode, prefECNode, 0, 1, int64(newCost), flowgraph.ArcTypeOther, dimacs.AddArcTaskToEquivClass, "UpdateTaskToEquivArcs")
+		} else {
+			gm.cm.ChangeArc(prefECArc, prefECArc.CapLowerBound, prefECArc.CapUpperBound, int64(newCost), dimacs.ChgArcTaskToEquivClass, "UpdateTaskToEquivArcs")
+		}
+
+		if _, ok := markedNodes[prefECNode.ID]; !ok {
+			// Add the EC node to the queue if it hasn't been marked yet.
+			markedNodes[prefECNode.ID] = struct{}{}
+			nodeQueue.Push(&taskOrNode{Node: prefECNode, TaskDesc: prefECNode.Task})
+		}
+		gm.removeInvalidECPrefArcs(taskNode, prefECs, dimacs.DelArcTaskToEquivClass)
+	}
 }
 
 // Updates a task's preferences to resources.
