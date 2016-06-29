@@ -1079,9 +1079,40 @@ func (gm *graphManager) updateTaskToEquivArcs(taskNode *flowgraph.Node,
 }
 
 // Updates a task's preferences to resources.
-func (gm *graphManager) updateTaskToResArcs(taskNode *flowgraph.Node,
-	nodeQueue queue.FIFO,
-	markedNodes map[flowgraph.NodeID]struct{}) {
+func (gm *graphManager) updateTaskToResArcs(taskNode *flowgraph.Node, nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
+	prefRIDs := gm.costModeler.GetTaskPreferenceArcs(types.TaskID(taskNode.Task.Uid))
+	// Empty slice means no preferences
+	if len(prefRIDs) == 0 {
+		gm.removeInvalidPrefResArcs(taskNode, prefRIDs, dimacs.DelArcTaskToRes)
+		return
+	}
+
+	for _, prefRID := range prefRIDs {
+		prefResNode := gm.nodeForResourceID(prefRID)
+		// The resource node should already exist because the cost models cannot
+		// prefer a resource before it is added to the graph.
+		if prefResNode == nil {
+			log.Panicf("gm/updateEquivToResArcs: preferred resource node cannot be nil")
+		}
+		newCost := gm.costModeler.TaskToResourceNodeCost(types.TaskID(taskNode.Task.Uid), prefRID)
+		prefResArc := gm.cm.Graph().GetArc(taskNode, prefResNode)
+
+		if prefResArc == nil {
+			gm.cm.AddArc(taskNode, prefResNode, 0, 1, int64(newCost), flowgraph.ArcTypeOther, dimacs.AddArcTaskToRes, "UpdateTaskToResArcs")
+		} else if prefResArc.Type != flowgraph.ArcTypeRunning {
+			// We don't change the cost of the arc if it's a running arc because
+			// the arc is updated somewhere else. Moreover, the cost of running
+			// arcs is returned by TaskContinuationCost.
+			gm.cm.ChangeArcCost(prefResArc, int64(newCost), dimacs.ChgArcTaskToRes, "UpdateTaskToResArcs")
+		}
+
+		if _, ok := markedNodes[prefResNode.ID]; !ok {
+			// Add the res node to the queue if it hasn't been marked yet.
+			markedNodes[prefResNode.ID] = struct{}{}
+			nodeQueue.Push(&taskOrNode{Node: prefResNode, TaskDesc: prefResNode.Task})
+		}
+	}
+	gm.removeInvalidPrefResArcs(taskNode, prefRIDs, dimacs.DelArcTaskToRes)
 }
 
 // Updates the arc from a task to its unscheduled aggregator. The method
