@@ -1097,8 +1097,8 @@ func (gm *graphManager) updateTaskToEquivArcs(taskNode *flowgraph.Node, nodeQueu
 			markedNodes[prefECNode.ID] = struct{}{}
 			nodeQueue.Push(&taskOrNode{Node: prefECNode, TaskDesc: prefECNode.Task})
 		}
-		gm.removeInvalidECPrefArcs(taskNode, prefECs, dimacs.DelArcTaskToEquivClass)
 	}
+	gm.removeInvalidECPrefArcs(taskNode, prefECs, dimacs.DelArcTaskToEquivClass)
 }
 
 // Updates a task's preferences to resources.
