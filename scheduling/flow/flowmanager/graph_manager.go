@@ -1175,6 +1175,12 @@ func (gm *graphManager) updateUnscheduledAggNode(unschedAggNode *flowgraph.Node,
 }
 
 func (gm *graphManager) visitTopologyChildren(rtnd *pb.ResourceTopologyNodeDescriptor) {
+	rd := rtnd.ResourceDesc
+	for _, rtndChild := range rtnd.Children {
+		gm.addResourceTopologyDFS(rtndChild)
+		rd.NumSlotsBelow += rtndChild.ResourceDesc.NumSlotsBelow
+		rd.NumRunningTasksBelow += rtndChild.ResourceDesc.NumRunningTasksBelow
+	}
 }
 
 // Small helper functions, might not really be needed
