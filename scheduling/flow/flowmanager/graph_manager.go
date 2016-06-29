@@ -1092,7 +1092,7 @@ func (gm *graphManager) updateTaskToResArcs(taskNode *flowgraph.Node, nodeQueue 
 		// The resource node should already exist because the cost models cannot
 		// prefer a resource before it is added to the graph.
 		if prefResNode == nil {
-			log.Panicf("gm/updateEquivToResArcs: preferred resource node cannot be nil")
+			log.Panicf("gm/updateTaskToResArcs: preferred resource node cannot be nil")
 		}
 		newCost := gm.costModeler.TaskToResourceNodeCost(types.TaskID(taskNode.Task.Uid), prefRID)
 		prefResArc := gm.cm.Graph().GetArc(taskNode, prefResNode)
