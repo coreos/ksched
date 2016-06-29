@@ -1094,11 +1094,11 @@ func (gm *graphManager) updateTaskToResArcs(taskNode *flowgraph.Node, nodeQueue 
 		if prefResNode == nil {
 			log.Panicf("gm/updateTaskToResArcs: preferred resource node cannot be nil")
 		}
-		newCost := gm.costModeler.TaskToResourceNodeCost(types.TaskID(taskNode.Task.Uid), prefRID)
+		newCost := int64(gm.costModeler.TaskToResourceNodeCost(types.TaskID(taskNode.Task.Uid), prefRID))
 		prefResArc := gm.cm.Graph().GetArc(taskNode, prefResNode)
 
 		if prefResArc == nil {
-			gm.cm.AddArc(taskNode, prefResNode, 0, 1, int64(newCost), flowgraph.ArcTypeOther, dimacs.AddArcTaskToRes, "UpdateTaskToResArcs")
+			gm.cm.AddArc(taskNode, prefResNode, 0, 1, newCost, flowgraph.ArcTypeOther, dimacs.AddArcTaskToRes, "UpdateTaskToResArcs")
 		} else if prefResArc.Type != flowgraph.ArcTypeRunning {
 			// We don't change the cost of the arc if it's a running arc because
 			// the arc is updated somewhere else. Moreover, the cost of running
