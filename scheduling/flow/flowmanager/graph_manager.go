@@ -84,9 +84,11 @@ type GraphManager interface {
 }
 
 type graphManager struct {
-	Preemption           bool
-	MaxTasksPerPu        uint64
-	flowSchedulingSolver string
+	// True if the preferences of a running task should be updated before each scheduling round
+	UpdatePreferencesRunningTask bool
+	Preemption                   bool
+	MaxTasksPerPu                uint64
+	flowSchedulingSolver         string
 
 	cm          GraphChangeManager
 	sinkNode    *flowgraph.Node
@@ -1062,9 +1064,14 @@ func (gm *graphManager) updateRunningTaskToUnscheduledAggArc(taskNode *flowgraph
 	gm.cm.ChangeArcCost(unschedArc, cost, dimacs.ChgArcToUnsched, "UpdateRunningTaskToUnscheduledAggArc")
 }
 
-func (gm *graphManager) updateTaskNode(taskNode *flowgraph.Node,
-	nodeQueue queue.FIFO,
-	markedNodes map[flowgraph.NodeID]struct{}) {
+func (gm *graphManager) updateTaskNode(taskNode *flowgraph.Node, nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
+	if taskNode.IsTaskAssignedOrRunning() {
+		gm.updateRunningTaskNode(taskNode, gm.UpdatePreferencesRunningTask, nodeQueue, markedNodes)
+		return
+	}
+	gm.updateTaskToUnscheduledAggArc(taskNode)
+	gm.updateTaskToEquivArcs(taskNode, nodeQueue, markedNodes)
+	gm.updateTaskToResArcs(taskNode, nodeQueue, markedNodes)
 }
 
 // Updates a task's outgoing arcs to ECs. If the task has new outgoing arcs
