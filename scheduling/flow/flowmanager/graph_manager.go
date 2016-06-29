@@ -797,11 +797,13 @@ func (gm *graphManager) updateChildrenTasks(td *pb.TaskDescriptor,
 				nodeQueue.Push(&taskOrNode{Node: childTaskNode, TaskDesc: childTask})
 				markedNodes[childTaskNode.ID] = struct{}{}
 			}
+			return
 		}
 
 		// ChildTask has no node
 		if !taskMustHaveNode(childTask) {
 			nodeQueue.Push(&taskOrNode{Node: nil, TaskDesc: childTask})
+			return
 		}
 
 		// ChildTask must have node
@@ -839,12 +841,12 @@ func (gm *graphManager) updateEquivToEquivArcs(ecNode *flowgraph.Node, nodeQueue
 		cost, capUpper := gm.costModeler.EquivClassToEquivClass(*ecNode.EquivClass, prefEC)
 		prefECArc := gm.cm.Graph().GetArc(ecNode, prefECNode)
 
-		if prefECArc != nil {
+		if prefECArc == nil {
+			// Create arc if it doesn't exist
+			gm.cm.AddArc(ecNode, prefECNode, 0, capUpper, int64(cost), flowgraph.ArcTypeOther, dimacs.AddArcBetweenEquivClass, "UpdateEquivClassNode")
+		} else {
 			gm.cm.ChangeArc(prefECArc, prefECArc.CapLowerBound, capUpper, int64(cost), dimacs.ChgArcBetweenEquivClass, "UpdateEquivClassNode")
 		}
-
-		// Create arc if it doesn't exist
-		gm.cm.AddArc(ecNode, prefECNode, 0, capUpper, int64(cost), flowgraph.ArcTypeOther, dimacs.AddArcBetweenEquivClass, "UpdateEquivClassNode")
 
 		if _, ok := markedNodes[prefECNode.ID]; !ok {
 			// Add the EC node to the queue if it hasn't been marked yet.
@@ -879,12 +881,12 @@ func (gm *graphManager) updateEquivToResArcs(ecNode *flowgraph.Node,
 		cost, capUpper := gm.costModeler.EquivClassToResourceNode(*ecNode.EquivClass, prefRID)
 		prefResArc := gm.cm.Graph().GetArc(ecNode, prefResNode)
 
-		if prefResArc != nil {
+		if prefResArc == nil {
+			// Create arc if it doesn't exist
+			gm.cm.AddArc(ecNode, prefResNode, 0, capUpper, int64(cost), flowgraph.ArcTypeOther, dimacs.AddArcEquivClassToRes, "UpdateEquivToResArcs")
+		} else {
 			gm.cm.ChangeArc(prefResArc, prefResArc.CapLowerBound, capUpper, int64(cost), dimacs.ChgArcEquivClassToRes, "UpdateEquivToResArcs")
 		}
-
-		// Create arc if it doesn't exist
-		gm.cm.AddArc(ecNode, prefResNode, 0, capUpper, int64(cost), flowgraph.ArcTypeOther, dimacs.AddArcEquivClassToRes, "UpdateEquivToResArcs")
 
 		if _, ok := markedNodes[prefResNode.ID]; !ok {
 			// Add the res node to the queue if it hasn't been marked yet.
@@ -1004,11 +1006,12 @@ func (gm *graphManager) updateResToSinkArc(resNode *flowgraph.Node) {
 
 	resArcSink := gm.cm.Graph().GetArc(resNode, gm.sinkNode)
 	cost := int64(gm.costModeler.LeafResourceNodeToSinkCost(resNode.ResourceID))
-	if resArcSink != nil {
+	if resArcSink == nil {
+		gm.cm.AddArc(resNode, gm.sinkNode, 0, gm.MaxTasksPerPu, cost, flowgraph.ArcTypeOther, dimacs.AddArcResToSink, "UpdateResToSinkArc")
+	} else {
 		gm.cm.ChangeArcCost(resArcSink, cost, dimacs.ChgArcResToSink, "UpdateResToSinkArc")
-		return
 	}
-	gm.cm.AddArc(resNode, gm.sinkNode, 0, gm.MaxTasksPerPu, cost, flowgraph.ArcTypeOther, dimacs.AddArcResToSink, "UpdateResToSinkArc")
+
 }
 
 // Updates the cost on running arc of the task. If preemption is enabled then
