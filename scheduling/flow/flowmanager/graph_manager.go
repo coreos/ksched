@@ -1003,7 +1003,7 @@ func (gm *graphManager) updateRunningTaskNode(taskNode *flowgraph.Node, updatePr
 	}
 	newCost := int64(gm.costModeler.TaskContinuationCost(taskID))
 	gm.cm.ChangeArcCost(runningArc, newCost, dimacs.ChgArcTaskToRes, "UpdateRunningTaskNode: continuation cost")
-	if gm.Preemption == false {
+	if !gm.Preemption {
 		return
 	}
 
