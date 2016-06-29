@@ -1092,13 +1092,13 @@ func (gm *graphManager) updateTaskToUnscheduledAggArc(taskNode *flowgraph.Node) 
 	if unschedAggNode == nil {
 		unschedAggNode = gm.addUnscheduledAggNode(taskNode.JobID)
 	}
-	newCost := gm.costModeler.TaskToUnscheduledAggCost(types.TaskID(taskNode.Task.Uid))
+	newCost := int64(gm.costModeler.TaskToUnscheduledAggCost(types.TaskID(taskNode.Task.Uid)))
 	toUnschedArc := gm.cm.Graph().GetArc(taskNode, unschedAggNode)
 
 	if toUnschedArc == nil {
-		gm.cm.AddArc(taskNode, unschedAggNode, 0, 1, int64(newCost), flowgraph.ArcTypeOther, dimacs.AddArcToUnsched, "UpdateTaskToUnscheduledAggArc")
+		gm.cm.AddArc(taskNode, unschedAggNode, 0, 1, newCost, flowgraph.ArcTypeOther, dimacs.AddArcToUnsched, "UpdateTaskToUnscheduledAggArc")
 	} else {
-		gm.cm.ChangeArcCost(toUnschedArc, int64(newCost), dimacs.ChgArcToUnsched, "UpdateTaskToUnscheduledAggArc")
+		gm.cm.ChangeArcCost(toUnschedArc, newCost, dimacs.ChgArcToUnsched, "UpdateTaskToUnscheduledAggArc")
 	}
 	return unschedAggNode
 }
