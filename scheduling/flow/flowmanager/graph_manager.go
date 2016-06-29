@@ -1088,7 +1088,19 @@ func (gm *graphManager) updateTaskToResArcs(taskNode *flowgraph.Node,
 // adds the unscheduled if it doesn't already exist.
 // returns the unscheduled aggregator node
 func (gm *graphManager) updateTaskToUnscheduledAggArc(taskNode *flowgraph.Node) *flowgraph.Node {
-	return nil
+	unschedAggNode := gm.unschedAggNodeForJobID(taskNode.JobID)
+	if unschedAggNode == nil {
+		unschedAggNode = gm.addUnscheduledAggNode(taskNode.JobID)
+	}
+	newCost := gm.costModeler.TaskToUnscheduledAggCost(types.TaskID(taskNode.Task.Uid))
+	toUnschedArc := gm.cm.Graph().GetArc(taskNode, unschedAggNode)
+
+	if toUnschedArc == nil {
+		gm.cm.AddArc(taskNode, unschedAggNode, 0, 1, int64(newCost), flowgraph.ArcTypeOther, dimacs.AddArcToUnsched, "UpdateTaskToUnscheduledAggArc")
+	} else {
+		gm.cm.ChangeArcCost(toUnschedArc, int64(newCost), dimacs.ChgArcToUnsched, "UpdateTaskToUnscheduledAggArc")
+	}
+	return unschedAggNode
 }
 
 // Adjusts the capacity of the arc connecting the unscheduled agg to the sink
