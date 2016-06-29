@@ -1031,6 +1031,22 @@ func (gm *graphManager) updateRunningTaskNode(taskNode *flowgraph.Node,
 // NOTE: This method should only be called when preemption is enabled.
 // taskNode is the node for which to update the arc
 func (gm *graphManager) updateRunningTaskToUnscheduledAggArc(taskNode *flowgraph.Node) {
+	if gm.Preemption == false {
+		log.Panicf("Arc to unscheduled doesn't exist for running task when preemption is not enabled")
+	}
+
+	unschedAggNode := gm.unschedAggNodeForJobID(taskNode.JobID)
+	if unschedAggNode == nil {
+		log.Panicf("gm/updateRunningTaskToUnscheduledAggArc: unscheduledAggNode must exist for taskNode.JobID:%v\n", taskNode.JobID)
+	}
+
+	unschedArc := gm.cm.Graph().GetArc(taskNode, unschedAggNode)
+	if unschedArc == nil {
+		log.Panicf("gm/updateRunningTaskToUnscheduledAggArc: unscheduledArc must exist for unschedAggNode.ID:%v\n", unschedAggNode.ID)
+	}
+
+	cost := int64(gm.costModeler.TaskPreemptionCost(types.TaskID(taskNode.Task.Uid)))
+	gm.cm.ChangeArcCost(unschedArc, cost, dimacs.ChgArcToUnsched, "UpdateRunningTaskToUnscheduledAggArc")
 }
 
 func (gm *graphManager) updateTaskNode(taskNode *flowgraph.Node,
