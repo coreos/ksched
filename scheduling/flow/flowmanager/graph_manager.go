@@ -307,6 +307,9 @@ func (gm *graphManager) PurgeUnconnectedEquivClassNodes() {
 	}
 }
 
+// Removes the resource, and all of it's children from the flowgraph
+// Updates the capcaities, numRunningTasks and numSlotsBelow all the way
+// from this node up to the root of the flow graph
 func (gm *graphManager) RemoveResourceTopology(rd pb.ResourceDescriptor) []flowgraph.NodeID {
 	rID := util.MustResourceIDFromString(rd.Uuid)
 	rNode := gm.nodeForResourceID(rID)
@@ -317,13 +320,13 @@ func (gm *graphManager) RemoveResourceTopology(rd pb.ResourceDescriptor) []flowg
 	capDelta := int64(0)
 	// Delete the children nodes.
 	for _, arc := range rNode.OutgoingArcMap {
-		capDelta = int64(arc.CapUpperBound)
+		capDelta -= int64(arc.CapUpperBound)
 		if arc.DstNode.ResourceID != 0 {
 			removedPUs = append(removedPUs, gm.traverseAndRemoveTopology(arc.DstNode)...)
 		}
 	}
 	// Propagate the stats update up to the root resource.
-	gm.updateResourceStatsUpToRoot(rNode, capDelta, int64(rNode.ResourceDescriptor.NumSlotsBelow), int64(rNode.ResourceDescriptor.NumRunningTasksBelow))
+	gm.updateResourceStatsUpToRoot(rNode, capDelta, -int64(rNode.ResourceDescriptor.NumSlotsBelow), -int64(rNode.ResourceDescriptor.NumRunningTasksBelow))
 	// Delete the node.
 	if rNode.Type == flowgraph.NodeTypePu {
 		removedPUs = append(removedPUs, rNode.ID)
