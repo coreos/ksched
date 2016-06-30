@@ -194,10 +194,7 @@ func (gm *graphManager) AddResourceTopology(rtnd *pb.ResourceTopologyNodeDescrip
 	if rtnd.ParentId != "" {
 		// We start from rtnd's parent because in AddResourceTopologyDFS we
 		// already added an arc between rtnd and its parent.
-		rID, err := util.ResourceIDFromString(rtnd.ParentId)
-		if err != nil {
-			log.Panic(err)
-		}
+		rID := util.MustResourceIDFromString(rtnd.ParentId)
 		currNode := gm.nodeForResourceID(rID)
 		runningTasksDelta := rd.NumRunningTasksBelow
 		capacityToParent := gm.capacityFromResNodeToParent(rd)
