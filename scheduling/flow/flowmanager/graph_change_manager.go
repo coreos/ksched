@@ -176,7 +176,6 @@ func (cm *changeManager) ChangeArcCost(arc *flowgraph.Arc, cost int64, changeTyp
 func (cm *changeManager) DeleteArc(arc *flowgraph.Arc, changeType dimacs.ChangeType, comment string) {
 	arc.CapUpperBound = 0
 	arc.CapLowerBound = 0
-	cm.flowGraph.DeleteArc(arc)
 
 	change := dimacs.NewUpdateArcChange(arc, arc.Cost)
 	change.SetComment(comment)

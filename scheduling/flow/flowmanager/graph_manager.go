@@ -644,6 +644,7 @@ func (gm *graphManager) removeInvalidECPrefArcs(node *flowgraph.Node, prefEcs []
 	for ec := range prefEcs {
 		prefECSet[types.EquivClass(ec)] = struct{}{}
 	}
+	toDelete := make([]*flowgraph.Arc, 0)
 
 	// For each arc, check if the preferredEC is actually an EC node and that it's not in the preferences slice(prefEC)
 	// If yes, remove that arc
@@ -652,8 +653,12 @@ func (gm *graphManager) removeInvalidECPrefArcs(node *flowgraph.Node, prefEcs []
 		_, ok := prefECSet[prefEC]
 		if prefEC != 0 && !ok {
 			log.Printf("Deleting no-longer-current arc to EC:%v", prefEC)
-			gm.cm.DeleteArc(arc, changeType, "RemoveInvalidECPrefArcs")
+			toDelete = append(toDelete, arc)
 		}
+	}
+
+	for _, arc := range toDelete {
+		gm.cm.DeleteArc(arc, changeType, "RemoveInvalidECPrefArcs")
 	}
 }
 
