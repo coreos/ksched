@@ -583,7 +583,6 @@ func (gm *graphManager) capacityFromResNodeToParent(rd *pb.ResourceDescriptor) u
 // This arc is the running arc, indicating where this particular will run and it's cost is assigned as a TaskContinuationCost
 // from the cost model.
 func (gm *graphManager) pinTaskToNode(taskNode, resourceNode *flowgraph.Node) {
-	var runningArc *flowgraph.Arc
 	addedRunningArc := false
 	lowBoundCapacity := uint64(1)
 	// TODO: Address the lower capacity issue on custom solvers, see original
@@ -603,7 +602,13 @@ func (gm *graphManager) pinTaskToNode(taskNode, resourceNode *flowgraph.Node) {
 		newCost := int64(gm.costModeler.TaskContinuationCost(types.TaskID(taskNode.Task.Uid)))
 		arc.Type = flowgraph.ArcTypeRunning
 		gm.cm.ChangeArc(arc, lowBoundCapacity, 1, newCost, dimacs.ChgArcRunningTask, "PinTaskToNode: transform to running arc")
-		runningArc = arc
+
+		// Insert mapping for Task to RunningArc, must not already exist
+		_, ok := gm.taskToRunningArc[types.TaskID(taskNode.ID)]
+		if ok {
+			log.Panicf("gm:pintTaskToNode Mapping for taskID:%v to running arc already present\n", taskNode.ID)
+		}
+		gm.taskToRunningArc[types.TaskID(taskNode.ID)] = arc
 	}
 
 	// Decrement capacity from unsched agg node to sink.
@@ -612,15 +617,15 @@ func (gm *graphManager) pinTaskToNode(taskNode, resourceNode *flowgraph.Node) {
 		// Add a single arc from the task to the resource node
 		newCost := int64(gm.costModeler.TaskContinuationCost(types.TaskID(taskNode.Task.Uid)))
 		newArc := gm.cm.AddArc(taskNode, resourceNode, lowBoundCapacity, 1, newCost, flowgraph.ArcTypeRunning, dimacs.AddArcRunningTask, "PinTaskToNode: add running arc")
-		runningArc = newArc
+
+		// Insert mapping for Task to RunningArc, must not already exist
+		_, ok := gm.taskToRunningArc[types.TaskID(taskNode.ID)]
+		if ok {
+			log.Panicf("gm:pintTaskToNode Mapping for taskID:%v to running arc already present\n", taskNode.ID)
+		}
+		gm.taskToRunningArc[types.TaskID(taskNode.ID)] = newArc
 	}
 
-	// Insert mapping for Task to RunningArc, must not already exist
-	_, ok := gm.taskToRunningArc[types.TaskID(taskNode.ID)]
-	if ok {
-		log.Panicf("gm:pintTaskToNode Mapping for taskID:%v to running arc already present\n", taskNode.ID)
-	}
-	gm.taskToRunningArc[types.TaskID(taskNode.ID)] = runningArc
 }
 
 func (gm *graphManager) removeEquivClassNode(ecNode *flowgraph.Node) {
