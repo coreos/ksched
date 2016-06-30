@@ -447,10 +447,7 @@ func (gm *graphManager) addResourceNode(rd *pb.ResourceDescriptor) *flowgraph.No
 
 	resourceNode := gm.cm.AddNode(flowgraph.TransformToResourceNodeType(rd),
 		0, dimacs.AddResourceNode, comment)
-	rID, err := util.ResourceIDFromString(rd.Uuid)
-	if err != nil {
-		panic(err)
-	}
+	rID := util.MustResourceIDFromString(rd.Uuid)
 	resourceNode.ID = flowgraph.NodeID(rID)
 	resourceNode.ResourceDescriptor = rd
 	// Insert mapping resource to node, must not already have mapping
@@ -461,7 +458,7 @@ func (gm *graphManager) addResourceNode(rd *pb.ResourceDescriptor) *flowgraph.No
 	gm.resourceToNode[rID] = resourceNode
 
 	if resourceNode.Type == flowgraph.NodeTypePu {
-		gm.leafNodeIDs[flowgraph.NodeID(rID)] = struct{}{}
+		gm.leafNodeIDs[resourceNode.ID] = struct{}{}
 		gm.leafResourceIDs[rID] = struct{}{}
 	}
 	return resourceNode
