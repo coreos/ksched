@@ -389,7 +389,7 @@ func (gm *graphManager) TaskFailed(id types.TaskID) {
 		// When we pin the task we reduce the capacity from the unscheduled
 		// aggrator to the sink. Hence, we only have to reduce the capacity
 		// when we support preemption.
-		unschedAggNode := gm.jobUnschedToNode[taskNode.JobID]
+		unschedAggNode := gm.unschedAggNodeForJobID(taskNode.JobID)
 		gm.updateUnscheduledAggNode(unschedAggNode, -1)
 	}
 
