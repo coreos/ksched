@@ -363,22 +363,26 @@ func (gm *graphManager) TaskMigrated(id types.TaskID, from, to types.ResourceID)
 	gm.TaskScheduled(id, to)
 }
 
-func (gm *graphManager) TaskEvicted(id types.TaskID, rid types.ResourceID) {
+func (gm *graphManager) TaskEvicted(taskID types.TaskID, rid types.ResourceID) {
 	gm.mu.Lock()
 	defer gm.mu.Unlock()
 
-	taskNode := gm.taskToNode[id]
+	taskNode := gm.nodeForTaskID(taskID)
 	taskNode.Type = flowgraph.NodeTypeUnscheduledTask
 
-	arc := gm.taskToRunningArc[id]
-	delete(gm.taskToRunningArc, id)
+	arc, ok := gm.taskToRunningArc[taskID]
+	if !ok {
+		log.Panicf("gb/TaskEvicted: running arc mapping for taskID:%d must exist\n", taskID)
+	}
+	delete(gm.taskToRunningArc, taskID)
 	gm.cm.DeleteArc(arc, dimacs.DelArcEvictedTask, "TaskEvicted: delete running arc")
 
 	if !gm.Preemption {
 		// If we're running with preemption disabled then increase the capacity from
 		// the unscheduled aggregator to the sink because the task can now stay
 		// unscheduled.
-		unschedAggNode := gm.jobUnschedToNode[taskNode.JobID]
+		jobID := util.MustJobIDFromString(taskNode.Task.JobID)
+		unschedAggNode := gm.unschedAggNodeForJobID(jobID)
 		// Increment capacity from unsched agg node to sink.
 		gm.updateUnscheduledAggNode(unschedAggNode, 1)
 	}
