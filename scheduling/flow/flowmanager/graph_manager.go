@@ -136,26 +136,29 @@ func (gm *graphManager) LeafNodeIDs() map[flowgraph.NodeID]struct{} {
 	return gm.leafNodeIDs
 }
 
+// This function updates the flow graph by adding new unscheduled aggregator
+// nodes for new jobs, and builds a queue of nodes(nodeQueue) in the graph
+// that need to be updated(costs, capacities) via updateFlowGraph().
+// For existing jobs it passes them on via the nodeQueue to be updated.
+// jobs: The list of jobs that need updating
 func (gm *graphManager) AddOrUpdateJobNodes(jobs []pb.JobDescriptor) {
-	// For each job:
-	// 1. Add/Update unscheduled agg node
-	// 2. Add its root task to the queue
-
-	q := queue.NewFIFO()
+	nodeQueue := queue.NewFIFO()
 	markedNodes := make(map[flowgraph.NodeID]struct{})
-
-	for _, j := range jobs {
-		jid := util.MustJobIDFromString(j.Uuid)
+	// For each job:
+	// 1. Add/Update its unscheduled agg node
+	// 2. Add its root task to the nodeQueue
+	for _, job := range jobs {
+		jid := util.MustJobIDFromString(job.Uuid)
 		// First add an unscheduled aggregator node for this job if none exists already.
 		unschedAggNode := gm.jobUnschedToNode[jid]
 		if unschedAggNode == nil {
 			unschedAggNode = gm.addUnscheduledAggNode(jid)
 		}
 
-		rootTD := j.RootTask
-		rootTaskNode := gm.taskToNode[types.TaskID(rootTD.Uid)]
+		rootTD := job.RootTask
+		rootTaskNode := gm.nodeForTaskID(types.TaskID(rootTD.Uid))
 		if rootTaskNode != nil {
-			q.Push(&taskOrNode{Node: rootTaskNode, TaskDesc: rootTD})
+			nodeQueue.Push(&taskOrNode{Node: rootTaskNode, TaskDesc: rootTD})
 			markedNodes[rootTaskNode.ID] = struct{}{}
 			continue
 		}
@@ -165,19 +168,18 @@ func (gm *graphManager) AddOrUpdateJobNodes(jobs []pb.JobDescriptor) {
 			// Increment capacity from unsched agg node to sink.
 			gm.updateUnscheduledAggNode(unschedAggNode, 1)
 
-			q.Push(&taskOrNode{Node: rootTaskNode, TaskDesc: rootTD})
+			nodeQueue.Push(&taskOrNode{Node: rootTaskNode, TaskDesc: rootTD})
 			markedNodes[rootTaskNode.ID] = struct{}{}
 		} else {
 			// We don't have to add a new node for the task.
-			q.Push(&taskOrNode{TaskDesc: rootTD})
+			nodeQueue.Push(&taskOrNode{TaskDesc: rootTD})
 			// We can't mark the task as visited because we don't have
 			// a node id for it. However, this is fine in practice because the
 			// tasks cannot be a DAG and so we will never visit them again.
 		}
 	}
-
 	// UpdateFlowGraph is responsible for making sure that the node_queue is empty upon completion.
-	gm.updateFlowGraph(q, markedNodes)
+	gm.updateFlowGraph(nodeQueue, markedNodes)
 }
 
 // TODO: do we really need this method? this is just a wrapper around AddOrUpdateJobNodes
