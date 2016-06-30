@@ -569,7 +569,11 @@ func (gm *graphManager) addUnscheduledAggNode(jobID types.JobID) *flowgraph.Node
 }
 
 func (gm *graphManager) capacityFromResNodeToParent(rd *pb.ResourceDescriptor) uint64 {
-	return 0
+	if gm.Preemption {
+		return rd.NumSlotsBelow
+	} else {
+		return rd.NumSlotsBelow - rd.NumRunningTasksBelow
+	}
 }
 
 // Pins the task (taskNode) to the resource (resourceNode).
