@@ -411,11 +411,11 @@ func (gm *graphManager) TaskScheduled(id types.TaskID, rid types.ResourceID) {
 }
 
 func (gm *graphManager) UpdateAllCostsToUnscheduledAggs() {
-	for _, node := range gm.jobUnschedToNode {
-		if node == nil {
-			log.Panicf("gm/UpdateAllCostsToUnscheduledAggs: node for jobID:%v cannot be nil", node)
+	for _, jobNode := range gm.jobUnschedToNode {
+		if jobNode == nil {
+			log.Panicf("gm/UpdateAllCostsToUnscheduledAggs: node for jobID:%v cannot be nil", jobNode)
 		}
-		for _, arc := range node.IncomingArcMap {
+		for _, arc := range jobNode.IncomingArcMap {
 			if arc.SrcNode.IsTaskAssignedOrRunning() {
 				gm.updateRunningTaskNode(arc.SrcNode, false, nil, nil)
 			} else {
