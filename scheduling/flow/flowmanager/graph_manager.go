@@ -733,6 +733,7 @@ func (gm *graphManager) traverseAndRemoveTopology(resNode *flowgraph.Node) []flo
 	removedPUs := make([]flowgraph.NodeID, 0)
 	for _, arc := range resNode.OutgoingArcMap {
 		if arc.DstNode.ResourceID != 0 {
+			// The arc is pointing to a resource node.
 			removedPUs = append(removedPUs, gm.traverseAndRemoveTopology(arc.DstNode)...)
 		}
 	}
