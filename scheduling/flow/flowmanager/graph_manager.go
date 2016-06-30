@@ -338,9 +338,6 @@ func (gm *graphManager) RemoveResourceTopology(rd pb.ResourceDescriptor) []flowg
 }
 
 func (gm *graphManager) TaskCompleted(id types.TaskID) flowgraph.NodeID {
-	gm.mu.Lock()
-	defer gm.mu.Unlock()
-
 	taskNode := gm.taskToNode[id]
 
 	if gm.Preemption {
@@ -364,9 +361,6 @@ func (gm *graphManager) TaskMigrated(id types.TaskID, from, to types.ResourceID)
 }
 
 func (gm *graphManager) TaskEvicted(taskID types.TaskID, rid types.ResourceID) {
-	gm.mu.Lock()
-	defer gm.mu.Unlock()
-
 	taskNode := gm.nodeForTaskID(taskID)
 	taskNode.Type = flowgraph.NodeTypeUnscheduledTask
 
@@ -390,9 +384,6 @@ func (gm *graphManager) TaskEvicted(taskID types.TaskID, rid types.ResourceID) {
 }
 
 func (gm *graphManager) TaskFailed(id types.TaskID) {
-	gm.mu.Lock()
-	defer gm.mu.Unlock()
-
 	taskNode := gm.taskToNode[id]
 	if gm.Preemption {
 		// When we pin the task we reduce the capacity from the unscheduled
@@ -412,9 +403,6 @@ func (gm *graphManager) TaskKilled(id types.TaskID) {
 }
 
 func (gm *graphManager) TaskScheduled(id types.TaskID, rid types.ResourceID) {
-	gm.mu.Lock()
-	defer gm.mu.Unlock()
-
 	taskNode := gm.taskToNode[id]
 	taskNode.Type = flowgraph.NodeTypeScheduledTask
 
