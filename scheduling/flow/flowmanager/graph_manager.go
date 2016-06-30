@@ -403,10 +403,10 @@ func (gm *graphManager) TaskKilled(id types.TaskID) {
 }
 
 func (gm *graphManager) TaskScheduled(id types.TaskID, rid types.ResourceID) {
-	taskNode := gm.taskToNode[id]
+	taskNode := gm.nodeForTaskID(id)
 	taskNode.Type = flowgraph.NodeTypeScheduledTask
 
-	resNode := gm.resourceToNode[rid]
+	resNode := gm.nodeForResourceID(rid)
 	gm.updateArcsForScheduledTask(taskNode, resNode)
 }
 
