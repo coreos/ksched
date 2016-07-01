@@ -36,14 +36,14 @@ type GraphManager interface {
 
 	AddOrUpdateJobNodes(jobs []pb.JobDescriptor)
 
+	// TODO: do we really need this method? this is just a wrapper around AddOrUpdateJobNodes
 	UpdateTimeDependentCosts(jobs []pb.JobDescriptor)
 
 	// AddResourceTopology adds the entire resource topology tree. The method
 	// also updates the statistics of the nodes up to the root resource.
 	AddResourceTopology(topo pb.ResourceTopologyNodeDescriptor)
 
-	// TODO: do we really need this method? this is just a wrapper around AddOrUpdateJobNodes
-	UpdateResourceTopology(topo pb.ResourceTopologyNodeDescriptor)
+	UpdateResourceTopology(rtnd *pb.ResourceTopologyNodeDescriptor)
 
 	// NOTE: The original interface passed in pointers to member functions of the costModeler
 	// Now we just call the costModeler methods directly
@@ -187,6 +187,29 @@ func (gm *graphManager) AddOrUpdateJobNodes(jobs []pb.JobDescriptor) {
 // TODO: do we really need this method? this is just a wrapper around AddOrUpdateJobNodes
 func (gm *graphManager) UpdateTimeDependentCosts(jobs []pb.JobDescriptor) {
 	gm.AddOrUpdateJobNodes(jobs)
+}
+
+// UpdateResourceTopology first updates(capacity, num running tasks) of the resource tree rooted at rtnd
+// and then propagates those changes up to the root.
+func (gm *graphManager) UpdateResourceTopology(rtnd *pb.ResourceTopologyNodeDescriptor) {
+	// TODO(ionel): We don't currently update the arc costs. Moreover, we should
+	// handle the case when a resource's parent changes.
+	rd := rtnd.ResourceDesc
+	oldCapacity := int64(gm.capacityFromResNodeToParent(rd))
+	oldNumSlots := int64(rd.NumSlotsBelow)
+	oldNumRunningTasks := int64(rd.NumRunningTasksBelow)
+	gm.updateResourceTopologyDFS(rtnd)
+
+	// Update towards the parent
+	if rtnd.ParentId != "" {
+		// We start from rtnd's parent because in UpdateResourceTopologyDFS
+		// we already update the arc between rtnd and its parent.
+		curNode := gm.nodeForResourceID(util.MustResourceIDFromString(rtnd.ParentId))
+		capDelta := int64(gm.capacityFromResNodeToParent(rd)) - oldCapacity
+		slotsDelta := int64(rd.NumSlotsBelow) - oldNumSlots
+		runningTasksDelta := int64(rd.NumRunningTasksBelow) - oldNumRunningTasks
+		gm.updateResourceStatsUpToRoot(curNode, capDelta, slotsDelta, runningTasksDelta)
+	}
 }
 
 func (gm *graphManager) AddResourceTopology(rtnd *pb.ResourceTopologyNodeDescriptor) {
