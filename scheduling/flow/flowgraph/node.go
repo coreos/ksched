@@ -70,7 +70,7 @@ type Node struct {
 	IncomingArcMap map[NodeID]*Arc
 	// Field use to mark if the node has been visited in a graph traversal.
 	// TODO: Why is this a uint32 in the original code
-	visited uint32
+	Visited uint32
 }
 
 // True indicates that an insert took place,
