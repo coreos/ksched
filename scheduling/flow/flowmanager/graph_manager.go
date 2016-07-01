@@ -45,7 +45,9 @@ type GraphManager interface {
 	// TODO: do we really need this method? this is just a wrapper around AddOrUpdateJobNodes
 	UpdateResourceTopology(topo pb.ResourceTopologyNodeDescriptor)
 
-	// TODO: ComputeTopologyStatistics(...)
+	// NOTE: The original interface passed in pointers to member functions of the costModeler
+	// Now we just call the costModeler methods directly
+	ComputeTopologyStatistics(node *flowgraph.Node)
 
 	JobCompleted(id types.JobID)
 
@@ -421,6 +423,39 @@ func (gm *graphManager) UpdateAllCostsToUnscheduledAggs() {
 			} else {
 				gm.updateTaskToUnscheduledAggArc(arc.SrcNode)
 			}
+		}
+	}
+}
+
+// ComputeTopologyStatistics does a BFS traversal starting from the sink
+// to gather and update the usage statistics for the resource topology
+func (gm *graphManager) ComputeTopologyStatistics(node *flowgraph.Node) {
+	// XXX(ionel): The function only works correctly as long as the topology is a
+	// tree. If the topology is a DAG then it does not work correctly! It does
+	// not work in the DAG case because the function implements BFS. Hence,
+	// we may pop a node of the queue and propagate its statistics via its incoming
+	// arcs before we've received all the statistics at the node.
+	toVisit := queue.NewFIFO()
+	// We maintain a value that is used to mark visited nodes. Before each
+	// visit we increment the mark to make sure that nodes visited in previous
+	// traversal are not going to be treated as marked. By using the mark
+	// variable we avoid having to reset the visited state of each node before
+	// of a traversal.
+	gm.curTraversalCounter++
+	toVisit.Push(node)
+	node.Visited = gm.curTraversalCounter
+	for !toVisit.IsEmpty() {
+		curNode := toVisit.Pop().(*flowgraph.Node)
+		for _, incomingArc := range curNode.IncomingArcMap {
+			if incomingArc.SrcNode.Visited != gm.curTraversalCounter {
+				gm.costModeler.PrepareStats(incomingArc.SrcNode)
+				toVisit.Push(incomingArc.SrcNode)
+				incomingArc.SrcNode.Visited = gm.curTraversalCounter
+			}
+			incomingArc.SrcNode = gm.costModeler.GatherStats(incomingArc.SrcNode, curNode)
+			// The update part might not be needed since that functionality has been moved
+			// to the graph manager itself.
+			incomingArc.SrcNode = gm.costModeler.UpdateStats(incomingArc.SrcNode, curNode)
 		}
 	}
 }
