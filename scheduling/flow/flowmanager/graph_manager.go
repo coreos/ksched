@@ -136,7 +136,7 @@ func (gm *graphManager) LeafNodeIDs() map[flowgraph.NodeID]struct{} {
 	return gm.leafNodeIDs
 }
 
-// This function updates the flow graph by adding new unscheduled aggregator
+// AddOrUpdateJobNodes updates the flow graph by adding new unscheduled aggregator
 // nodes for new jobs, and builds a queue of nodes(nodeQueue) in the graph
 // that need to be updated(costs, capacities) via updateFlowGraph().
 // For existing jobs it passes them on via the nodeQueue to be updated.
@@ -571,9 +571,8 @@ func (gm *graphManager) addUnscheduledAggNode(jobID types.JobID) *flowgraph.Node
 func (gm *graphManager) capacityFromResNodeToParent(rd *pb.ResourceDescriptor) uint64 {
 	if gm.Preemption {
 		return rd.NumSlotsBelow
-	} else {
-		return rd.NumSlotsBelow - rd.NumRunningTasksBelow
 	}
+	return rd.NumSlotsBelow - rd.NumRunningTasksBelow
 }
 
 // Pins the task (taskNode) to the resource (resourceNode).
@@ -644,7 +643,7 @@ func (gm *graphManager) removeInvalidECPrefArcs(node *flowgraph.Node, prefEcs []
 	for ec := range prefEcs {
 		prefECSet[types.EquivClass(ec)] = struct{}{}
 	}
-	toDelete := make([]*flowgraph.Arc, 0)
+	var toDelete []*flowgraph.Arc
 
 	// For each arc, check if the preferredEC is actually an EC node and that it's not in the preferences slice(prefEC)
 	// If yes, remove that arc
