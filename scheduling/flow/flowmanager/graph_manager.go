@@ -190,7 +190,7 @@ func (gm *graphManager) UpdateTimeDependentCosts(jobs []pb.JobDescriptor) {
 }
 
 // UpdateResourceTopology first updates(capacity, num running tasks) of the resource tree rooted at rtnd
-// and then propates those changes up to the root.
+// and then propagates those changes up to the root.
 func (gm *graphManager) UpdateResourceTopology(rtnd *pb.ResourceTopologyNodeDescriptor) {
 	// TODO(ionel): We don't currently update the arc costs. Moreover, we should
 	// handle the case when a resource's parent changes.
