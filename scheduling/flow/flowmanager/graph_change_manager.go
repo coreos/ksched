@@ -189,7 +189,7 @@ func (cm *changeManager) GetGraphChanges() []dimacs.Change {
 }
 
 func (cm *changeManager) GetOptimizedGraphChanges() []dimacs.Change {
-	cm.optimizeChanges()
+	// cm.optimizeChanges()
 	return cm.graphChanges
 }
 
@@ -234,7 +234,7 @@ func (cm *changeManager) mergeChangesToSameArcHelper(
 	change *dimacs.Change, newGraphChanges []*dimacs.Change,
 	arcsSrcChanges map[uint64]map[uint64]*dimacs.Change,
 	arcsDstChanges map[uint64]map[uint64]*dimacs.Change) {
-
+	panic("optimization not implemented ")
 }
 
 func (cm *changeManager) purgeChangesBeforeNodeRemoval() {
@@ -252,7 +252,7 @@ func (cm *changeManager) removeDuplicateChangesHelper(
 	srcID, dstID uint64, change *dimacs.Change,
 	newGraphChanges []*dimacs.Change,
 	node_to_change map[uint64]map[string]*dimacs.Change) {
-
+	panic("optimization not implemented ")
 }
 
 func (cm *changeManager) removeDuplicateChangesUpdateState(
@@ -267,4 +267,5 @@ func (cm *changeManager) removeDuplicateCleanState(
 	newNodeID, srcID, dstID uint64,
 	changeDesc string,
 	node_to_change map[uint64]map[string]*dimacs.Change) {
+	panic("optimization not implemented ")
 }
