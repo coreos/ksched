@@ -42,23 +42,16 @@ func MustResourceIDFromString(s string) types.ResourceID {
 // on every ID generation
 
 // Random number generator
-var (
-	randGen *rand.Rand
-	isInit  bool
-)
+var randGen *rand.Rand
 
 // See the rng based on current time
-func randInit() {
+func init() {
 	t := time.Now().UnixNano()
 	randGen = rand.New(rand.NewSource(t))
-	isInit = true
 }
 
 // Generate a uint64 random number
 func randUint64() uint64 {
-	if !isInit {
-		randInit()
-	}
 	// Using two calls to uint32 since there is no rand.uint64
 	return uint64(randGen.Uint32()) + uint64(randGen.Uint32())
 }
