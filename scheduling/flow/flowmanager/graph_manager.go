@@ -127,6 +127,23 @@ type taskOrNode struct {
 	TaskDesc *pb.TaskDescriptor
 }
 
+func NewGraphManager(costModeler costmodel.CostModeler, leafResourceIDs map[types.ResourceID]struct{}, dimacsStats *dimacs.ChangeStats) *graphManager {
+	cm := NewChangeManager(dimacsStats)
+	gm := &graphManager{dimacsStats: dimacsStats,
+		leafResourceIDs:  leafResourceIDs,
+		cm:               cm,
+		costModeler:      costModeler,
+		resourceToNode:   make(map[types.ResourceID]*flowgraph.Node),
+		taskToNode:       make(map[types.TaskID]*flowgraph.Node),
+		taskECToNode:     make(map[types.EquivClass]*flowgraph.Node),
+		jobUnschedToNode: make(map[types.JobID]*flowgraph.Node),
+		taskToRunningArc: make(map[types.TaskID]*flowgraph.Arc),
+		nodeToParentNode: make(map[*flowgraph.Node]*flowgraph.Node),
+		leafNodeIDs:      make(map[flowgraph.NodeID]struct{}),
+	}
+	return gm
+}
+
 func (gm *graphManager) GraphChangeManager() GraphChangeManager {
 	return gm.cm
 }

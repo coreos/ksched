@@ -25,9 +25,13 @@ type trivialCostModeler struct {
 	machineToResTopo map[types.ResourceID]*pb.ResourceTopologyNodeDescriptor
 }
 
-func NewTrivial() *trivialCostModeler {
-	// TODO:
-	return &trivialCostModeler{}
+func NewTrivial(resourceMap *types.ResourceMap, taskMap *types.TaskMap, leafResIDset map[types.ResourceID]struct{}) *trivialCostModeler {
+	return &trivialCostModeler{
+		resourceMap:      resourceMap,
+		taskMap:          taskMap,
+		leafResIDset:     leafResIDset,
+		machineToResTopo: make(map[types.ResourceID]*pb.ResourceTopologyNodeDescriptor),
+	}
 }
 
 func (t *trivialCostModeler) TaskToUnscheduledAggCost(types.TaskID) Cost {

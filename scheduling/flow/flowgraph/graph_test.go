@@ -3,7 +3,7 @@ package flowgraph
 import "testing"
 
 func TestNodeAddArc(t *testing.T) {
-	g := New(false)
+	g := NewGraph(false)
 	nc := g.NumNodes()
 
 	n0 := g.AddNode()
@@ -22,7 +22,7 @@ func TestNodeAddArc(t *testing.T) {
 }
 
 func TestArcChange(t *testing.T) {
-	g := New(false)
+	g := NewGraph(false)
 
 	n0 := g.AddNode()
 	n1 := g.AddNode()
