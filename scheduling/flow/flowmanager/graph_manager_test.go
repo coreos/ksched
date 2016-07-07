@@ -11,27 +11,23 @@ import (
 	"github.com/coreos/ksched/scheduling/flow/dimacs"
 )
 
-var (
-	resourceMap     types.ResourceMap
-	taskMap         types.TaskMap
-	leafResourceIDs map[types.ResourceID]struct{}
-	dimacsStats     *dimacs.ChangeStats
-)
-
-func init() {
-	resourceMap.Init()
-	taskMap.Init()
-	leafResourceIDs = make(map[types.ResourceID]struct{})
-	dimacsStats = &dimacs.ChangeStats{}
+func TestAddResourceNode(t *testing.T) {
+	//TODO
 }
 
-func CreateGraphManagerUsingTrivialCost() *graphManager {
-	costModeler := costmodel.NewTrivial(&resourceMap, &taskMap, leafResourceIDs)
+// Create a Graph Manager using the trivial cost model
+func createGMTrivial() *graphManager {
+	resourceMap := types.NewResourceMap()
+	taskMap := types.NewTaskMap()
+	leafResourceIDs := make(map[types.ResourceID]struct{})
+	dimacsStats := &dimacs.ChangeStats{}
+	costModeler := costmodel.NewTrivial(resourceMap, taskMap, leafResourceIDs)
 	gm := NewGraphManager(costModeler, leafResourceIDs, dimacsStats)
 	return gm
 }
 
-func CreateMachine(rtnd *pb.ResourceTopologyNodeDescriptor, machineName string) *pb.ResourceDescriptor {
+// TODO: Helper functions that may just be duplicated into each unit test later
+func createMachine(rtnd *pb.ResourceTopologyNodeDescriptor, machineName string) *pb.ResourceDescriptor {
 	util.SeedStringRng(machineName)
 	rID := util.GenerateResourceID()
 	rd := rtnd.ResourceDesc
@@ -40,12 +36,8 @@ func CreateMachine(rtnd *pb.ResourceTopologyNodeDescriptor, machineName string) 
 	return rd
 }
 
-func CreateTask(jd pb.JobDescriptor, jobIDSeed uint64) {
+func createTask(jd pb.JobDescriptor, jobIDSeed uint64) {
 	util.SeedIntRng(int64(jobIDSeed))
 	jobID := util.GenerateJobID()
 	jd.Uuid = strconv.FormatUint(uint64(jobID), 10)
-}
-
-func TestAddResourceNode(t *testing.T) {
-	//TODO
 }
