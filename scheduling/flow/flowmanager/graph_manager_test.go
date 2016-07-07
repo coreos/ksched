@@ -16,7 +16,7 @@ func TestAddResourceNode(t *testing.T) {
 }
 
 // Create a Graph Manager using the trivial cost model
-func createGMTrivial() *graphManager {
+func createTestGMTrivial() *graphManager {
 	resourceMap := types.NewResourceMap()
 	taskMap := types.NewTaskMap()
 	leafResourceIDs := make(map[types.ResourceID]struct{})
