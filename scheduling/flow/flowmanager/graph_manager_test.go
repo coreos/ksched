@@ -27,7 +27,7 @@ func createTestGMTrivial() *graphManager {
 }
 
 // TODO: Helper functions that may just be duplicated into each unit test later
-func createMachine(rtnd *pb.ResourceTopologyNodeDescriptor, machineName string) *pb.ResourceDescriptor {
+func createTestMachine(rtnd *pb.ResourceTopologyNodeDescriptor, machineName string) *pb.ResourceDescriptor {
 	util.SeedRNGWithString(machineName)
 	rID := util.GenerateResourceID()
 	rd := rtnd.ResourceDesc
@@ -36,7 +36,7 @@ func createMachine(rtnd *pb.ResourceTopologyNodeDescriptor, machineName string) 
 	return rd
 }
 
-func createTask(jd pb.JobDescriptor, jobIDSeed uint64) {
+func createTestTask(jd pb.JobDescriptor, jobIDSeed uint64) {
 	util.SeedRNGWithInt(int64(jobIDSeed))
 	jobID := util.GenerateJobID()
 	jd.Uuid = strconv.FormatUint(uint64(jobID), 10)
