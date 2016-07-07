@@ -28,25 +28,27 @@ type Scheduler interface {
 	// jd: JobDescriptor of the job to add
 	AddJob(jd *pb.JobDescriptor)
 
-	// Finds the resource to which a particular task ID is currently bound.
-	// taskID: the id of the task for which to do the lookup
-	// Returns nil if the task does not exist or is not currently bound
-	// Otherwise, it returns its resource id
-	BoundResourceForTask(taskID types.TaskID) *types.ResourceID
-
-	// Finds the tasks which are bound to a particular resource ID
-	// resourceID: the id of the resource for which to do the lookup
-	// Returns a slice of task ids
-	BoundTasksForResource(resourceID types.ResourceID) []types.TaskID
-
-	// Checks if all running tasks managed by this scheduler are healthy. It
-	// invokes failure handlers if any failures are detected.
-	CheckRunningTasksHealth()
+	// Registers a resource with the scheduler, who may subsequently assign
+	// work to this resource.
+	// rtnd: the resource topology node descriptor
+	// local: boolean to indicate if the resource is local or not
+	RegisterResource(ResourceTopologyNodeDescriptor *rtnd, local bool, simulated bool)
 
 	// Unregisters a resource ID from the scheduler. No-op if the resource ID is
 	// not actually registered with it.
 	// param1: rtnd pointer to the resource topology node descriptor of the resource to deregister
 	DeregisterResource(*pb.ResourceTopologyNodeDescriptor)
+
+	// Runs a scheduling iteration for all active jobs. Computes runnable jobs and then calls ScheduleJobs()
+	// Returns the number of tasks scheduled, and the scheduling deltas
+	// NOTE: Modified from original interface to return deltas rather than passing in and modifying the deltas
+	ScheduleAllJobs(schedulerStats *SchedulerStats) (uint64, []pb.SchedulingDelta)
+
+	// Schedules the given jobs. This is called by ScheduleAllJobs()
+	// @jds: a slice of job descriptors
+	// Returns the number of tasks scheduled, and the scheduling deltas
+	// NOTE: Modified from original interface to return deltas rather than passing in and modifying the deltas
+	ScheduleJobs(jds []*pb.JobDescriptor, schedulerStats *SchedulerStats) (uint64, []pb.SchedulingDelta)
 
 	// Handles the completion of a job (all tasks are completed, failed or
 	// aborted). May clean up scheduler-specific state.
@@ -62,17 +64,34 @@ type Scheduler interface {
 	// originally: HandleTaskCompletion(td *TaskDescriptor, report *TaskFinalReport)
 	HandleTaskCompletion(td *pb.TaskDescriptor)
 
-	// Handles the failure of an attempt to delegate a task to a subordinate
-	// coordinator. This can happen because the resource is no longer there (it
-	// failed) or it is no longer idle (someone else put a task there).
-	// td: the descriptor of the task that could not be delegated
-	HandleTaskDelegationFailure(td *pb.TaskDescriptor)
-	HandleTaskDelegationSuccess(td *pb.TaskDescriptor)
+	// Places a task to a resource, i.e. effects a scheduling assignment.
+	// This will modify various bits of meta-data tracking assignments. It will
+	// then delegate the actual execution of the task binary to the appropriate
+	// local execution handler.
+	// td: the descriptor of the task to bind
+	// rd: the descriptor of the resource to bind to
+	HandleTaskPlacement(td *TaskDescriptor, rd *ResourceDescriptor)
+
+	// Finds the resource to which a particular task ID is currently bound.
+	// taskID: the id of the task for which to do the lookup
+	// Returns nil if the task does not exist or is not currently bound
+	// Otherwise, it returns its resource id
+	BoundResourceForTask(taskID types.TaskID) *types.ResourceID
+
+	// Finds the tasks which are bound to a particular resource ID
+	// resourceID: the id of the resource for which to do the lookup
+	// Returns a slice of task ids
+	BoundTasksForResource(resourceID types.ResourceID) []types.TaskID
 
 	// Handles the eviction of a task.
 	// @td: The task descriptor of the evicted task
 	// rd: The resource descriptor of the resource from which the task was evicted
 	HandleTaskEviction(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor)
+
+	// Handles the migration of a task.
+	// td: the descriptor of the migrated task
+	// rd: the descriptor of the resource to which the task was migrated
+	HandleTaskMigration(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor)
 
 	// Handles the failure of a task. This usually involves freeing up its
 	// resource by setting it idle, and kicking off the necessary fault tolerance
@@ -85,20 +104,11 @@ type Scheduler interface {
 	// NOTE: modified to not include kill message
 	KillRunningTask(taskID types.TaskID)
 
-	// Places a task delegated from a superior coordinator to a resource managed
-	// by this scheduler.
-	// @td the task descriptor of the delegated task
-	// targetRID the resource ID on which to place the task
-	PlaceDelegatedTask(td *TaskDescriptor, targetRID types.ResourceID) bool
-
-	// Registers a resource with the scheduler, who may subsequently assign
-	// work to this resource.
-	// rtnd: the resource topology node descriptor
-	// local: boolean to indicate if the resource is local or not
-	RegisterResource(ResourceTopologyNodeDescriptor *rtnd, local bool, simulated bool)
-
-	// Runs a scheduling iteration for all active jobs.
-	// Returns the number of tasks scheduled, and the scheduling deltas
-	// NOTE: Modified from original interface to return deltas rather than passing in and modifying the deltas
-	ScheduleAllJobs(schedulerStats *SchedulerStats) (uint64, []pb.SchedulingDelta)
+	// NOTE: This method is not implemented by the flow_scheduler but by the event_driven_sched
+	// Our implementation should be to ignore dependencies and mark all runnable tasks as runnable
+	// ComputeRunnableTasksForJob finds runnable tasks for the job in the argument and adds them to the
+	// global runnable set.
+	// @jd: the descriptor of the job for which to find tasks
+	// Returns the set of tasks that are runnable for this job
+	ComputeRunnableTasksForJob(jd *JobDescriptor) map[types.TaskID]struct{}
 }
