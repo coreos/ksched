@@ -49,12 +49,12 @@ func init() {
 }
 
 // Seed the rng to generate deterministic IDs for testing purposes
-func SeedIntRng(seed int64) {
+func SeedRNGWithInt(seed int64) {
 	randGen = rand.New(rand.NewSource(seed))
 }
 
-func SeedStringRng(seed string) {
-	SeedIntRng(int64(hashFNV(seed)))
+func SeedRNGWithString(seed string) {
+	SeedRNGWithInt(int64(hashFNV(seed)))
 }
 
 // Returns a 64 bit int from fnv hash of the string
