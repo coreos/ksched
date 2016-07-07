@@ -42,7 +42,7 @@ type Graph struct {
 
 // Constructor equivalent in Go
 // Must specify RandomizeNodeIDs flag
-func New(randomizeNodeIDs bool) *Graph {
+func NewGraph(randomizeNodeIDs bool) *Graph {
 	fg := &Graph{
 		arcSet:  make(map[*Arc]struct{}),
 		nodeMap: make(map[NodeID]*Node),

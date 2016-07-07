@@ -50,6 +50,25 @@ type TaskMap struct {
 	m    map[TaskID]*pb.TaskDescriptor
 }
 
+// Get new maps
+func NewResourceMap() *ResourceMap {
+	return &ResourceMap{
+		m: make(map[ResourceID]*rs.ResourceStatus),
+	}
+}
+
+func NewJobMap() *JobMap {
+	return &JobMap{
+		m: make(map[JobID]*pb.JobDescriptor),
+	}
+}
+
+func NewTaskMap() *TaskMap {
+	return &TaskMap{
+		m: make(map[TaskID]*pb.TaskDescriptor),
+	}
+}
+
 // Expose Map for readonly purposes. To be used with Rlock() and RUnlock()
 func (rm *ResourceMap) UnsafeGet() map[ResourceID]*rs.ResourceStatus {
 	return rm.m

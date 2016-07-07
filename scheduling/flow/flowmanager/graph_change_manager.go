@@ -80,6 +80,11 @@ type changeManager struct {
 	dimacsStats  *dimacs.ChangeStats
 }
 
+func NewChangeManager(dimacsStats *dimacs.ChangeStats) *changeManager {
+	cm := changeManager{flowGraph: flowgraph.NewGraph(false), dimacsStats: dimacsStats}
+	return &cm
+}
+
 func (cm *changeManager) CheckNodeType(id flowgraph.NodeID, typ flowgraph.NodeType) bool {
 	return cm.flowGraph.Node(id).Type == typ
 }

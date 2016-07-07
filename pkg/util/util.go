@@ -38,8 +38,6 @@ func MustResourceIDFromString(s string) types.ResourceID {
 
 // NOTE: Just using a single rng for generating Resource, Job or Task IDs
 // instead of separate rngs for each ID
-// Also just seeding it once, as opposed to having the option for a custom seed
-// on every ID generation
 
 // Random number generator
 var randGen *rand.Rand
@@ -48,6 +46,22 @@ var randGen *rand.Rand
 func init() {
 	t := time.Now().UnixNano()
 	randGen = rand.New(rand.NewSource(t))
+}
+
+// Seed the rng to generate deterministic IDs for testing purposes
+func SeedRNGWithInt(seed int64) {
+	randGen = rand.New(rand.NewSource(seed))
+}
+
+func SeedRNGWithString(seed string) {
+	SeedRNGWithInt(int64(hashFNV(seed)))
+}
+
+// Returns a 64 bit int from fnv hash of the string
+func hashFNV(s string) uint64 {
+	h := fnv.New64()
+	h.Write([]byte(s))
+	return h.Sum64()
 }
 
 // Generate a uint64 random number
@@ -66,6 +80,7 @@ func GenerateJobID() types.JobID {
 	return types.JobID(randUint64())
 }
 
+// For GenerateRootTaskID() just use this func
 func GenerateTaskID() types.TaskID {
 	return types.TaskID(randUint64())
 }
