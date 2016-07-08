@@ -246,7 +246,6 @@ func (s *scheduler) updateCostModelResourceStats() {
 }
 
 // Event driven scheduler specific method
-//
 func (s *scheduler) bindTaskToResource(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
 	taskID := types.TaskID(td.Uid)
 	rID := util.MustResourceIDFromString(rd.Uuid)
