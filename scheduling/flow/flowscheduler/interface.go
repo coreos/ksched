@@ -26,13 +26,16 @@ type Scheduler interface {
 	// AddJob adds a new job. The job will be scheduled on the next run of the scheduler
 	// if it has any runnable tasks.
 	// jd: JobDescriptor of the job to add
+	// NOTE: This method was originally implemented only by event_scheduler and not flow_scheduler
 	AddJob(jd *pb.JobDescriptor)
 
 	// RegisterResource registers a resource with the scheduler, who may subsequently assign
 	// work to this resource.
 	// rtnd: the resource topology node descriptor
 	// local: boolean to indicate if the resource is local or not
-	RegisterResource(rtnd *pb.ResourceTopologyNodeDescriptor, local bool, simulated bool)
+	// NOTE: We don't distinguish between local(cpu), remote(storage) or simulated resources
+	// Original interface modified to not take inputs for local or simulated flags
+	RegisterResource(rtnd *pb.ResourceTopologyNodeDescriptor)
 
 	// DeregisterResource unregisters a resource ID from the scheduler. No-op if the resource ID is
 	// not actually registered with it.

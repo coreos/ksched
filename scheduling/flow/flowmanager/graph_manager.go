@@ -41,7 +41,7 @@ type GraphManager interface {
 
 	// AddResourceTopology adds the entire resource topology tree. The method
 	// also updates the statistics of the nodes up to the root resource.
-	AddResourceTopology(topo pb.ResourceTopologyNodeDescriptor)
+	AddResourceTopology(topo *pb.ResourceTopologyNodeDescriptor)
 
 	UpdateResourceTopology(rtnd *pb.ResourceTopologyNodeDescriptor)
 
@@ -523,7 +523,7 @@ func (gm *graphManager) addResourceNode(rd *pb.ResourceDescriptor) *flowgraph.No
 	resourceNode := gm.cm.AddNode(flowgraph.TransformToResourceNodeType(rd),
 		0, dimacs.AddResourceNode, comment)
 	rID := util.MustResourceIDFromString(rd.Uuid)
-	resourceNode.ID = flowgraph.NodeID(rID)
+	resourceNode.ResourceID = rID
 	resourceNode.ResourceDescriptor = rd
 	// Insert mapping resource to node, must not already have mapping
 	_, ok := gm.resourceToNode[rID]
