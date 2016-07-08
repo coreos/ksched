@@ -5,20 +5,76 @@ import (
 
 	"github.com/coreos/ksched/pkg/types"
 	"github.com/coreos/ksched/pkg/util"
+	"github.com/coreos/ksched/pkg/util/queue"
 	pb "github.com/coreos/ksched/proto"
 	"github.com/coreos/ksched/scheduling/flow/flowmanager"
 	"github.com/coreos/ksched/scheduling/flow/placement"
 )
 
+// Set of tasks
+type TaskSet map[types.TaskID]struct{}
+
 type scheduler struct {
-	gm      flowmanager.GraphManager
-	solver  placement.Solver
-	rmap    types.ResourceMap
-	jobMap  types.JobMap
-	taskMap types.TaskMap
-	// Note: taskBindings records which task maps to which resource (before each iteration).
-	taskBindings  map[types.TaskID]types.ResourceID
+	// Fields specific to every scheduler, originally present in the interface
+	resourceMap      types.ResourceMap
+	jobMap           types.JobMap
+	taskMap          types.TaskMap
+	resourceTopology *pb.ResourceTopologyNodeDescriptor
+
+	// Flow scheduler specific fields
+	gm     flowmanager.GraphManager
+	solver placement.Solver
+	// Root nodes(presumably machines) of all the resources in the topology
 	resourceRoots map[*pb.ResourceTopologyNodeDescriptor]struct{}
+
+	// Event driven scheduler specific fields
+	// Note: taskBindings tracks the old state of which task maps to which resource (before each iteration).
+	taskBindings map[types.TaskID]types.ResourceID
+	// A vector holding descriptors of the jobs to be scheduled in the next scheduling round.
+	jobsToSchedule map[types.JobID]*pb.JobDescriptor
+	runnableTasks  map[types.JobID]TaskSet
+	// Sets of runnable and blocked tasks in each job.
+	// Originally maintained up by ComputeRunnableTasksForJob() and LazyGraphReduction()
+	// by checking and resolving dependencies between tasks. We will avoid that for now
+	// and simply declare all tasks as runnable
+}
+
+// Event scheduler method
+func (s *scheduler) AddJob(jd *pb.JobDescriptor) {
+	s.jobsToSchedule[util.MustJobIDFromString(jd.Uuid)] = jd
+}
+
+// Not needed for testing
+func (s *scheduler) HandleJobCompletion(jobID types.JobID) {
+	// Job completed, so remove its nodes
+	s.gm.JobCompleted(jobID)
+	// Event scheduler related work
+	jd := s.jobMap.FindPtrOrNull(jobID)
+	if jd == nil {
+		log.Panicf("Job for id:%v must exist\n", jobID)
+	}
+	delete(s.jobsToSchedule, jobID)
+	delete(s.runnableTasks, jobID)
+	jd.State = pb.JobDescriptor_Completed
+}
+
+func (s *scheduler) RegisterResource(rtnd *pb.ResourceTopologyNodeDescriptor) {
+	// Event scheduler related work
+	// Do a BFS traversal starting from rtnd root and set each PU in this topology as schedulable
+	toVisit := queue.NewFIFO()
+	toVisit.Push(rtnd)
+	for !toVisit.IsEmpty() {
+		currRD := toVisit.Pop().(*pb.ResourceTopologyNodeDescriptor).ResourceDesc
+		if currRD.Type == pb.ResourceDescriptor_ResourcePu {
+			currRD.Schedulable = true
+		}
+	}
+
+	// Flow scheduler related work
+	s.gm.AddResourceTopology(rtnd)
+	if rtnd.ParentId == "" {
+		s.resourceRoots[rtnd] = struct{}{}
+	}
 }
 
 func (s *scheduler) RunSchedulingIteration() ([]pb.SchedulingDelta, int) {
@@ -37,7 +93,7 @@ func (s *scheduler) RunSchedulingIteration() ([]pb.SchedulingDelta, int) {
 	// Otherwise, we would have to maintain for every ResourceDescriptor the
 	// current_running_tasks field which would be expensive because
 	// RepeatedFields don't have any efficient remove element method.
-	deltas := s.gm.SchedulingDeltasForPreemptedTasks(taskMappings, s.rmap)
+	deltas := s.gm.SchedulingDeltasForPreemptedTasks(taskMappings, s.resourceMap)
 
 	for taskNodeID, resourceNodeID := range taskMappings {
 		// Note: Ignore those completed, removal check...
@@ -64,7 +120,7 @@ func (s *scheduler) ApplySchedulingDeltas(deltas []pb.SchedulingDelta) int {
 			panic("")
 		}
 		resID := util.MustResourceIDFromString(d.ResourceId)
-		rs := s.rmap.FindPtrOrNull(resID)
+		rs := s.resourceMap.FindPtrOrNull(resID)
 		if rs == nil {
 			panic("")
 		}

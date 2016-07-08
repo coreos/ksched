@@ -26,13 +26,16 @@ type Scheduler interface {
 	// AddJob adds a new job. The job will be scheduled on the next run of the scheduler
 	// if it has any runnable tasks.
 	// jd: JobDescriptor of the job to add
+	// NOTE: This method was originally implemented only by event_scheduler and not flow_scheduler
 	AddJob(jd *pb.JobDescriptor)
 
 	// RegisterResource registers a resource with the scheduler, who may subsequently assign
 	// work to this resource.
 	// rtnd: the resource topology node descriptor
 	// local: boolean to indicate if the resource is local or not
-	RegisterResource(rtnd *pb.ResourceTopologyNodeDescriptor, local bool, simulated bool)
+	// NOTE: We don't distinguish between local(cpu), remote(storage) or simulated resources
+	// 		 Original interface modified to not take inputs for local or simulated flags
+	RegisterResource(rtnd *pb.ResourceTopologyNodeDescriptor)
 
 	// DeregisterResource unregisters a resource ID from the scheduler. No-op if the resource ID is
 	// not actually registered with it.
@@ -42,14 +45,14 @@ type Scheduler interface {
 	// ScheduleAllJobs runs a scheduling iteration for all active jobs. Computes runnable jobs and then calls ScheduleJobs()
 	// Returns the number of tasks scheduled, and the scheduling deltas
 	// NOTE: Modified from original interface to return deltas rather than passing in and modifying the deltas
-	// Also removed the schedulerStats from the input arguments
+	// 		 Also removed the schedulerStats from the input arguments
 	ScheduleAllJobs() (uint64, []pb.SchedulingDelta)
 
 	// ScheduleJobs schedules the given jobs. This is called by ScheduleAllJobs()
 	// jds: a slice of job descriptors
 	// Returns the number of tasks scheduled, and the scheduling deltas
 	// NOTE: Modified from original interface to return deltas rather than passing in and modifying the deltas
-	// Also removed the schedulerStats from the input arguments
+	// 		 Also removed the schedulerStats from the input arguments
 	ScheduleJobs(jds []*pb.JobDescriptor) (uint64, []pb.SchedulingDelta)
 
 	// HandleJobCompletion handles the completion of a job (all tasks are completed, failed or
@@ -63,7 +66,7 @@ type Scheduler interface {
 	// report: the task report to be populated with statistics
 	// (e.g., finish time).
 	// NOTE: Modified to not include processing the TaskFinalReport
-	// originally: HandleTaskCompletion(td *TaskDescriptor, report *TaskFinalReport)
+	// 		 originally: HandleTaskCompletion(td *TaskDescriptor, report *TaskFinalReport)
 	HandleTaskCompletion(td *pb.TaskDescriptor)
 
 	// HandleTaskPlacement places a task to a resource, i.e. effects a scheduling assignment.
@@ -107,7 +110,7 @@ type Scheduler interface {
 	KillRunningTask(taskID types.TaskID)
 
 	// NOTE: This method is not implemented by the flow_scheduler but by the event_driven_sched
-	// Our implementation should be to ignore dependencies and mark all runnable tasks as runnable
+	// 		 Our implementation should be to ignore dependencies and mark all runnable tasks as runnable
 	// ComputeRunnableTasksForJob finds runnable tasks for the job in the argument and adds them to the
 	// global runnable set.
 	// jd: the descriptor of the job for which to find tasks
