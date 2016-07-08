@@ -7,6 +7,7 @@ import (
 	"github.com/coreos/ksched/pkg/util"
 	"github.com/coreos/ksched/pkg/util/queue"
 	pb "github.com/coreos/ksched/proto"
+	"github.com/coreos/ksched/scheduling/flow/dimacs"
 	"github.com/coreos/ksched/scheduling/flow/flowmanager"
 	"github.com/coreos/ksched/scheduling/flow/placement"
 )
@@ -22,8 +23,9 @@ type scheduler struct {
 	resourceTopology *pb.ResourceTopologyNodeDescriptor
 
 	// Flow scheduler specific fields
-	gm     flowmanager.GraphManager
-	solver placement.Solver
+	gm          flowmanager.GraphManager
+	solver      placement.Solver
+	dimacsStats *dimacs.ChangeStats
 	// Root nodes(presumably machines) of all the resources in the topology
 	resourceRoots map[*pb.ResourceTopologyNodeDescriptor]struct{}
 
@@ -58,6 +60,10 @@ func (s *scheduler) HandleJobCompletion(jobID types.JobID) {
 	jd.State = pb.JobDescriptor_Completed
 }
 
+func (s *scheduler) HandleTaskCompletion(td *pb.TaskDescriptor) {
+
+}
+
 func (s *scheduler) RegisterResource(rtnd *pb.ResourceTopologyNodeDescriptor) {
 	// Event scheduler related work
 	// Do a BFS traversal starting from rtnd root and set each PU in this topology as schedulable
@@ -65,8 +71,12 @@ func (s *scheduler) RegisterResource(rtnd *pb.ResourceTopologyNodeDescriptor) {
 	toVisit.Push(rtnd)
 	for !toVisit.IsEmpty() {
 		currRD := toVisit.Pop().(*pb.ResourceTopologyNodeDescriptor).ResourceDesc
-		if currRD.Type == pb.ResourceDescriptor_ResourcePu {
-			currRD.Schedulable = true
+		if currRD.Type != pb.ResourceDescriptor_ResourcePu {
+			continue
+		}
+		currRD.Schedulable = true
+		if currRD.State == pb.ResourceDescriptor_ResourceUnknown {
+			currRD.State = pb.ResourceDescriptor_ResourceIdle
 		}
 	}
 
@@ -77,7 +87,75 @@ func (s *scheduler) RegisterResource(rtnd *pb.ResourceTopologyNodeDescriptor) {
 	}
 }
 
-func (s *scheduler) RunSchedulingIteration() ([]pb.SchedulingDelta, int) {
+func (s *scheduler) DeregisterResource(*pb.ResourceTopologyNodeDescriptor) {
+
+}
+
+func (s *scheduler) HandleTaskPlacement(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
+
+}
+
+func (s *scheduler) BoundResourceForTask(taskID types.TaskID) *types.ResourceID {
+	return nil
+}
+
+func (s *scheduler) BoundTasksForResource(resourceID types.ResourceID) []types.TaskID {
+	return nil
+}
+
+func (s *scheduler) HandleTaskEviction(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
+
+}
+
+func (s *scheduler) HandleTaskMigration(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
+
+}
+
+func (s *scheduler) HandleTaskFailure(td *pb.TaskDescriptor) {
+
+}
+
+func (s *scheduler) KillRunningTask(taskID types.TaskID) {
+
+}
+
+func (s *scheduler) ComputeRunnableTasksForJob(jd *pb.JobDescriptor) map[types.TaskID]struct{} {
+	return nil
+}
+
+// Flow scheduler method
+func (s *scheduler) ScheduleAllJobs() (uint64, []pb.SchedulingDelta) {
+	jds := make([]*pb.JobDescriptor, 0)
+	for _, jobDesc := range s.jobsToSchedule {
+		// If at least one task is runnable in the job, add it for scheduling
+		if len(s.ComputeRunnableTasksForJob(jobDesc)) > 0 {
+			jds = append(jds, jobDesc)
+		}
+	}
+	return s.ScheduleJobs(jds)
+}
+
+// Flow scheduler method
+func (s *scheduler) ScheduleJobs(jdsRunnable []*pb.JobDescriptor) (uint64, []pb.SchedulingDelta) {
+	numScheduledTasks := uint64(0)
+	deltas := make([]pb.SchedulingDelta, 0)
+	if len(jdsRunnable) > 0 {
+		s.updateCostModelResourceStats()
+		s.gm.AddOrUpdateJobNodes(jdsRunnable)
+		numScheduledTasks, deltas = s.runSchedulingIteration()
+		log.Printf("Scheduling Iteration complete, placed %v tasks\n", numScheduledTasks)
+
+		// We reset the DIMACS stats here because all the graph changes we make
+		// from now on are going to be included in the next scheduler run.
+		s.dimacsStats.ResetStats()
+		// TODO
+		// If the support for the trace generator is ever added then log the dimacs changes
+		// for this iteration before resetting them
+	}
+	return numScheduledTasks, deltas
+}
+
+func (s *scheduler) runSchedulingIteration() (uint64, []pb.SchedulingDelta) {
 	// Steps:
 	// - run solver and get task mapping
 	// - update graph manager
@@ -102,18 +180,18 @@ func (s *scheduler) RunSchedulingIteration() ([]pb.SchedulingDelta, int) {
 		deltas = append(deltas, d)
 	}
 
-	numScheduled := s.ApplySchedulingDeltas(deltas)
+	numScheduled := s.applySchedulingDeltas(deltas)
 
 	// TODO: update_resource_topology_capacities??
 	for rtnd := range s.resourceRoots {
 		s.gm.UpdateResourceTopology(rtnd)
 	}
 
-	return deltas, numScheduled
+	return numScheduled, deltas
 }
 
-func (s *scheduler) ApplySchedulingDeltas(deltas []pb.SchedulingDelta) int {
-	numScheduled := 0
+func (s *scheduler) applySchedulingDeltas(deltas []pb.SchedulingDelta) uint64 {
+	numScheduled := uint64(0)
 	for _, d := range deltas {
 		td := s.taskMap.FindPtrOrNull(types.TaskID(d.TaskId))
 		if td == nil {
@@ -146,11 +224,6 @@ func (s *scheduler) ApplySchedulingDeltas(deltas []pb.SchedulingDelta) int {
 	return numScheduled
 }
 
-func (s *scheduler) HandleTaskPlacement(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
-}
-
-func (s *scheduler) HandleTaskEviction(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
-}
-
-func (s *scheduler) HandleTaskMigration(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
+func (s *scheduler) updateCostModelResourceStats() {
+	s.gm.ComputeTopologyStatistics(s.gm.SinkNode())
 }
