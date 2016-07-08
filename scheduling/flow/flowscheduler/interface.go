@@ -75,6 +75,8 @@ type Scheduler interface {
 	// local execution handler.
 	// td: the descriptor of the task to bind
 	// rd: the descriptor of the resource to bind to
+	// This method is called by the flow scheduler for every PLACE scheduling delta
+	// indicating a successful placement of a task on a resource
 	HandleTaskPlacement(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor)
 
 	// BoundResourceForTask finds the resource to which a particular task ID is currently bound.
