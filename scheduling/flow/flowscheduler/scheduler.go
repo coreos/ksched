@@ -32,13 +32,15 @@ type scheduler struct {
 	// Event driven scheduler specific fields
 	// Note: taskBindings tracks the old state of which task maps to which resource (before each iteration).
 	taskBindings map[types.TaskID]types.ResourceID
+	// Similar to taskBindings but tracks tasks binded to every resource. This is a multimap
+	resourceBindings map[types.ResourceID]TaskSet
 	// A vector holding descriptors of the jobs to be scheduled in the next scheduling round.
 	jobsToSchedule map[types.JobID]*pb.JobDescriptor
-	runnableTasks  map[types.JobID]TaskSet
-	// Sets of runnable and blocked tasks in each job.
+	// Sets of runnable and blocked tasks in each job. Multimap
 	// Originally maintained up by ComputeRunnableTasksForJob() and LazyGraphReduction()
 	// by checking and resolving dependencies between tasks. We will avoid that for now
 	// and simply declare all tasks as runnable
+	runnableTasks map[types.JobID]TaskSet
 }
 
 // Event scheduler method
@@ -92,7 +94,22 @@ func (s *scheduler) DeregisterResource(*pb.ResourceTopologyNodeDescriptor) {
 }
 
 func (s *scheduler) HandleTaskPlacement(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
+	// Flow scheduler related work
+	td.ScheduledToResource = rd.Uuid
+	taskID := types.TaskID(td.Uid)
+	s.gm.TaskScheduled(taskID, util.MustResourceIDFromString(rd.Uuid))
 
+	// Event scheduler related work
+	s.bindTaskToResource(td, rd)
+	// Remove the task from the runnable_tasks
+	jobID := util.MustJobIDFromString(td.JobID)
+	runnablesForJob := s.runnableTasks[jobID]
+	if runnablesForJob != nil {
+		delete(runnablesForJob, taskID)
+	}
+
+	// Execute the task on the resource
+	s.executeTask(td, rd)
 }
 
 func (s *scheduler) BoundResourceForTask(taskID types.TaskID) *types.ResourceID {
@@ -226,4 +243,32 @@ func (s *scheduler) applySchedulingDeltas(deltas []pb.SchedulingDelta) uint64 {
 
 func (s *scheduler) updateCostModelResourceStats() {
 	s.gm.ComputeTopologyStatistics(s.gm.SinkNode())
+}
+
+// Event driven scheduler specific method
+//
+func (s *scheduler) bindTaskToResource(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
+	taskID := types.TaskID(td.Uid)
+	rID := util.MustResourceIDFromString(rd.Uuid)
+	// Mark resource as busy and record task binding
+	rd.State = pb.ResourceDescriptor_ResourceBusy
+	rd.CurrentRunningTasks = append(rd.CurrentRunningTasks, uint64(taskID))
+	// Insert mapping into task bindings, must not already exist
+	if _, ok := s.taskBindings[taskID]; ok {
+		log.Panicf("scheduler/bindTaskToResource: mapping for taskID:%v in taskBindings must not already exist\n", taskID)
+	}
+	s.taskBindings[taskID] = rID
+	// Update resource bindings, create a binding set if it doesn't exist already
+	if _, ok := s.resourceBindings[rID]; !ok {
+		s.resourceBindings[rID] = make(TaskSet)
+	}
+	s.resourceBindings[rID][taskID] = struct{}{}
+}
+
+// Event driven scheduler specific method
+func (s *scheduler) executeTask(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
+	// This function actually executes the task asynchronously on that resource via an executor
+	// but we don't need that
+	td.State = pb.TaskDescriptor_Running
+	td.ScheduledToResource = rd.Uuid
 }
