@@ -245,6 +245,8 @@ func (s *scheduler) updateCostModelResourceStats() {
 	s.gm.ComputeTopologyStatistics(s.gm.SinkNode())
 }
 
+// BindTaskToResource is used to update metadata anytime a task is placed on a some resource by the scheduler
+// either through a placement or migration
 // Event driven scheduler specific method
 func (s *scheduler) bindTaskToResource(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
 	taskID := types.TaskID(td.Uid)
@@ -264,6 +266,8 @@ func (s *scheduler) bindTaskToResource(td *pb.TaskDescriptor, rd *pb.ResourceDes
 	s.resourceBindings[rID][taskID] = struct{}{}
 }
 
+// ExecuteTask is used to actually execute the task on a resource via an excution handler
+// For our purposes we skip that and only update the meta data to mark the task as running
 // Event driven scheduler specific method
 func (s *scheduler) executeTask(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
 	// This function actually executes the task asynchronously on that resource via an executor
