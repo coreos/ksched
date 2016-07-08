@@ -126,7 +126,7 @@ func (s *scheduler) ComputeRunnableTasksForJob(jd *pb.JobDescriptor) map[types.T
 // Flow scheduler method
 func (s *scheduler) ScheduleAllJobs() (uint64, []pb.SchedulingDelta) {
 	jds := make([]*pb.JobDescriptor, 0)
-	for jobID, jobDesc := range s.jobsToSchedule {
+	for _, jobDesc := range s.jobsToSchedule {
 		// If at least one task is runnable in the job, add it for scheduling
 		if len(s.ComputeRunnableTasksForJob(jobDesc)) > 0 {
 			jds = append(jds, jobDesc)
@@ -225,6 +225,5 @@ func (s *scheduler) applySchedulingDeltas(deltas []pb.SchedulingDelta) uint64 {
 }
 
 func (s *scheduler) updateCostModelResourceStats() {
-	log.Printf("Updating resource statistics in flow graph\n")
 	s.gm.ComputeTopologyStatistics(s.gm.SinkNode())
 }

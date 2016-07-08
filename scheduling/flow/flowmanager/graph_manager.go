@@ -470,6 +470,7 @@ func (gm *graphManager) UpdateAllCostsToUnscheduledAggs() {
 // ComputeTopologyStatistics does a BFS traversal starting from the sink
 // to gather and update the usage statistics for the resource topology
 func (gm *graphManager) ComputeTopologyStatistics(node *flowgraph.Node) {
+	log.Printf("Updating resource statistics in flow graph\n")
 	// XXX(ionel): The function only works correctly as long as the topology is a
 	// tree. If the topology is a DAG then it does not work correctly! It does
 	// not work in the DAG case because the function implements BFS. Hence,
