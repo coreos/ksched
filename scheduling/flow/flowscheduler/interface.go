@@ -32,7 +32,7 @@ type Scheduler interface {
 	// work to this resource.
 	// rtnd: the resource topology node descriptor
 	// local: boolean to indicate if the resource is local or not
-	RegisterResource(ResourceTopologyNodeDescriptor *rtnd, local bool, simulated bool)
+	RegisterResource(rtnd *pb.ResourceTopologyNodeDescriptor, local bool, simulated bool)
 
 	// Unregisters a resource ID from the scheduler. No-op if the resource ID is
 	// not actually registered with it.
@@ -42,13 +42,15 @@ type Scheduler interface {
 	// Runs a scheduling iteration for all active jobs. Computes runnable jobs and then calls ScheduleJobs()
 	// Returns the number of tasks scheduled, and the scheduling deltas
 	// NOTE: Modified from original interface to return deltas rather than passing in and modifying the deltas
-	ScheduleAllJobs(schedulerStats *SchedulerStats) (uint64, []pb.SchedulingDelta)
+	// Also removed the schedulerStats from the input arguments
+	ScheduleAllJobs() (uint64, []pb.SchedulingDelta)
 
 	// Schedules the given jobs. This is called by ScheduleAllJobs()
 	// @jds: a slice of job descriptors
 	// Returns the number of tasks scheduled, and the scheduling deltas
 	// NOTE: Modified from original interface to return deltas rather than passing in and modifying the deltas
-	ScheduleJobs(jds []*pb.JobDescriptor, schedulerStats *SchedulerStats) (uint64, []pb.SchedulingDelta)
+	// Also removed the schedulerStats from the input arguments
+	ScheduleJobs(jds []*pb.JobDescriptor) (uint64, []pb.SchedulingDelta)
 
 	// Handles the completion of a job (all tasks are completed, failed or
 	// aborted). May clean up scheduler-specific state.
@@ -70,7 +72,7 @@ type Scheduler interface {
 	// local execution handler.
 	// td: the descriptor of the task to bind
 	// rd: the descriptor of the resource to bind to
-	HandleTaskPlacement(td *TaskDescriptor, rd *ResourceDescriptor)
+	HandleTaskPlacement(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor)
 
 	// Finds the resource to which a particular task ID is currently bound.
 	// taskID: the id of the task for which to do the lookup
@@ -97,7 +99,7 @@ type Scheduler interface {
 	// resource by setting it idle, and kicking off the necessary fault tolerance
 	// handling procedures.
 	// td: the task descriptor of the failed task
-	HandleTaskFailure(td *TaskDescriptor)
+	HandleTaskFailure(td *pb.TaskDescriptor)
 
 	// Kills a running task.
 	// @param task_id the id of the task to kill
@@ -110,5 +112,5 @@ type Scheduler interface {
 	// global runnable set.
 	// @jd: the descriptor of the job for which to find tasks
 	// Returns the set of tasks that are runnable for this job
-	ComputeRunnableTasksForJob(jd *JobDescriptor) map[types.TaskID]struct{}
+	ComputeRunnableTasksForJob(jd *pb.JobDescriptor) map[types.TaskID]struct{}
 }
