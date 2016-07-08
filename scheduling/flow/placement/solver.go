@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log"
 	"os/exec"
 
 	"github.com/coreos/ksched/scheduling/flow/dimacs"
@@ -171,9 +172,10 @@ func (fs *flowlesslySolver) parseFlowToMapping(extractedFlow map[flowgraph.NodeI
 
 		if fs.gm.GraphChangeManager().Graph().Node(nodeID).IsTaskNode() {
 			// record the task mapping between task node and PU.
-			for _, puID := range puIDs[nodeID] {
-				taskToPU.Insert(nodeID, puID)
+			if len(puIDs[nodeID]) != 1 {
+				log.Panicf("Task Node to Resource Node should be 1:1 mapping")
 			}
+			taskToPU[nodeID] = puIDs[nodeID][0]
 			continue
 		}
 
