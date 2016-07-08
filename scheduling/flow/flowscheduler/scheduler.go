@@ -81,8 +81,10 @@ func (s *scheduler) ApplySchedulingDeltas(deltas []pb.SchedulingDelta) int {
 			s.HandleTaskEviction(td, rs.Descriptor())
 		case pb.SchedulingDelta_MIGRATE:
 			s.HandleTaskMigration(td, rs.Descriptor())
+		case pb.SchedulingDelta_NOOP:
+			log.Println("NOOP Delta type:", d.Type)
 		default:
-			log.Println("Unhandled Delta type:", d.Type)
+			log.Fatalf("Unknown delta type: %v", d.Type)
 		}
 	}
 	return numScheduled
