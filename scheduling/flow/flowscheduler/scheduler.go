@@ -96,11 +96,11 @@ func (s *scheduler) HandleTaskPlacement(td *pb.TaskDescriptor, rd *pb.ResourceDe
 }
 
 func (s *scheduler) BoundResourceForTask(taskID types.TaskID) *types.ResourceID {
-
+	return nil
 }
 
 func (s *scheduler) BoundTasksForResource(resourceID types.ResourceID) []types.TaskID {
-
+	return nil
 }
 
 func (s *scheduler) HandleTaskEviction(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
@@ -120,7 +120,7 @@ func (s *scheduler) KillRunningTask(taskID types.TaskID) {
 }
 
 func (s *scheduler) ComputeRunnableTasksForJob(jd *pb.JobDescriptor) map[types.TaskID]struct{} {
-
+	return nil
 }
 
 // Flow scheduler method
@@ -137,11 +137,12 @@ func (s *scheduler) ScheduleAllJobs() (uint64, []pb.SchedulingDelta) {
 
 // Flow scheduler method
 func (s *scheduler) ScheduleJobs(jdsRunnable []*pb.JobDescriptor) (uint64, []pb.SchedulingDelta) {
-	numScheduledTasks := 0
+	numScheduledTasks := uint64(0)
+	deltas := make([]pb.SchedulingDelta, 0)
 	if len(jdsRunnable) > 0 {
 		s.updateCostModelResourceStats()
 		s.gm.AddOrUpdateJobNodes(jdsRunnable)
-		numScheduledTasks, deltas := s.runSchedulingIteration()
+		numScheduledTasks, deltas = s.runSchedulingIteration()
 		log.Printf("Scheduling Iteration complete, placed %v tasks\n", numScheduledTasks)
 
 		// We reset the DIMACS stats here because all the graph changes we make
@@ -151,9 +152,10 @@ func (s *scheduler) ScheduleJobs(jdsRunnable []*pb.JobDescriptor) (uint64, []pb.
 		// If the support for the trace generator is ever added then log the dimacs changes
 		// for this iteration before resetting them
 	}
+	return numScheduledTasks, deltas
 }
 
-func (s *scheduler) runSchedulingIteration() (int, []pb.SchedulingDelta) {
+func (s *scheduler) runSchedulingIteration() (uint64, []pb.SchedulingDelta) {
 	// Steps:
 	// - run solver and get task mapping
 	// - update graph manager
@@ -178,7 +180,7 @@ func (s *scheduler) runSchedulingIteration() (int, []pb.SchedulingDelta) {
 		deltas = append(deltas, d)
 	}
 
-	numScheduled := s.ApplySchedulingDeltas(deltas)
+	numScheduled := s.applySchedulingDeltas(deltas)
 
 	// TODO: update_resource_topology_capacities??
 	for rtnd := range s.resourceRoots {
@@ -188,8 +190,8 @@ func (s *scheduler) runSchedulingIteration() (int, []pb.SchedulingDelta) {
 	return numScheduled, deltas
 }
 
-func (s *scheduler) applySchedulingDeltas(deltas []pb.SchedulingDelta) int {
-	numScheduled := 0
+func (s *scheduler) applySchedulingDeltas(deltas []pb.SchedulingDelta) uint64 {
+	numScheduled := uint64(0)
 	for _, d := range deltas {
 		td := s.taskMap.FindPtrOrNull(types.TaskID(d.TaskId))
 		if td == nil {

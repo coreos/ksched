@@ -34,10 +34,10 @@ type GraphManager interface {
 	SinkNode() *flowgraph.Node
 	GraphChangeManager() GraphChangeManager
 
-	AddOrUpdateJobNodes(jobs []pb.JobDescriptor)
+	AddOrUpdateJobNodes(jobs []*pb.JobDescriptor)
 
 	// TODO: do we really need this method? this is just a wrapper around AddOrUpdateJobNodes
-	UpdateTimeDependentCosts(jobs []pb.JobDescriptor)
+	UpdateTimeDependentCosts(jobs []*pb.JobDescriptor)
 
 	// AddResourceTopology adds the entire resource topology tree. The method
 	// also updates the statistics of the nodes up to the root resource.
@@ -160,7 +160,7 @@ func (gm *graphManager) LeafNodeIDs() map[flowgraph.NodeID]struct{} {
 // that need to be updated(costs, capacities) via updateFlowGraph().
 // For existing jobs it passes them on via the nodeQueue to be updated.
 // jobs: The list of jobs that need updating
-func (gm *graphManager) AddOrUpdateJobNodes(jobs []pb.JobDescriptor) {
+func (gm *graphManager) AddOrUpdateJobNodes(jobs []*pb.JobDescriptor) {
 	nodeQueue := queue.NewFIFO()
 	markedNodes := make(map[flowgraph.NodeID]struct{})
 	// For each job:
@@ -202,7 +202,7 @@ func (gm *graphManager) AddOrUpdateJobNodes(jobs []pb.JobDescriptor) {
 }
 
 // TODO: do we really need this method? this is just a wrapper around AddOrUpdateJobNodes
-func (gm *graphManager) UpdateTimeDependentCosts(jobs []pb.JobDescriptor) {
+func (gm *graphManager) UpdateTimeDependentCosts(jobs []*pb.JobDescriptor) {
 	gm.AddOrUpdateJobNodes(jobs)
 }
 
