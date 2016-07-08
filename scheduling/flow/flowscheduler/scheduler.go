@@ -37,7 +37,7 @@ func (s *scheduler) RunSchedulingIteration() ([]pb.SchedulingDelta, int) {
 	// Otherwise, we would have to maintain for every ResourceDescriptor the
 	// current_running_tasks field which would be expensive because
 	// RepeatedFields don't have any efficient remove element method.
-	deltas := s.gm.SchedulingDeltasForPreemptedTasks(taskMapping, s.rmap)
+	deltas := s.gm.SchedulingDeltasForPreemptedTasks(taskMappings, s.rmap)
 
 	for taskNodeID, resourceNodeID := range taskMappings {
 		// Note: Ignore those completed, removal check...
@@ -59,11 +59,11 @@ func (s *scheduler) RunSchedulingIteration() ([]pb.SchedulingDelta, int) {
 func (s *scheduler) ApplySchedulingDeltas(deltas []pb.SchedulingDelta) int {
 	numScheduled := 0
 	for _, d := range deltas {
-		td := s.taskMap.FindPtrOrNull(d.TaskId)
+		td := s.taskMap.FindPtrOrNull(types.TaskID(d.TaskId))
 		if td == nil {
 			panic("")
 		}
-		resID := util.ResourceIDFromString(d.ResourceId)
+		resID := util.MustResourceIDFromString(d.ResourceId)
 		rs := s.rmap.FindPtrOrNull(resID)
 		if rs == nil {
 			panic("")

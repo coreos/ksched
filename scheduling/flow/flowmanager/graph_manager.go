@@ -55,7 +55,7 @@ type GraphManager interface {
 	// interface would modify the passed in delta array by appending the scheduling delta.
 	// This is not easy to be done in go. Rr it is not the common way to do it. We return
 	// the delta instead. Users can just append it to the delta array themselves.
-	NodeBindingToSchedulingDelta(taskNodeID, resourceNodeID uint64,
+	NodeBindingToSchedulingDelta(taskNodeID, resourceNodeID flowgraph.NodeID,
 		taskBindings map[types.TaskID]types.ResourceID) pb.SchedulingDelta
 
 	// NOTE(haseeb): Returns a slice of deltas for the user to append
