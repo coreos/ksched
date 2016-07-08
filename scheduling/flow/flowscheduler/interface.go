@@ -102,7 +102,7 @@ type Scheduler interface {
 	HandleTaskFailure(td *pb.TaskDescriptor)
 
 	// KillRunningTask kills a running task.
-	// @param task_id the id of the task to kill
+	// task_id: the id of the task to kill
 	// NOTE: modified to not include kill message
 	KillRunningTask(taskID types.TaskID)
 
