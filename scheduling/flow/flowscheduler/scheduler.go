@@ -279,7 +279,8 @@ func (s *scheduler) bindTaskToResource(td *pb.TaskDescriptor, rd *pb.ResourceDes
 	s.resourceBindings[rID][taskID] = struct{}{}
 }
 
-// UnbindTaskFromResource is similar to BindTaskToResource, in that it just updates the metadata for a task being removed from a resource, and is called in the event of a task failure, migration or eviction.
+// UnbindTaskFromResource is similar to BindTaskToResource, in that it just updates the metadata for a task being removed from a resource
+// It is called in the event of a task failure, migration or eviction.
 // Returns false in case the task was not already bound to the resource in the taskMappings or resourceMappings
 // Event driven scheduler specific method
 func (s *scheduler) unbindTaskFromResource(td *pb.TaskDescriptor, rID types.ResourceID) bool {
