@@ -121,7 +121,20 @@ func (s *scheduler) BoundTasksForResource(resourceID types.ResourceID) []types.T
 }
 
 func (s *scheduler) HandleTaskEviction(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
+	rID := util.MustResourceIDFromString(rd.Uuid)
+	taskID := types.TaskID(td.Uid)
+	jobID := util.MustJobIDFromString(td.JobID)
+	// Flow scheduler related work
+	s.gm.TaskEvicted(taskID, rID)
 
+	// Event scheudler related work
+	if !s.unbindTaskFromResource(td, rID) {
+		log.Panicf("Could not unbind task:%v from resource:%v for eviction\n", taskID, rID)
+	}
+	td.State = pb.TaskDescriptor_Runnable
+	s.insertTaskIntoRunnables(jobID, taskID)
+	// Some work is then done by the executor to handle the task eviction(update finish/running times)
+	// but we don't need to account for that right now
 }
 
 func (s *scheduler) HandleTaskMigration(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
@@ -266,6 +279,33 @@ func (s *scheduler) bindTaskToResource(td *pb.TaskDescriptor, rd *pb.ResourceDes
 	s.resourceBindings[rID][taskID] = struct{}{}
 }
 
+// UnbindTaskFromResource is similar to BindTaskToResource, in that it just updates the metadata for a task being removed from a resource
+// It is called in the event of a task failure, migration or eviction.
+// Returns false in case the task was not already bound to the resource in the taskMappings or resourceMappings
+// Event driven scheduler specific method
+func (s *scheduler) unbindTaskFromResource(td *pb.TaskDescriptor, rID types.ResourceID) bool {
+	taskID := types.TaskID(td.Uid)
+	resourceStatus := s.resourceMap.FindPtrOrNull(rID)
+	rd := resourceStatus.Descriptor()
+	// We don't have to remove the task from rd's running tasks because
+	// we've already cleared the list in the scheduling iteration
+	if len(rd.CurrentRunningTasks) == 0 {
+		rd.State = pb.ResourceDescriptor_ResourceIdle
+	}
+	// Remove the task from the resource bindings, return false if not found in the mappings
+	if _, ok := s.taskBindings[taskID]; !ok {
+		return false
+	}
+
+	taskSet := s.resourceBindings[rID]
+	if _, ok := taskSet[taskID]; !ok {
+		return false
+	}
+
+	delete(taskSet, taskID)
+	return true
+}
+
 // ExecuteTask is used to actually execute the task on a resource via an excution handler
 // For our purposes we skip that and only update the meta data to mark the task as running
 // Event driven scheduler specific method
@@ -274,4 +314,15 @@ func (s *scheduler) executeTask(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor
 	// but we don't need that
 	td.State = pb.TaskDescriptor_Running
 	td.ScheduledToResource = rd.Uuid
+}
+
+// InsertTaskIntoRunnables is a helper method used to update the runnable tasks set for the specified job by adding the new task
+// Event driven scheduler specific method
+func (s *scheduler) insertTaskIntoRunnables(jobID types.JobID, taskID types.TaskID) {
+	// Create a task set for this job if it doesn't already exist
+	if _, ok := s.runnableTasks[jobID]; !ok {
+		s.runnableTasks[jobID] = make(TaskSet)
+	}
+	// Insert task into runnable set for this job
+	s.runnableTasks[jobID][taskID] = struct{}{}
 }
