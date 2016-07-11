@@ -139,10 +139,10 @@ func (s *scheduler) HandleTaskEviction(td *pb.TaskDescriptor, rd *pb.ResourceDes
 
 func (s *scheduler) HandleTaskMigration(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
 	taskID := types.TaskID(td.Uid)
-
-	// Flow scheduler related work
 	oldRID := s.taskBindings[taskID]
 	newRID := util.MustResourceIDFromString(rd.Uuid)
+
+	// Flow scheduler related work
 	// XXX(ionel): HACK! We update scheduledToResource field here
 	// and in the EventDrivenScheduler. We update it here because
 	// TaskMigrated first calls TaskEvict and then TaskSchedule.
