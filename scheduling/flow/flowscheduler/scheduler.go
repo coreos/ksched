@@ -45,10 +45,8 @@ type scheduler struct {
 }
 
 // Scheduler constructor
-
 func NewScheduler(jobMap *types.JobMap, resourceMap *types.ResourceMap,
 	root *pb.ResourceTopologyNodeDescriptor, taskMap *types.TaskMap) Scheduler {
-
 	// Initialize graph manager with trivial cost model
 	leafResourceIDs := make(map[types.ResourceID]struct{})
 	dimacsStats := &dimacs.ChangeStats{}
@@ -259,7 +257,6 @@ func (s *scheduler) runSchedulingIteration() (uint64, []pb.SchedulingDelta) {
 
 	for taskNodeID, resourceNodeID := range taskMappings {
 		// Note: Ignore those completed, removal check...
-
 		delta := s.gm.NodeBindingToSchedulingDelta(taskNodeID, resourceNodeID, s.taskBindings)
 		deltas = append(deltas, *delta)
 	}
