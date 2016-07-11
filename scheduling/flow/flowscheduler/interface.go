@@ -110,12 +110,4 @@ type Scheduler interface {
 	// task_id: the id of the task to kill
 	// NOTE: modified to not include kill message
 	KillRunningTask(taskID types.TaskID)
-
-	// NOTE: This method is not implemented by the flow_scheduler but by the event_driven_sched
-	// Our implementation should be to ignore dependencies and mark all runnable tasks as runnable
-	// ComputeRunnableTasksForJob finds runnable tasks for the job in the argument and adds them to the
-	// global runnable set.
-	// jd: the descriptor of the job for which to find tasks
-	// Returns the set of tasks that are runnable for this job
-	ComputeRunnableTasksForJob(jd *pb.JobDescriptor) map[types.TaskID]struct{}
 }

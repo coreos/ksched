@@ -206,16 +206,12 @@ func (s *scheduler) KillRunningTask(taskID types.TaskID) {
 
 }
 
-func (s *scheduler) ComputeRunnableTasksForJob(jd *pb.JobDescriptor) map[types.TaskID]struct{} {
-	return nil
-}
-
 // Flow scheduler method
 func (s *scheduler) ScheduleAllJobs() (uint64, []pb.SchedulingDelta) {
 	jds := make([]*pb.JobDescriptor, 0)
 	for _, jobDesc := range s.jobsToSchedule {
 		// If at least one task is runnable in the job, add it for scheduling
-		if len(s.ComputeRunnableTasksForJob(jobDesc)) > 0 {
+		if len(s.computeRunnableTasksForJob(jobDesc)) > 0 {
 			jds = append(jds, jobDesc)
 		}
 	}
@@ -381,4 +377,46 @@ func (s *scheduler) insertTaskIntoRunnables(jobID types.JobID, taskID types.Task
 	}
 	// Insert task into runnable set for this job
 	s.runnableTasks[jobID][taskID] = struct{}{}
+}
+
+// NOTE: This method is not implemented by the flow_scheduler but by the event_driven_sched
+// Our implementation should be to ignore dependencies and mark all runnable tasks as runnable
+// ComputeRunnableTasksForJob finds runnable tasks for the job in the argument and adds them to the
+// global runnable set.
+// jd: the descriptor of the job for which to find tasks
+// Returns the set of tasks that are runnable for this job
+func (s *scheduler) computeRunnableTasksForJob(jd *pb.JobDescriptor) TaskSet {
+	// The "lazy graph reduction" performed in the original method
+	// places all tasks that are newly created or blocking in the runnableTasks set
+	// only if their dependencies are fulfilled. We disregards dependencies and
+	// place all tasks that are in the Created or Blocking state into the runnableTasks set
+	jobID := util.MustJobIDFromString(jd.Uuid)
+	rootTask := jd.RootTask
+
+	newlyActiveTasks := queue.NewFIFO()
+	// Only add the root task if it is not already scheduled, running, done
+	// or failed.
+	if rootTask.State == pb.TaskDescriptor_Created ||
+		rootTask.State == pb.TaskDescriptor_Running ||
+		rootTask.State == pb.TaskDescriptor_Runnable ||
+		rootTask.State == pb.TaskDescriptor_Completed {
+		newlyActiveTasks.Push(rootTask)
+	}
+	for !newlyActiveTasks.IsEmpty() {
+		currentTask := newlyActiveTasks.Pop().(*pb.TaskDescriptor)
+		// Put all child tasks in queue
+		for _, childTask := range currentTask.Spawned {
+			newlyActiveTasks.Push(childTask)
+		}
+		if currentTask.State == pb.TaskDescriptor_Created || currentTask.State == pb.TaskDescriptor_Blocking {
+			currentTask.State = pb.TaskDescriptor_Runnable
+			s.insertTaskIntoRunnables(util.MustJobIDFromString(currentTask.JobID), types.TaskID(currentTask.Uid))
+		}
+	}
+
+	if runnableTasksForJob, ok := s.runnableTasks[jobID]; ok {
+		return runnableTasksForJob
+	}
+	s.runnableTasks[jobID] = make(TaskSet)
+	return s.runnableTasks[jobID]
 }
