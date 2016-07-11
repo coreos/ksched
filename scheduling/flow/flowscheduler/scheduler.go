@@ -7,6 +7,7 @@ import (
 	"github.com/coreos/ksched/pkg/util"
 	"github.com/coreos/ksched/pkg/util/queue"
 	pb "github.com/coreos/ksched/proto"
+	"github.com/coreos/ksched/scheduling/flow/costmodel"
 	"github.com/coreos/ksched/scheduling/flow/dimacs"
 	"github.com/coreos/ksched/scheduling/flow/flowmanager"
 	"github.com/coreos/ksched/scheduling/flow/placement"
@@ -17,9 +18,9 @@ type TaskSet map[types.TaskID]struct{}
 
 type scheduler struct {
 	// Fields specific to every scheduler, originally present in the interface
-	resourceMap      types.ResourceMap
-	jobMap           types.JobMap
-	taskMap          types.TaskMap
+	resourceMap      *types.ResourceMap
+	jobMap           *types.JobMap
+	taskMap          *types.TaskMap
 	resourceTopology *pb.ResourceTopologyNodeDescriptor
 
 	// Flow scheduler specific fields
@@ -41,6 +42,39 @@ type scheduler struct {
 	// by checking and resolving dependencies between tasks. We will avoid that for now
 	// and simply declare all tasks as runnable
 	runnableTasks map[types.JobID]TaskSet
+}
+
+// Scheduler constructor
+
+func NewScheduler(jobMap *types.JobMap, resourceMap *types.ResourceMap,
+	root *pb.ResourceTopologyNodeDescriptor, taskMap *types.TaskMap) Scheduler {
+
+	// Initialize graph manager with trivial cost model
+	leafResourceIDs := make(map[types.ResourceID]struct{})
+	dimacsStats := &dimacs.ChangeStats{}
+	costModeler := costmodel.NewTrivial(resourceMap, taskMap, leafResourceIDs)
+	gm := flowmanager.NewGraphManager(costModeler, leafResourceIDs, dimacsStats)
+	// Set up the initial flow graph
+	gm.AddResourceTopology(root)
+	// Set up the solver
+	solver := placement.NewSolver(gm)
+
+	// Initialize and return a new scheduler
+	return &scheduler{
+		resourceMap:      resourceMap,
+		jobMap:           jobMap,
+		taskMap:          taskMap,
+		resourceTopology: root,
+		gm:               gm,
+		solver:           solver,
+		dimacsStats:      dimacsStats,
+		resourceRoots:    make(map[*pb.ResourceTopologyNodeDescriptor]struct{}),
+		taskBindings:     make(map[types.TaskID]types.ResourceID),
+		resourceBindings: make(map[types.ResourceID]TaskSet),
+		jobsToSchedule:   make(map[types.JobID]*pb.JobDescriptor),
+		runnableTasks:    make(map[types.JobID]TaskSet),
+	}
+
 }
 
 // Event scheduler method
@@ -226,8 +260,8 @@ func (s *scheduler) runSchedulingIteration() (uint64, []pb.SchedulingDelta) {
 	for taskNodeID, resourceNodeID := range taskMappings {
 		// Note: Ignore those completed, removal check...
 
-		d := s.gm.NodeBindingToSchedulingDelta(taskNodeID, resourceNodeID, s.taskBindings)
-		deltas = append(deltas, d)
+		delta := s.gm.NodeBindingToSchedulingDelta(taskNodeID, resourceNodeID, s.taskBindings)
+		deltas = append(deltas, *delta)
 	}
 
 	numScheduled := s.applySchedulingDeltas(deltas)

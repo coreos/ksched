@@ -56,10 +56,10 @@ type GraphManager interface {
 	// This is not easy to be done in go. Rr it is not the common way to do it. We return
 	// the delta instead. Users can just append it to the delta array themselves.
 	NodeBindingToSchedulingDelta(taskNodeID, resourceNodeID flowgraph.NodeID,
-		taskBindings map[types.TaskID]types.ResourceID) pb.SchedulingDelta
+		taskBindings map[types.TaskID]types.ResourceID) *pb.SchedulingDelta
 
 	// NOTE(haseeb): Returns a slice of deltas for the user to append
-	SchedulingDeltasForPreemptedTasks(taskMapping TaskMapping, rmap types.ResourceMap) []pb.SchedulingDelta
+	SchedulingDeltasForPreemptedTasks(taskMapping TaskMapping, rmap *types.ResourceMap) []pb.SchedulingDelta
 
 	// As a result of task state change, preferences change or
 	// resource removal we may end up with unconnected equivalence
@@ -127,7 +127,7 @@ type taskOrNode struct {
 	TaskDesc *pb.TaskDescriptor
 }
 
-func NewGraphManager(costModeler costmodel.CostModeler, leafResourceIDs map[types.ResourceID]struct{}, dimacsStats *dimacs.ChangeStats) *graphManager {
+func NewGraphManager(costModeler costmodel.CostModeler, leafResourceIDs map[types.ResourceID]struct{}, dimacsStats *dimacs.ChangeStats) GraphManager {
 	cm := NewChangeManager(dimacsStats)
 	gm := &graphManager{dimacsStats: dimacsStats,
 		leafResourceIDs:  leafResourceIDs,

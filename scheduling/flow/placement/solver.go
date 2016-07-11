@@ -42,6 +42,15 @@ type flowlesslySolver struct {
 	fromSolver      io.Reader
 }
 
+// Returns new solver initialized with the graph manager
+func NewSolver(gm flowmanager.GraphManager) Solver {
+	// TODO: Do the fields toSolver and fromSolver need to be initialized?
+	return &flowlesslySolver{
+		gm:              gm,
+		isSolverStarted: false,
+	}
+}
+
 // NOTE: assume we don't have debug flag
 // NOTE: assume we only do incremental flow
 // Note: assume Solve() is called iteratively and sequentially without concurrency.
