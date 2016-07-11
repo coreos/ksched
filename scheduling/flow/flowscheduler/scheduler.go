@@ -44,9 +44,15 @@ type scheduler struct {
 	runnableTasks map[types.JobID]TaskSet
 }
 
-// Scheduler constructor
-func NewScheduler(jobMap *types.JobMap, resourceMap *types.ResourceMap,
-	root *pb.ResourceTopologyNodeDescriptor, taskMap *types.TaskMap) Scheduler {
+// Initialize a new scheduler. All the input parameters will need to be kept updated by the caller
+// of the scheduler functions, upon the addition of new machines, tasks
+// resourceMap: The mappings of ResourceIDs to ResourceStatuses(wrappers around ResourceDescriptors and ResourceTopologyNodes)
+// jobMap: The mappings of JobIDs to JobDescriptors
+// taskMap: The mappings of TaskIDs to TaskDescriptors
+// root: The root ResourceTopologyNodeDescriptor of all the resources in the cluster.
+// Any new machines will need be added as children of this root before calling RegisterResource() on the scheduler
+func NewScheduler(resourceMap *types.ResourceMap, jobMap *types.JobMap, taskMap *types.TaskMap,
+	root *pb.ResourceTopologyNodeDescriptor) Scheduler {
 	// Initialize graph manager with trivial cost model
 	leafResourceIDs := make(map[types.ResourceID]struct{})
 	dimacsStats := &dimacs.ChangeStats{}
@@ -72,7 +78,6 @@ func NewScheduler(jobMap *types.JobMap, resourceMap *types.ResourceMap,
 		jobsToSchedule:   make(map[types.JobID]*pb.JobDescriptor),
 		runnableTasks:    make(map[types.JobID]TaskSet),
 	}
-
 }
 
 // Event scheduler method
