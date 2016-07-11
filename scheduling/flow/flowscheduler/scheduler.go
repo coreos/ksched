@@ -155,7 +155,7 @@ func (s *scheduler) HandleTaskMigration(td *pb.TaskDescriptor, rd *pb.ResourceDe
 	// Unbind task from old resource and bind to new one
 	rd.State = pb.ResourceDescriptor_ResourceBusy
 	td.State = pb.TaskDescriptor_Running
-	if s.unbindTaskFromResource(td, oldRID) == false {
+	if !s.unbindTaskFromResource(td, oldRID) {
 		log.Panicf("Task/Resource binding for taskID:%v to rID:%v must exist\n", taskID, oldRID)
 	}
 	s.bindTaskToResource(td, rd)
