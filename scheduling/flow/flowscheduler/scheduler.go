@@ -138,7 +138,27 @@ func (s *scheduler) HandleTaskEviction(td *pb.TaskDescriptor, rd *pb.ResourceDes
 }
 
 func (s *scheduler) HandleTaskMigration(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
+	taskID := types.TaskID(td.Uid)
+	oldRID := s.taskBindings[taskID]
+	newRID := util.MustResourceIDFromString(rd.Uuid)
 
+	// Flow scheduler related work
+	// XXX(ionel): HACK! We update scheduledToResource field here
+	// and in the EventDrivenScheduler. We update it here because
+	// TaskMigrated first calls TaskEvict and then TaskSchedule.
+	// TaskSchedule requires scheduledToResource to be up to date.
+	// Hence, we have to set it before we call the method.
+	td.ScheduledToResource = rd.Uuid
+	s.gm.TaskMigrated(taskID, oldRID, newRID)
+
+	// Event scheudler related work
+	// Unbind task from old resource and bind to new one
+	rd.State = pb.ResourceDescriptor_ResourceBusy
+	td.State = pb.TaskDescriptor_Running
+	if !s.unbindTaskFromResource(td, oldRID) {
+		log.Panicf("Task/Resource binding for taskID:%v to rID:%v must exist\n", taskID, oldRID)
+	}
+	s.bindTaskToResource(td, rd)
 }
 
 func (s *scheduler) HandleTaskFailure(td *pb.TaskDescriptor) {
