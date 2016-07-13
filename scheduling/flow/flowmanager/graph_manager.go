@@ -294,7 +294,7 @@ func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings TaskMappi
 	defer rmap.RUnlock()
 
 	for resourceID, resourceStatus := range rmap.UnsafeGet() {
-		rd := resourceStatus.Descriptor()
+		rd := resourceStatus.Descriptor
 		runningTasks := rd.CurrentRunningTasks
 		for taskID := range runningTasks {
 			taskNode := gm.nodeForTaskID(types.TaskID(taskID))

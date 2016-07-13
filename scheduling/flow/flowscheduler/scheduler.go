@@ -291,12 +291,12 @@ func (s *scheduler) applySchedulingDeltas(deltas []pb.SchedulingDelta) uint64 {
 			if jd.State != pb.JobDescriptor_Running {
 				jd.State = pb.JobDescriptor_Running
 			}
-			s.HandleTaskPlacement(td, rs.Descriptor())
+			s.HandleTaskPlacement(td, rs.Descriptor)
 			numScheduled++
 		case pb.SchedulingDelta_PREEMPT:
-			s.HandleTaskEviction(td, rs.Descriptor())
+			s.HandleTaskEviction(td, rs.Descriptor)
 		case pb.SchedulingDelta_MIGRATE:
-			s.HandleTaskMigration(td, rs.Descriptor())
+			s.HandleTaskMigration(td, rs.Descriptor)
 		case pb.SchedulingDelta_NOOP:
 			log.Println("NOOP Delta type:", d.Type)
 		default:
@@ -338,7 +338,7 @@ func (s *scheduler) bindTaskToResource(td *pb.TaskDescriptor, rd *pb.ResourceDes
 func (s *scheduler) unbindTaskFromResource(td *pb.TaskDescriptor, rID types.ResourceID) bool {
 	taskID := types.TaskID(td.Uid)
 	resourceStatus := s.resourceMap.FindPtrOrNull(rID)
-	rd := resourceStatus.Descriptor()
+	rd := resourceStatus.Descriptor
 	// We don't have to remove the task from rd's running tasks because
 	// we've already cleared the list in the scheduling iteration
 	if len(rd.CurrentRunningTasks) == 0 {

@@ -1,12 +1,16 @@
 package flowscheduler
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 
 	"github.com/coreos/ksched/pkg/types"
+	"github.com/coreos/ksched/pkg/types/resourcestatus"
 	"github.com/coreos/ksched/pkg/util"
+	"github.com/coreos/ksched/pkg/util/queue"
 	pb "github.com/coreos/ksched/proto"
+	"github.com/coreos/ksched/scheduling/flow/flowscheduler"
 )
 
 // Needed to specify
@@ -15,7 +19,7 @@ var MaxTasksPerPU int = 1
 func TestOneScheduleIteration(t *testing.T) {
 
 	// Initialize empty resource, job and task maps.
-	// Initialize an empty root ResourceTpoplogyNodeDescriptor
+	// Initialize a root ResourceTpoplogyNodeDescriptor of type Coordinator
 	resourceMap := types.NewResourceMap()
 	jobMap := types.NewJobMap()
 	taskMap := types.NewTaskMap()
@@ -23,13 +27,16 @@ func TestOneScheduleIteration(t *testing.T) {
 		ResourceDesc: getNewResourceDesc(pb.ResourceDescriptor_ResourceCoordinator, 0),
 	}
 
-	// TODO:
-	// Initialize the scheduler
+	fmt.Printf("RootNode ID: %s\n", rootNode.ResourceDesc.Uuid)
 
-	// Add Machine
+	// Initialize the flow scheduler
+	scheduler := flowscheduler.NewScheduler(resourceMap, jobMap, taskMap, rootNode)
+
+	// Add Machines
 	// Need to prepare the ResourceTopologyNode(and ResourceDescriptors) for the entire machine
 	// before adding it to the topology
-	AddMachine(rootNode)
+	AddMachine(rootNode, resourceMap, scheduler)
+	AddMachine(rootNode, resourceMap, scheduler)
 
 	// TODO:
 	// Add Tasks/Job
@@ -42,20 +49,31 @@ func TestOneScheduleIteration(t *testing.T) {
 }
 
 // AddMachine creates and adds a new machine topology descriptor to a root topology node
-func AddMachine(root *pb.ResourceTopologyNodeDescriptor) {
+// It also updates the resourceMap and registers the resource with the scheduler
+func AddMachine(root *pb.ResourceTopologyNodeDescriptor, resourceMap *types.ResourceMap, scheduler flowscheduler.Scheduler) {
 	// Create a new machine topology descriptor and add it as the root's child
-	// Hard code a machine topology for now
-	rootUuid := root.ResourceDesc.Uuid
+	// Hard code a machine topology for now, 2 cores, 1 PU each
 	machineNode := getNewMachineRtnd(2, 1, MaxTasksPerPU)
 	root.Children = append(root.Children, machineNode)
 	// Link machine to root
-	machineNode.ParentId = rootUuid
+	machineNode.ParentId = root.ResourceDesc.Uuid
 
-	// Register the resource with the scheduler
-
-	// TODO:
 	// Do a dfs from the rootNode and populate the resourceMap,
 	// since the resourceMap is not maintained by the scheduler
+	nodes := queue.NewFIFO()
+	nodes.Push(machineNode)
+	for !nodes.IsEmpty() {
+		currNode := nodes.Pop().(*pb.ResourceTopologyNodeDescriptor)
+		resourceStatus := &resourcestatus.ResourceStatus{
+			Descriptor:   currNode.ResourceDesc,
+			TopologyNode: currNode,
+		}
+		// Add the resource node to the resourceMap
+		resourceMap.InsertIfNotPresent(util.MustResourceIDFromString(currNode.ResourceDesc.Uuid), resourceStatus)
+	}
+
+	// Register the resource with the scheduler
+	scheduler.RegisterResource(machineNode)
 
 }
 
@@ -117,6 +135,7 @@ func getNewResourceDesc(resourceType pb.ResourceDescriptor_ResourceType, taskCap
 	IDString := strconv.FormatUint(util.RandUint64(), 10)
 	// Resource name = type + IDString
 	name := pb.ResourceDescriptor_ResourceType_name[int32(resourceType)] + IDString
+	fmt.Printf("Created Resource: %s\n", name)
 	return &pb.ResourceDescriptor{
 		Uuid:         IDString,
 		FriendlyName: name,
