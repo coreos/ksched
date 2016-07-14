@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 
 	"github.com/coreos/ksched/scheduling/flow/dimacs"
@@ -60,11 +61,20 @@ func (fs *flowlesslySolver) Solve() flowmanager.TaskMapping {
 	if !fs.isSolverStarted {
 		fs.isSolverStarted = true
 
-		fs.startSolver()
+		// Uncomment once we run real sollver.
+		// fs.startSolver()
+
 		// We must export graph and read from STDOUT/STDERR in parallel
 		// Otherwise, the solver might block if STDOUT/STDERR buffer gets full.
 		// (For example, if it outputs lots of warnings on STDERR.)
-		go fs.writeGraph()
+
+		// go fs.writeGraph()
+		fs.toSolver = os.Stdout
+		fs.writeGraph()
+
+		// remove it.. once we run real sollver.
+		os.Exit(1)
+
 		tm := fs.readTaskMapping()
 		// Exporter should have already finished writing because reading goroutine
 		// have also finished.
