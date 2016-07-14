@@ -11,7 +11,6 @@ import (
 	"github.com/coreos/ksched/pkg/util"
 	"github.com/coreos/ksched/pkg/util/queue"
 	pb "github.com/coreos/ksched/proto"
-	"github.com/coreos/ksched/scheduling/flow/flowscheduler"
 )
 
 func TestOneScheduleIteration(t *testing.T) {
@@ -28,7 +27,7 @@ func TestOneScheduleIteration(t *testing.T) {
 	fmt.Printf("RootNode ID: %s\n", rootNode.ResourceDesc.Uuid)
 
 	// Initialize the flow scheduler
-	scheduler := flowscheduler.NewScheduler(resourceMap, jobMap, taskMap, rootNode)
+	scheduler := NewScheduler(resourceMap, jobMap, taskMap, rootNode)
 
 	// Add 2 Machines to the topology, (2 cores per machine, 1 Pu per core, 1 Task per Pu)
 	addMachine(2, 1, 1, rootNode, resourceMap, scheduler)
@@ -139,7 +138,7 @@ func addTask(jobID types.JobID, jobMap *types.JobMap, taskMap *types.TaskMap) ty
 // AddMachine creates and adds a new machine topology node to the root topology node
 // It then traverses the machine node topology and updates the resourceMap and finally registers the machine node with the scheduler
 func addMachine(numCores int, pusPerCore int, tasksPerPu int,
-	root *pb.ResourceTopologyNodeDescriptor, resourceMap *types.ResourceMap, scheduler flowscheduler.Scheduler) {
+	root *pb.ResourceTopologyNodeDescriptor, resourceMap *types.ResourceMap, scheduler Scheduler) {
 	// Create a new machine topology descriptor and add it as the root's child
 	machineNode := getNewMachineRtnd(numCores, pusPerCore, tasksPerPu)
 	root.Children = append(root.Children, machineNode)
