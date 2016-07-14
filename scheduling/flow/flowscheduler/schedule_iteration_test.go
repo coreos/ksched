@@ -64,7 +64,7 @@ func TestOneScheduleIteration(t *testing.T) {
 		resourceNode := resourceMap.FindPtrOrNull(resourceID).TopologyNode
 		resourceDesc := resourceMap.FindPtrOrNull(resourceID).Descriptor
 		parentMachine := findParentMachine(resourceNode, resourceMap)
-		fmt.Printf("Task:%v placed on resource:%v on machine:%v", taskDesc.Uid, resourceDesc.FriendlyName, parentMachine.FriendlyName)
+		fmt.Printf("Task:%v placed on resource:%v on machine:%v\n", taskDesc.Uid, resourceDesc.FriendlyName, parentMachine.FriendlyName)
 	}
 }
 
