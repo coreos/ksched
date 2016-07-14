@@ -27,7 +27,7 @@ import (
 type NodeType int
 
 const (
-	NodeTypeOther NodeType = iota + 1
+	NodeTypeOther NodeType = iota
 	NodeTypeTask
 	NodeTypePu
 	NodeTypeSink

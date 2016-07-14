@@ -25,7 +25,7 @@ import (
 type NodeType int
 
 const (
-	NodeTypeRootTask NodeType = iota + 1
+	NodeTypeRootTask NodeType = iota
 	NodeTypeScheduledTask
 	NodeTypeUnscheduledTask
 	NodeTypeJobAggregator

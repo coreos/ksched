@@ -21,7 +21,7 @@ type ChangeType int
 const NumChangeTypes = 36
 
 const (
-	AddTaskNode ChangeType = iota + 1
+	AddTaskNode ChangeType = iota
 	AddResourceNode
 	AddEquivClassNode
 	AddUnschedJobNode
