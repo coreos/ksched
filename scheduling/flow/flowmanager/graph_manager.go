@@ -15,6 +15,7 @@
 package flowmanager
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"sync"
@@ -163,12 +164,14 @@ func (gm *graphManager) LeafNodeIDs() map[flowgraph.NodeID]struct{} {
 // For existing jobs it passes them on via the nodeQueue to be updated.
 // jobs: The list of jobs that need updating
 func (gm *graphManager) AddOrUpdateJobNodes(jobs []*pb.JobDescriptor) {
+
 	nodeQueue := queue.NewFIFO()
 	markedNodes := make(map[flowgraph.NodeID]struct{})
 	// For each job:
 	// 1. Add/Update its unscheduled agg node
 	// 2. Add its root task to the nodeQueue
 	for _, job := range jobs {
+		fmt.Printf("Graph Manager: AddOrUpdateJobNodes: job: %s\n", job.Name)
 		jid := util.MustJobIDFromString(job.Uuid)
 		// First add an unscheduled aggregator node for this job if none exists already.
 		unschedAggNode := gm.jobUnschedToNode[jid]
@@ -626,7 +629,7 @@ func (gm *graphManager) addTaskNode(jobID types.JobID, td *pb.TaskDescriptor) *f
 	// trace.traceGenerator.TaskSubmitted(td)
 	gm.costModeler.AddTask(types.TaskID(td.Uid))
 	taskNode := gm.cm.AddNode(flowgraph.NodeTypeUnscheduledTask, 1, dimacs.AddTaskNode, "AddTaskNode")
-	log.Printf("Graph Manager: add node: name (%s)\n", td.Name)
+	fmt.Printf("Graph Manager: addTaskNode: name (%s)\n", td.Name)
 	taskNode.Task = td
 	taskNode.JobID = jobID
 	gm.sinkNode.Excess--
@@ -895,7 +898,7 @@ func (gm *graphManager) updateChildrenTasks(td *pb.TaskDescriptor,
 		}
 
 		// ChildTask has no node
-		if !taskMustHaveNode(childTask) {
+		if !isTaskSchedulable(childTask) {
 			nodeQueue.Push(&taskOrNode{Node: nil, TaskDesc: childTask})
 			return
 		}
