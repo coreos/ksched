@@ -22,6 +22,7 @@ import (
 )
 
 type Scheduler interface {
+	GetTaskBindings() map[types.TaskID]types.ResourceID
 
 	// AddJob adds a new job. The job will be scheduled on the next run of the scheduler
 	// if it has any runnable tasks.

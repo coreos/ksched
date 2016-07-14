@@ -2,6 +2,7 @@ package flowscheduler
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"testing"
 
@@ -40,18 +41,58 @@ func TestOneScheduleIteration(t *testing.T) {
 	jobID2 := types.JobID(util.RandUint64())
 	AddTask(jobID2, jobMap, taskMap)
 	AddTask(jobID2, jobMap, taskMap)
+
+	// Register the jobs with scheduler
+	job1 := jobMap.FindPtrOrNull(jobID1)
+	job2 := jobMap.FindPtrOrNull(jobID2)
+	if job1 == nil || job2 == nil {
+		log.Panicf("All jobs should exist\n")
+	}
+	scheduler.AddJob(job1)
+	scheduler.AddJob(job2)
 	// Don't need to worry about the resource usage or request vector since cost model is trivial
 	// Check simulator_bridge.cc and simulator_bridge_test.cc to see how machines and tasks are added
 
-	// Finally what is the output to observe after 1 scheduling iteration?
-	// Can just print out the scheduling deltas to see where Task is placed
+	//Run one scheduling iteration
+	numScheduled, _ := scheduler.ScheduleAllJobs()
+	fmt.Printf("Number of tasks scheduled:%d\n", numScheduled)
 
+	// Finally what is the output to observe after 1 scheduling iteration?
+	// Print out the updated task bindings to see which task is placed on what resource
+	for taskID, resourceID := range scheduler.GetTaskBindings() {
+		taskDesc := taskMap.FindPtrOrNull(taskID)
+		resourceNode := resourceMap.FindPtrOrNull(resourceID).TopologyNode
+		resourceDesc := resourceMap.FindPtrOrNull(resourceID).Descriptor
+		parentMachine := findParentMachine(resourceNode, resourceMap)
+		fmt.Printf("Task:%v placed on resource:%v on machine:%v", taskDesc.Uid, resourceDesc.FriendlyName, parentMachine.FriendlyName)
+	}
+}
+
+func findParentMachine(node *pb.ResourceTopologyNodeDescriptor, resourceMap *types.ResourceMap) *pb.ResourceDescriptor {
+	for {
+		if node.ResourceDesc.Type == pb.ResourceDescriptor_ResourceMachine {
+			return node.ResourceDesc
+		}
+		// traverse to parent node
+		id, err := strconv.ParseUint(node.ParentId, 10, 64)
+		if err != nil {
+			log.Panicf("Could not parse parentID\n")
+		}
+		parentID := types.ResourceID(id)
+		parentNode := resourceMap.FindPtrOrNull(parentID)
+		if parentNode == nil {
+			// reached the root
+			fmt.Printf("Machine not found\n")
+			return nil
+		}
+		node = parentNode.TopologyNode
+	}
 }
 
 // AddTask adds a new task to the specified jobID. If the jobID does not exist then
 // a new job will be created for it. Both the taskMap and jobMap are updated with the new
 // task and job.
-// Returns the taskID of the newly spawned task
+// Returns the taskID of the task created
 func AddTask(jobID types.JobID, jobMap *types.JobMap, taskMap *types.TaskMap) types.TaskID {
 	// Create a new job descriptor if there isn't one in the jobMap already
 	jobDesc := jobMap.FindPtrOrNull(jobID)
@@ -91,6 +132,7 @@ func AddTask(jobID types.JobID, jobMap *types.JobMap, taskMap *types.TaskMap) ty
 		// Add it as one of the children spawned by the root
 		jobDesc.RootTask.Spawned = append(jobDesc.RootTask.Spawned, task)
 	}
+
 	return taskID
 }
 
