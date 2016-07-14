@@ -15,6 +15,7 @@
 package flowmanager
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"sync"
@@ -591,8 +592,12 @@ func (gm *graphManager) addResourceTopologyDFS(rtnd *pb.ResourceTopologyNodeDesc
 	}
 
 	gm.visitTopologyChildren(rtnd)
-	if rtnd.ParentId == "" && rd.Type != pb.ResourceDescriptor_ResourceCoordinator {
-		log.Panicf("A resource node that is not a coordinator must have a parent")
+	// If we reach the root
+	if rtnd.ParentId == "" {
+		if rd.Type != pb.ResourceDescriptor_ResourceCoordinator {
+			log.Panicf("A resource node that is not a coordinator must have a parent")
+		}
+		return
 	}
 
 	if addedNewResNode {
@@ -1091,6 +1096,9 @@ func (gm *graphManager) updateResToSinkArc(resNode *flowgraph.Node) {
 		log.Panicf("gm:updateResToSinkArc: Updating an arc from a non-PU to the sink")
 	}
 
+	if gm.cm.Graph().GetArc(resNode, gm.sinkNode) == nil {
+		fmt.Printf("Graph is nil\n")
+	}
 	resArcSink := gm.cm.Graph().GetArc(resNode, gm.sinkNode)
 	cost := int64(gm.costModeler.LeafResourceNodeToSinkCost(resNode.ResourceID))
 	if resArcSink == nil {

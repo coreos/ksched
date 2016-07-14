@@ -13,9 +13,6 @@ import (
 	"github.com/coreos/ksched/scheduling/flow/flowscheduler"
 )
 
-// Needed to specify
-var MaxTasksPerPU int = 1
-
 func TestOneScheduleIteration(t *testing.T) {
 
 	// Initialize empty resource, job and task maps.
@@ -32,14 +29,17 @@ func TestOneScheduleIteration(t *testing.T) {
 	// Initialize the flow scheduler
 	scheduler := flowscheduler.NewScheduler(resourceMap, jobMap, taskMap, rootNode)
 
-	// Add Machines
-	// Need to prepare the ResourceTopologyNode(and ResourceDescriptors) for the entire machine
-	// before adding it to the topology
-	AddMachine(rootNode, resourceMap, scheduler)
-	AddMachine(rootNode, resourceMap, scheduler)
+	// Add 2 Machines to the topology, (2 cores per machine, 1 Pu per core, 1 Task per Pu)
+	AddMachine(2, 1, 1, rootNode, resourceMap, scheduler)
+	AddMachine(2, 1, 1, rootNode, resourceMap, scheduler)
 
-	// TODO:
-	// Add Tasks/Job
+	// Add 2 Jobs, with 2 Tasks each
+	jobID1 := types.JobID(util.RandUint64())
+	AddTask(jobID1, jobMap, taskMap)
+	AddTask(jobID1, jobMap, taskMap)
+	jobID2 := types.JobID(util.RandUint64())
+	AddTask(jobID2, jobMap, taskMap)
+	AddTask(jobID2, jobMap, taskMap)
 	// Don't need to worry about the resource usage or request vector since cost model is trivial
 	// Check simulator_bridge.cc and simulator_bridge_test.cc to see how machines and tasks are added
 
@@ -48,18 +48,64 @@ func TestOneScheduleIteration(t *testing.T) {
 
 }
 
-// AddMachine creates and adds a new machine topology descriptor to a root topology node
-// It also updates the resourceMap and registers the resource with the scheduler
-func AddMachine(root *pb.ResourceTopologyNodeDescriptor, resourceMap *types.ResourceMap, scheduler flowscheduler.Scheduler) {
+// AddTask adds a new task to the specified jobID. If the jobID does not exist then
+// a new job will be created for it. Both the taskMap and jobMap are updated with the new
+// task and job.
+// Returns the taskID of the newly spawned task
+func AddTask(jobID types.JobID, jobMap *types.JobMap, taskMap *types.TaskMap) types.TaskID {
+	// Create a new job descriptor if there isn't one in the jobMap already
+	jobDesc := jobMap.FindPtrOrNull(jobID)
+	jobUuid := strconv.FormatUint(uint64(jobID), 10)
+	if jobDesc == nil {
+		name := "Job " + jobUuid
+		jobDesc = &pb.JobDescriptor{
+			Uuid:  jobUuid,
+			Name:  name,
+			State: pb.JobDescriptor_Created,
+		}
+		jobMap.InsertIfNotPresent(jobID, jobDesc)
+	}
+
+	// Create a unique taskID
+	duplicate := true
+	taskID := types.TaskID(util.RandUint64())
+	duplicate = taskMap.ContainsKey(taskID)
+	for duplicate {
+		taskID := types.TaskID(util.RandUint64())
+		duplicate = taskMap.ContainsKey(taskID)
+	}
+	// Create the task descriptor and add it to the taskMap
+	name := "Task " + strconv.FormatUint(uint64(taskID), 10)
+	task := &pb.TaskDescriptor{
+		Uid:   uint64(taskID),
+		Name:  name,
+		State: pb.TaskDescriptor_Created,
+		JobID: jobUuid,
+	}
+	taskMap.InsertIfNotPresent(taskID, task)
+
+	// If it is the first task then add it as the root task of this job
+	if jobDesc.RootTask == nil {
+		jobDesc.RootTask = task
+	} else {
+		// Add it as one of the children spawned by the root
+		jobDesc.RootTask.Spawned = append(jobDesc.RootTask.Spawned, task)
+	}
+	return taskID
+}
+
+// AddMachine creates and adds a new machine topology node to the root topology node
+// It then traverses the machine node topology and updates the resourceMap and finally registers the machine node with the scheduler
+func AddMachine(numCores int, pusPerCore int, tasksPerPu int,
+	root *pb.ResourceTopologyNodeDescriptor, resourceMap *types.ResourceMap, scheduler flowscheduler.Scheduler) {
 	// Create a new machine topology descriptor and add it as the root's child
-	// Hard code a machine topology for now, 2 cores, 1 PU each
-	machineNode := getNewMachineRtnd(2, 1, MaxTasksPerPU)
+	machineNode := getNewMachineRtnd(numCores, pusPerCore, tasksPerPu)
 	root.Children = append(root.Children, machineNode)
 	// Link machine to root
 	machineNode.ParentId = root.ResourceDesc.Uuid
 
 	// Do a dfs from the rootNode and populate the resourceMap,
-	// since the resourceMap is not maintained by the scheduler
+	// since the resourceMap is supposed to be updated outside of the scheduler
 	nodes := queue.NewFIFO()
 	nodes.Push(machineNode)
 	for !nodes.IsEmpty() {
@@ -74,7 +120,6 @@ func AddMachine(root *pb.ResourceTopologyNodeDescriptor, resourceMap *types.Reso
 
 	// Register the resource with the scheduler
 	scheduler.RegisterResource(machineNode)
-
 }
 
 // getNewMachineRtnd returns an initialized and fully populated resource topology of type Machine
