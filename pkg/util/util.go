@@ -65,7 +65,7 @@ func hashFNV(s string) uint64 {
 }
 
 // Generate a uint64 random number
-func randUint64() uint64 {
+func RandUint64() uint64 {
 	// Using two calls to uint32 since there is no rand.uint64
 	return uint64(randGen.Uint32()) + uint64(randGen.Uint32())
 }
@@ -73,14 +73,14 @@ func randUint64() uint64 {
 // ID generators
 // NOTE: For GenerateRootResourceID() just use this func
 func GenerateResourceID() types.ResourceID {
-	return types.ResourceID(randUint64())
+	return types.ResourceID(RandUint64())
 }
 
 func GenerateJobID() types.JobID {
-	return types.JobID(randUint64())
+	return types.JobID(RandUint64())
 }
 
 // For GenerateRootTaskID() just use this func
 func GenerateTaskID() types.TaskID {
-	return types.TaskID(randUint64())
+	return types.TaskID(RandUint64())
 }

@@ -32,7 +32,7 @@ type scheduler struct {
 
 	// Event driven scheduler specific fields
 	// Note: taskBindings tracks the old state of which task maps to which resource (before each iteration).
-	taskBindings map[types.TaskID]types.ResourceID
+	TaskBindings map[types.TaskID]types.ResourceID
 	// Similar to taskBindings but tracks tasks binded to every resource. This is a multimap
 	resourceBindings map[types.ResourceID]TaskSet
 	// A vector holding descriptors of the jobs to be scheduled in the next scheduling round.
@@ -73,11 +73,15 @@ func NewScheduler(resourceMap *types.ResourceMap, jobMap *types.JobMap, taskMap 
 		solver:           solver,
 		dimacsStats:      dimacsStats,
 		resourceRoots:    make(map[*pb.ResourceTopologyNodeDescriptor]struct{}),
-		taskBindings:     make(map[types.TaskID]types.ResourceID),
+		TaskBindings:     make(map[types.TaskID]types.ResourceID),
 		resourceBindings: make(map[types.ResourceID]TaskSet),
 		jobsToSchedule:   make(map[types.JobID]*pb.JobDescriptor),
 		runnableTasks:    make(map[types.JobID]TaskSet),
 	}
+}
+
+func (s *scheduler) GetTaskBindings() map[types.TaskID]types.ResourceID {
+	return s.TaskBindings
 }
 
 // Event scheduler method
@@ -176,7 +180,7 @@ func (s *scheduler) HandleTaskEviction(td *pb.TaskDescriptor, rd *pb.ResourceDes
 
 func (s *scheduler) HandleTaskMigration(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
 	taskID := types.TaskID(td.Uid)
-	oldRID := s.taskBindings[taskID]
+	oldRID := s.TaskBindings[taskID]
 	newRID := util.MustResourceIDFromString(rd.Uuid)
 
 	// Flow scheduler related work
@@ -258,7 +262,7 @@ func (s *scheduler) runSchedulingIteration() (uint64, []pb.SchedulingDelta) {
 
 	for taskNodeID, resourceNodeID := range taskMappings {
 		// Note: Ignore those completed, removal check...
-		delta := s.gm.NodeBindingToSchedulingDelta(taskNodeID, resourceNodeID, s.taskBindings)
+		delta := s.gm.NodeBindingToSchedulingDelta(taskNodeID, resourceNodeID, s.TaskBindings)
 		deltas = append(deltas, *delta)
 	}
 
@@ -291,12 +295,12 @@ func (s *scheduler) applySchedulingDeltas(deltas []pb.SchedulingDelta) uint64 {
 			if jd.State != pb.JobDescriptor_Running {
 				jd.State = pb.JobDescriptor_Running
 			}
-			s.HandleTaskPlacement(td, rs.Descriptor())
+			s.HandleTaskPlacement(td, rs.Descriptor)
 			numScheduled++
 		case pb.SchedulingDelta_PREEMPT:
-			s.HandleTaskEviction(td, rs.Descriptor())
+			s.HandleTaskEviction(td, rs.Descriptor)
 		case pb.SchedulingDelta_MIGRATE:
-			s.HandleTaskMigration(td, rs.Descriptor())
+			s.HandleTaskMigration(td, rs.Descriptor)
 		case pb.SchedulingDelta_NOOP:
 			log.Println("NOOP Delta type:", d.Type)
 		default:
@@ -320,10 +324,10 @@ func (s *scheduler) bindTaskToResource(td *pb.TaskDescriptor, rd *pb.ResourceDes
 	rd.State = pb.ResourceDescriptor_ResourceBusy
 	rd.CurrentRunningTasks = append(rd.CurrentRunningTasks, uint64(taskID))
 	// Insert mapping into task bindings, must not already exist
-	if _, ok := s.taskBindings[taskID]; ok {
+	if _, ok := s.TaskBindings[taskID]; ok {
 		log.Panicf("scheduler/bindTaskToResource: mapping for taskID:%v in taskBindings must not already exist\n", taskID)
 	}
-	s.taskBindings[taskID] = rID
+	s.TaskBindings[taskID] = rID
 	// Update resource bindings, create a binding set if it doesn't exist already
 	if _, ok := s.resourceBindings[rID]; !ok {
 		s.resourceBindings[rID] = make(TaskSet)
@@ -338,14 +342,14 @@ func (s *scheduler) bindTaskToResource(td *pb.TaskDescriptor, rd *pb.ResourceDes
 func (s *scheduler) unbindTaskFromResource(td *pb.TaskDescriptor, rID types.ResourceID) bool {
 	taskID := types.TaskID(td.Uid)
 	resourceStatus := s.resourceMap.FindPtrOrNull(rID)
-	rd := resourceStatus.Descriptor()
+	rd := resourceStatus.Descriptor
 	// We don't have to remove the task from rd's running tasks because
 	// we've already cleared the list in the scheduling iteration
 	if len(rd.CurrentRunningTasks) == 0 {
 		rd.State = pb.ResourceDescriptor_ResourceIdle
 	}
 	// Remove the task from the resource bindings, return false if not found in the mappings
-	if _, ok := s.taskBindings[taskID]; !ok {
+	if _, ok := s.TaskBindings[taskID]; !ok {
 		return false
 	}
 
@@ -353,7 +357,7 @@ func (s *scheduler) unbindTaskFromResource(td *pb.TaskDescriptor, rID types.Reso
 	if _, ok := taskSet[taskID]; !ok {
 		return false
 	}
-
+	delete(s.TaskBindings, taskID)
 	delete(taskSet, taskID)
 	return true
 }

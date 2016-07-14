@@ -74,7 +74,7 @@ func (t *trivialCostModeler) EquivClassToResourceNode(ec types.EquivClass, id ty
 	if rs == nil {
 		panic(fmt.Errorf("couldn't find resource status for (%d)", id))
 	}
-	freeSlotNum := rs.Descriptor().NumSlotsBelow - rs.Descriptor().NumRunningTasksBelow
+	freeSlotNum := rs.Descriptor.NumSlotsBelow - rs.Descriptor.NumRunningTasksBelow
 	return 0, freeSlotNum
 }
 
