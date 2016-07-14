@@ -52,12 +52,12 @@ type scheduler struct {
 // root: The root ResourceTopologyNodeDescriptor of all the resources in the cluster.
 // Any new machines will need be added as children of this root before calling RegisterResource() on the scheduler
 func NewScheduler(resourceMap *types.ResourceMap, jobMap *types.JobMap, taskMap *types.TaskMap,
-	root *pb.ResourceTopologyNodeDescriptor) Scheduler {
+	root *pb.ResourceTopologyNodeDescriptor, maxTasksPerPu uint64) Scheduler {
 	// Initialize graph manager with trivial cost model
 	leafResourceIDs := make(map[types.ResourceID]struct{})
 	dimacsStats := &dimacs.ChangeStats{}
 	costModeler := costmodel.NewTrivial(resourceMap, taskMap, leafResourceIDs)
-	gm := flowmanager.NewGraphManager(costModeler, leafResourceIDs, dimacsStats)
+	gm := flowmanager.NewGraphManager(costModeler, leafResourceIDs, dimacsStats, maxTasksPerPu)
 	// Set up the initial flow graph
 	gm.AddResourceTopology(root)
 	// Set up the solver

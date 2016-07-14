@@ -15,6 +15,8 @@ import (
 
 func TestOneScheduleIteration(t *testing.T) {
 
+	maxTasksPerPu := uint64(1)
+
 	// Initialize empty resource, job and task maps.
 	// Initialize a root ResourceTpoplogyNodeDescriptor of type Coordinator
 	resourceMap := types.NewResourceMap()
@@ -25,7 +27,7 @@ func TestOneScheduleIteration(t *testing.T) {
 	}
 
 	// Initialize the flow scheduler
-	scheduler := NewScheduler(resourceMap, jobMap, taskMap, rootNode)
+	scheduler := NewScheduler(resourceMap, jobMap, taskMap, rootNode, maxTasksPerPu)
 
 	// Add 2 Machines to the topology, (2 cores per machine, 1 Pu per core, 1 Task per Pu)
 	// addMachine(2, 1, 1, rootNode, resourceMap, scheduler)

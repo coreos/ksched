@@ -21,7 +21,7 @@ func createTestGMTrivial() *graphManager {
 	taskMap := types.NewTaskMap()
 	leafResourceIDs := make(map[types.ResourceID]struct{})
 	dimacsStats := &dimacs.ChangeStats{}
-	costModeler := costmodel.NewTrivial(resourceMap, taskMap, leafResourceIDs)
+	costModeler := costmodel.NewTrivial(resourceMap, taskMap, leafResourceIDs, 1)
 	gm := NewGraphManager(costModeler, leafResourceIDs, dimacsStats)
 	return gm
 }
