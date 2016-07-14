@@ -28,25 +28,33 @@ func TestOneScheduleIteration(t *testing.T) {
 	scheduler := NewScheduler(resourceMap, jobMap, taskMap, rootNode)
 
 	// Add 2 Machines to the topology, (2 cores per machine, 1 Pu per core, 1 Task per Pu)
-	addMachine(2, 1, 1, rootNode, resourceMap, scheduler)
-	addMachine(2, 1, 1, rootNode, resourceMap, scheduler)
+	// addMachine(2, 1, 1, rootNode, resourceMap, scheduler)
+	// addMachine(2, 1, 1, rootNode, resourceMap, scheduler)
+
+	addMachine(1, 1, 1, rootNode, resourceMap, scheduler)
 
 	// Add 2 Jobs, with 2 Tasks each
+	// jobID1 := types.JobID(util.RandUint64())
+	// addTaskToJob(jobID1, jobMap, taskMap)
+	// addTaskToJob(jobID1, jobMap, taskMap)
+	// jobID2 := types.JobID(util.RandUint64())
+	// addTaskToJob(jobID2, jobMap, taskMap)
+	// addTaskToJob(jobID2, jobMap, taskMap)
+
 	jobID1 := types.JobID(util.RandUint64())
 	addTaskToJob(jobID1, jobMap, taskMap)
-	addTaskToJob(jobID1, jobMap, taskMap)
-	jobID2 := types.JobID(util.RandUint64())
-	addTaskToJob(jobID2, jobMap, taskMap)
-	addTaskToJob(jobID2, jobMap, taskMap)
 
 	// Register the jobs with scheduler
+	// job1 := jobMap.FindPtrOrNull(jobID1)
+	// job2 := jobMap.FindPtrOrNull(jobID2)
+	// if job1 == nil || job2 == nil {
+	// 	log.Panicf("All jobs should exist\n")
+	// }
+	// scheduler.AddJob(job1)
+	// scheduler.AddJob(job2)
+
 	job1 := jobMap.FindPtrOrNull(jobID1)
-	job2 := jobMap.FindPtrOrNull(jobID2)
-	if job1 == nil || job2 == nil {
-		log.Panicf("All jobs should exist\n")
-	}
 	scheduler.AddJob(job1)
-	scheduler.AddJob(job2)
 
 	// Don't need to worry about the resource usage or request vector since cost model is trivial
 	// Check simulator_bridge.cc and simulator_bridge_test.cc to see how machines and tasks are added
