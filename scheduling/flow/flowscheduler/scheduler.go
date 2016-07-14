@@ -232,7 +232,7 @@ func (s *scheduler) ScheduleJobs(jdsRunnable []*pb.JobDescriptor) (uint64, []pb.
 	numScheduledTasks := uint64(0)
 	deltas := make([]pb.SchedulingDelta, 0)
 	if len(jdsRunnable) > 0 {
-		// s.updateCostModelResourceStats()
+		s.updateCostModelResourceStats()
 		s.gm.AddOrUpdateJobNodes(jdsRunnable)
 		numScheduledTasks, deltas = s.runSchedulingIteration()
 		log.Printf("Scheduling Iteration complete, placed %v tasks\n", numScheduledTasks)
