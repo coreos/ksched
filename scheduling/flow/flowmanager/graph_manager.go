@@ -15,7 +15,6 @@
 package flowmanager
 
 import (
-	"fmt"
 	"log"
 	"strconv"
 	"sync"
@@ -1098,9 +1097,6 @@ func (gm *graphManager) updateResToSinkArc(resNode *flowgraph.Node) {
 		log.Panicf("gm:updateResToSinkArc: Updating an arc from a non-PU to the sink")
 	}
 
-	if gm.sinkNode == nil {
-		fmt.Printf("Graph is nil\n")
-	}
 	resArcSink := gm.cm.Graph().GetArc(resNode, gm.sinkNode)
 	cost := int64(gm.costModeler.LeafResourceNodeToSinkCost(resNode.ResourceID))
 	if resArcSink == nil {
