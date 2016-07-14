@@ -47,6 +47,7 @@ func TestOneScheduleIteration(t *testing.T) {
 	}
 	scheduler.AddJob(job1)
 	scheduler.AddJob(job2)
+
 	// Don't need to worry about the resource usage or request vector since cost model is trivial
 	// Check simulator_bridge.cc and simulator_bridge_test.cc to see how machines and tasks are added
 
