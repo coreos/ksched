@@ -113,13 +113,18 @@ func (s *scheduler) RegisterResource(rtnd *pb.ResourceTopologyNodeDescriptor) {
 	toVisit := queue.NewFIFO()
 	toVisit.Push(rtnd)
 	for !toVisit.IsEmpty() {
-		currRD := toVisit.Pop().(*pb.ResourceTopologyNodeDescriptor).ResourceDesc
+		currNode := toVisit.Pop().(*pb.ResourceTopologyNodeDescriptor)
+		currRD := currNode.ResourceDesc
 		if currRD.Type != pb.ResourceDescriptor_ResourcePu {
 			continue
 		}
 		currRD.Schedulable = true
 		if currRD.State == pb.ResourceDescriptor_ResourceUnknown {
 			currRD.State = pb.ResourceDescriptor_ResourceIdle
+		}
+		// Add children to queue
+		for _, child := range currNode.Children {
+			toVisit.Push(child)
 		}
 	}
 
