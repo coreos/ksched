@@ -138,13 +138,13 @@ func addTask(jobID types.JobID, jobMap *types.JobMap, taskMap *types.TaskMap) ty
 func addMachine(numCores int, pusPerCore int, tasksPerPu int,
 	root *pb.ResourceTopologyNodeDescriptor, resourceMap *types.ResourceMap, scheduler Scheduler) {
 	// Create a new machine topology descriptor and add it as the root's child
-	machineNode := getNewMachineRtnd(numCores, pusPerCore, tasksPerPu)
+	machineNode := createMachineNode(numCores, pusPerCore, tasksPerPu)
 	root.Children = append(root.Children, machineNode)
 	// Link machine to root
 	machineNode.ParentId = root.ResourceDesc.Uuid
 
-	// Do a dfs from the rootNode and populate the resourceMap,
-	// since the resourceMap is supposed to be updated outside of the scheduler
+	// Do a bfs from the rootNode and populate the resourceMap.
+	// The resourceMap is supposed to be updated outside of the scheduler
 	nodes := queue.NewFIFO()
 	nodes.Push(machineNode)
 	for !nodes.IsEmpty() {
@@ -155,23 +155,28 @@ func addMachine(numCores int, pusPerCore int, tasksPerPu int,
 		}
 		// Add the resource node to the resourceMap
 		resourceMap.InsertIfNotPresent(util.MustResourceIDFromString(currNode.ResourceDesc.Uuid), resourceStatus)
+		// We don't need a visited map because it's tree structure.
+		for _, childDesc := range currNode.GetChildren() {
+			nodes.Push(childDesc)
+		}
 	}
 
 	// Register the resource with the scheduler
 	scheduler.RegisterResource(machineNode)
 }
 
-// getNewMachineRtnd returns an initialized and fully populated resource topology of type Machine
+// createMachineNode returns an initialized and fully populated resource topology of type Machine
 // that looks like machine->cores->PUs
 // numCores: Total number of cores in the machine
 // pusPerCore: Number of processing units(hardware threads)PUs per core
 // tasksPerPu: The task capacity of each processing unit in the machine.
 // The total machine capacity = tasksPerPu * numCores * pusPerCore
-func getNewMachineRtnd(numCores int, pusPerCore int, tasksPerPu int) *pb.ResourceTopologyNodeDescriptor {
+func createMachineNode(numCores int, pusPerCore int, tasksPerPu int) *pb.ResourceTopologyNodeDescriptor {
 	totalCap := numCores * pusPerCore * tasksPerPu
 	machineNode := &pb.ResourceTopologyNodeDescriptor{
 		ResourceDesc: createResourceDesc(pb.ResourceDescriptor_ResourceMachine, totalCap),
 	}
+
 	// Add cores(and PUs by extension)
 	for i := 0; i < numCores; i++ {
 		coreNode := getNewCoreRtnd(pusPerCore, tasksPerPu)
