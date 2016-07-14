@@ -187,7 +187,7 @@ func (gm *graphManager) AddOrUpdateJobNodes(jobs []*pb.JobDescriptor) {
 			continue
 		}
 
-		if isTaskOnNode(rootTD) {
+		if taskNeedNode(rootTD) {
 			rootTaskNode = gm.addTaskNode(jid, rootTD)
 			// Increment capacity from unsched agg node to sink.
 			gm.updateUnscheduledAggNode(unschedAggNode, 1)
@@ -734,12 +734,16 @@ func (gm *graphManager) removeInvalidECPrefArcs(node *flowgraph.Node, prefEcs []
 	// For each arc, check if the preferredEC is actually an EC node and that it's not in the preferences slice(prefEC)
 	// If yes, remove that arc
 	for _, arc := range node.OutgoingArcMap {
-		prefEC := *arc.DstNode.EquivClass
-		_, ok := prefECSet[prefEC]
-		if prefEC != 0 && !ok {
-			log.Printf("Deleting no-longer-current arc to EC:%v", prefEC)
-			toDelete = append(toDelete, arc)
+		ecPtr := arc.DstNode.EquivClass
+		if ecPtr == nil {
+			continue
 		}
+		prefEC := *ecPtr
+		if _, ok := prefECSet[prefEC]; ok {
+			continue
+		}
+		log.Printf("Deleting no-longer-current arc to EC:%v", prefEC)
+		toDelete = append(toDelete, arc)
 	}
 
 	for _, arc := range toDelete {
@@ -879,9 +883,7 @@ func (gm *graphManager) updateArcsForScheduledTask(taskNode, resourceNode *flowg
 // If a child task doesn't need to have a graph node (e.g., task is not
 // RUNNABLE, RUNNING or ASSIGNED) then its taskOrNode struct will only contain
 // a pointer to its task descriptor.
-func (gm *graphManager) updateChildrenTasks(td *pb.TaskDescriptor,
-	nodeQueue queue.FIFO,
-	markedNodes map[flowgraph.NodeID]struct{}) {
+func (gm *graphManager) updateChildrenTasks(td *pb.TaskDescriptor, nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
 	// We do actually need to push tasks even if they are already completed,
 	// failed or running, since they may have children eligible for
 	// scheduling.
@@ -898,12 +900,12 @@ func (gm *graphManager) updateChildrenTasks(td *pb.TaskDescriptor,
 		}
 
 		// ChildTask has no node
-		if !isTaskOnNode(childTask) {
+		if !taskNeedNode(childTask) {
 			nodeQueue.Push(&taskOrNode{Node: nil, TaskDesc: childTask})
 			return
 		}
 
-		// ChildTask must have node
+		// ChildTask needs a node
 		jobID := util.MustJobIDFromString(childTask.JobID)
 		childTaskNode = gm.addTaskNode(jobID, childTask)
 		// Increment capacity from unsched agg node to sink.
@@ -996,7 +998,7 @@ func (gm *graphManager) updateEquivToResArcs(ecNode *flowgraph.Node,
 
 func (gm *graphManager) updateFlowGraph(nodeQueue queue.FIFO, markedNodes map[flowgraph.NodeID]struct{}) {
 	for !nodeQueue.IsEmpty() {
-		taskOrNode := nodeQueue.Pop().(taskOrNode)
+		taskOrNode := nodeQueue.Pop().(*taskOrNode)
 		node := taskOrNode.Node
 		task := taskOrNode.TaskDesc
 		switch {
@@ -1088,7 +1090,7 @@ func (gm *graphManager) updateResOutgoingArcs(resNode *flowgraph.Node, nodeQueue
 		if _, ok := markedNodes[arc.DstNode.ID]; !ok {
 			// Add the dst node to the queue if it hasn't been marked yet.
 			markedNodes[arc.DstNode.ID] = struct{}{}
-			nodeQueue.Push(taskOrNode{Node: arc.DstNode, TaskDesc: arc.DstNode.Task})
+			nodeQueue.Push(&taskOrNode{Node: arc.DstNode, TaskDesc: arc.DstNode.Task})
 		}
 	}
 }
@@ -1309,7 +1311,7 @@ func (gm *graphManager) unschedAggNodeForJobID(jobID types.JobID) *flowgraph.Nod
 }
 
 // check to see for this task it should be schedulable.
-func isTaskOnNode(td *pb.TaskDescriptor) bool {
+func taskNeedNode(td *pb.TaskDescriptor) bool {
 	return td.State == pb.TaskDescriptor_Runnable ||
 		td.State == pb.TaskDescriptor_Running ||
 		td.State == pb.TaskDescriptor_Assigned
