@@ -21,10 +21,8 @@ func TestOneScheduleIteration(t *testing.T) {
 	jobMap := types.NewJobMap()
 	taskMap := types.NewTaskMap()
 	rootNode := &pb.ResourceTopologyNodeDescriptor{
-		ResourceDesc: getNewResourceDesc(pb.ResourceDescriptor_ResourceCoordinator, 0),
+		ResourceDesc: createResourceDesc(pb.ResourceDescriptor_ResourceCoordinator, 0),
 	}
-
-	fmt.Printf("RootNode ID: %s\n", rootNode.ResourceDesc.Uuid)
 
 	// Initialize the flow scheduler
 	scheduler := NewScheduler(resourceMap, jobMap, taskMap, rootNode)
@@ -172,7 +170,7 @@ func addMachine(numCores int, pusPerCore int, tasksPerPu int,
 func getNewMachineRtnd(numCores int, pusPerCore int, tasksPerPu int) *pb.ResourceTopologyNodeDescriptor {
 	totalCap := numCores * pusPerCore * tasksPerPu
 	machineNode := &pb.ResourceTopologyNodeDescriptor{
-		ResourceDesc: getNewResourceDesc(pb.ResourceDescriptor_ResourceMachine, totalCap),
+		ResourceDesc: createResourceDesc(pb.ResourceDescriptor_ResourceMachine, totalCap),
 	}
 	// Add cores(and PUs by extension)
 	for i := 0; i < numCores; i++ {
@@ -196,7 +194,7 @@ func getNewMachineRtnd(numCores int, pusPerCore int, tasksPerPu int) *pb.Resourc
 func getNewCoreRtnd(numPUs int, tasksPerPu int) *pb.ResourceTopologyNodeDescriptor {
 	totalCap := numPUs * tasksPerPu
 	coreNode := &pb.ResourceTopologyNodeDescriptor{
-		ResourceDesc: getNewResourceDesc(pb.ResourceDescriptor_ResourceCore, totalCap),
+		ResourceDesc: createResourceDesc(pb.ResourceDescriptor_ResourceCore, totalCap),
 	}
 	// Add PUs
 	for i := 0; i < numPUs; i++ {
@@ -211,16 +209,16 @@ func getNewCoreRtnd(numPUs int, tasksPerPu int) *pb.ResourceTopologyNodeDescript
 // getNewPuRtnd returns a resource topology node of type PU with the sepcified task capacity
 func getNewPuRtnd(taskCap int) *pb.ResourceTopologyNodeDescriptor {
 	return &pb.ResourceTopologyNodeDescriptor{
-		ResourceDesc: getNewResourceDesc(pb.ResourceDescriptor_ResourcePu, taskCap),
+		ResourceDesc: createResourceDesc(pb.ResourceDescriptor_ResourcePu, taskCap),
 	}
 }
 
-// getNewResourceDesc returns an initialized Resource Descriptor of the specified type
-func getNewResourceDesc(resourceType pb.ResourceDescriptor_ResourceType, taskCap int) *pb.ResourceDescriptor {
+// createResourceDesc returns an initialized Resource Descriptor of the specified type
+func createResourceDesc(resourceType pb.ResourceDescriptor_ResourceType, taskCap int) *pb.ResourceDescriptor {
 	// TODO: This isn't a good way to generate unique IDs.
 	IDString := strconv.FormatUint(util.RandUint64(), 10)
 	// Resource name = type + IDString
-	name := pb.ResourceDescriptor_ResourceType_name[int32(resourceType)] + IDString
+	name := fmt.Sprintf("%s-%s", pb.ResourceDescriptor_ResourceType_name[int32(resourceType)], IDString)
 	fmt.Printf("Created Resource: %s\n", name)
 	return &pb.ResourceDescriptor{
 		Uuid:         IDString,
