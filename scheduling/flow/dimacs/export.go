@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	pb "github.com/coreos/ksched/proto"
 	"github.com/coreos/ksched/scheduling/flow/flowgraph"
 )
 
@@ -35,7 +36,7 @@ func generateNode(n *flowgraph.Node, w io.Writer) {
 	// dimacs comments
 	switch {
 	case n.ResourceDescriptor != nil:
-		fmt.Fprintf(w, "c nd Res_%s\n", n.ResourceDescriptor.Uuid)
+		fmt.Fprintf(w, "c nd Res_%s %s\n", n.ResourceDescriptor.Uuid, pb.ResourceDescriptor_ResourceType_name[int32(n.ResourceDescriptor.Type)])
 	case n.Task != nil:
 		fmt.Fprintf(w, "c nd Task_%d\n", n.Task.Uid)
 	case n.EquivClass != nil:
