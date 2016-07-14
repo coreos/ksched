@@ -184,7 +184,7 @@ func (gm *graphManager) AddOrUpdateJobNodes(jobs []*pb.JobDescriptor) {
 			continue
 		}
 
-		if taskMustHaveNode(rootTD) {
+		if isTaskSchedulable(rootTD) {
 			rootTaskNode = gm.addTaskNode(jid, rootTD)
 			// Increment capacity from unsched agg node to sink.
 			gm.updateUnscheduledAggNode(unschedAggNode, 1)
@@ -626,6 +626,7 @@ func (gm *graphManager) addTaskNode(jobID types.JobID, td *pb.TaskDescriptor) *f
 	// trace.traceGenerator.TaskSubmitted(td)
 	gm.costModeler.AddTask(types.TaskID(td.Uid))
 	taskNode := gm.cm.AddNode(flowgraph.NodeTypeUnscheduledTask, 1, dimacs.AddTaskNode, "AddTaskNode")
+	log.Printf("Graph Manager: add node: name (%s)\n", td.Name)
 	taskNode.Task = td
 	taskNode.JobID = jobID
 	gm.sinkNode.Excess--
@@ -1304,7 +1305,8 @@ func (gm *graphManager) unschedAggNodeForJobID(jobID types.JobID) *flowgraph.Nod
 	return gm.jobUnschedToNode[jobID]
 }
 
-func taskMustHaveNode(td *pb.TaskDescriptor) bool {
+// check to see for this task it should be schedulable.
+func isTaskSchedulable(td *pb.TaskDescriptor) bool {
 	return td.State == pb.TaskDescriptor_Runnable ||
 		td.State == pb.TaskDescriptor_Running ||
 		td.State == pb.TaskDescriptor_Assigned
