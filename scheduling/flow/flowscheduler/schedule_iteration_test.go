@@ -33,11 +33,11 @@ func TestOneScheduleIteration(t *testing.T) {
 
 	// Add 2 Jobs, with 2 Tasks each
 	jobID1 := types.JobID(util.RandUint64())
-	addTask(jobID1, jobMap, taskMap)
-	addTask(jobID1, jobMap, taskMap)
+	addTaskToJob(jobID1, jobMap, taskMap)
+	addTaskToJob(jobID1, jobMap, taskMap)
 	jobID2 := types.JobID(util.RandUint64())
-	addTask(jobID2, jobMap, taskMap)
-	addTask(jobID2, jobMap, taskMap)
+	addTaskToJob(jobID2, jobMap, taskMap)
+	addTaskToJob(jobID2, jobMap, taskMap)
 
 	// Register the jobs with scheduler
 	job1 := jobMap.FindPtrOrNull(jobID1)
@@ -86,11 +86,11 @@ func findParentMachine(node *pb.ResourceTopologyNodeDescriptor, resourceMap *typ
 	}
 }
 
-// AddTask adds a new task to the specified jobID. If the jobID does not exist then
+// addTaskToJob adds a new task to the specified jobID. If the jobID does not exist then
 // a new job will be created for it. Both the taskMap and jobMap are updated with the new
 // task and job.
 // Returns the taskID of the task created
-func addTask(jobID types.JobID, jobMap *types.JobMap, taskMap *types.TaskMap) types.TaskID {
+func addTaskToJob(jobID types.JobID, jobMap *types.JobMap, taskMap *types.TaskMap) types.TaskID {
 	// Create a new job descriptor if there isn't one in the jobMap already
 	jobDesc := jobMap.FindPtrOrNull(jobID)
 	jobUuid := strconv.FormatUint(uint64(jobID), 10)
