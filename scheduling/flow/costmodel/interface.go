@@ -31,7 +31,7 @@ type (
 
 //Enum for list of cost models supported
 const (
-	CostModelTrivial CostModelType = iota + 1
+	CostModelTrivial CostModelType = iota
 	CostModelRandom
 	CostModelSjf
 	CostModelQuincy
