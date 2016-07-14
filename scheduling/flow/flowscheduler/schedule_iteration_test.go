@@ -31,16 +31,16 @@ func TestOneScheduleIteration(t *testing.T) {
 	scheduler := flowscheduler.NewScheduler(resourceMap, jobMap, taskMap, rootNode)
 
 	// Add 2 Machines to the topology, (2 cores per machine, 1 Pu per core, 1 Task per Pu)
-	AddMachine(2, 1, 1, rootNode, resourceMap, scheduler)
-	AddMachine(2, 1, 1, rootNode, resourceMap, scheduler)
+	addMachine(2, 1, 1, rootNode, resourceMap, scheduler)
+	addMachine(2, 1, 1, rootNode, resourceMap, scheduler)
 
 	// Add 2 Jobs, with 2 Tasks each
 	jobID1 := types.JobID(util.RandUint64())
-	AddTask(jobID1, jobMap, taskMap)
-	AddTask(jobID1, jobMap, taskMap)
+	addTask(jobID1, jobMap, taskMap)
+	addTask(jobID1, jobMap, taskMap)
 	jobID2 := types.JobID(util.RandUint64())
-	AddTask(jobID2, jobMap, taskMap)
-	AddTask(jobID2, jobMap, taskMap)
+	addTask(jobID2, jobMap, taskMap)
+	addTask(jobID2, jobMap, taskMap)
 
 	// Register the jobs with scheduler
 	job1 := jobMap.FindPtrOrNull(jobID1)
@@ -93,7 +93,7 @@ func findParentMachine(node *pb.ResourceTopologyNodeDescriptor, resourceMap *typ
 // a new job will be created for it. Both the taskMap and jobMap are updated with the new
 // task and job.
 // Returns the taskID of the task created
-func AddTask(jobID types.JobID, jobMap *types.JobMap, taskMap *types.TaskMap) types.TaskID {
+func addTask(jobID types.JobID, jobMap *types.JobMap, taskMap *types.TaskMap) types.TaskID {
 	// Create a new job descriptor if there isn't one in the jobMap already
 	jobDesc := jobMap.FindPtrOrNull(jobID)
 	jobUuid := strconv.FormatUint(uint64(jobID), 10)
@@ -138,7 +138,7 @@ func AddTask(jobID types.JobID, jobMap *types.JobMap, taskMap *types.TaskMap) ty
 
 // AddMachine creates and adds a new machine topology node to the root topology node
 // It then traverses the machine node topology and updates the resourceMap and finally registers the machine node with the scheduler
-func AddMachine(numCores int, pusPerCore int, tasksPerPu int,
+func addMachine(numCores int, pusPerCore int, tasksPerPu int,
 	root *pb.ResourceTopologyNodeDescriptor, resourceMap *types.ResourceMap, scheduler flowscheduler.Scheduler) {
 	// Create a new machine topology descriptor and add it as the root's child
 	machineNode := getNewMachineRtnd(numCores, pusPerCore, tasksPerPu)
