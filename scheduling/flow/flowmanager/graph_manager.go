@@ -128,7 +128,7 @@ type taskOrNode struct {
 	TaskDesc *pb.TaskDescriptor
 }
 
-func NewGraphManager(costModeler costmodel.CostModeler, leafResourceIDs map[types.ResourceID]struct{}, dimacsStats *dimacs.ChangeStats) GraphManager {
+func NewGraphManager(costModeler costmodel.CostModeler, leafResourceIDs map[types.ResourceID]struct{}, dimacsStats *dimacs.ChangeStats, maxTasksPerPu uint64) GraphManager {
 	cm := NewChangeManager(dimacsStats)
 	sinkNode := cm.AddNode(flowgraph.NodeTypeSink, 0, dimacs.AddSinkNode, "SINK")
 	gm := &graphManager{dimacsStats: dimacsStats,
@@ -143,6 +143,7 @@ func NewGraphManager(costModeler costmodel.CostModeler, leafResourceIDs map[type
 		nodeToParentNode: make(map[*flowgraph.Node]*flowgraph.Node),
 		leafNodeIDs:      make(map[flowgraph.NodeID]struct{}),
 		sinkNode:         sinkNode,
+		MaxTasksPerPu:    maxTasksPerPu,
 	}
 	return gm
 }
