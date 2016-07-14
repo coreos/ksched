@@ -130,6 +130,7 @@ type taskOrNode struct {
 
 func NewGraphManager(costModeler costmodel.CostModeler, leafResourceIDs map[types.ResourceID]struct{}, dimacsStats *dimacs.ChangeStats) GraphManager {
 	cm := NewChangeManager(dimacsStats)
+	sinkNode := cm.AddNode(flowgraph.NodeTypeSink, 0, dimacs.AddSinkNode, "SINK")
 	gm := &graphManager{dimacsStats: dimacsStats,
 		leafResourceIDs:  leafResourceIDs,
 		cm:               cm,
@@ -141,6 +142,7 @@ func NewGraphManager(costModeler costmodel.CostModeler, leafResourceIDs map[type
 		taskToRunningArc: make(map[types.TaskID]*flowgraph.Arc),
 		nodeToParentNode: make(map[*flowgraph.Node]*flowgraph.Node),
 		leafNodeIDs:      make(map[flowgraph.NodeID]struct{}),
+		sinkNode:         sinkNode,
 	}
 	return gm
 }
@@ -1096,7 +1098,7 @@ func (gm *graphManager) updateResToSinkArc(resNode *flowgraph.Node) {
 		log.Panicf("gm:updateResToSinkArc: Updating an arc from a non-PU to the sink")
 	}
 
-	if gm.cm.Graph().GetArc(resNode, gm.sinkNode) == nil {
+	if gm.sinkNode == nil {
 		fmt.Printf("Graph is nil\n")
 	}
 	resArcSink := gm.cm.Graph().GetArc(resNode, gm.sinkNode)
