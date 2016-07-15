@@ -158,7 +158,7 @@ func (t *trivialCostModeler) GatherStats(accumulator *flowgraph.Node, other *flo
 }
 
 func (t *trivialCostModeler) PrepareStats(accumulator *flowgraph.Node) {
-	if accumulator.IsResourceNode() {
+	if !accumulator.IsResourceNode() {
 		return
 	}
 	if accumulator.ResourceDescriptor == nil {
