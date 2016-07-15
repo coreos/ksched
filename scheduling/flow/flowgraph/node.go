@@ -40,6 +40,38 @@ const (
 	NodeTypePu
 )
 
+func (nt NodeType) String() string {
+	switch nt {
+	case NodeTypeRootTask:
+		return "NodeTypeRootTask"
+	case NodeTypeScheduledTask:
+		return "NodeTypeScheduledTask"
+	case NodeTypeUnscheduledTask:
+		return "NodeTypeUnscheduledTask"
+	case NodeTypeJobAggregator:
+		return "NodeTypeJobAggregator"
+	case NodeTypeSink:
+		return "NodeTypeSink"
+	case NodeTypeEquivClass:
+		return "NodeTypeEquivClass"
+	case NodeTypeCoordinator:
+		return "NodeTypeCoordinator"
+	case NodeTypeMachine:
+		return "NodeTypeMachine"
+	case NodeTypeNuma:
+		return "NodeTypeNuma"
+	case NodeTypeSocket:
+		return "NodeTypeSocket"
+	case NodeTypeCache:
+		return "NodeTypeCache"
+	case NodeTypeCore:
+		return "NodeTypeCore"
+	case NodeTypePu:
+		return "NodeTypePu"
+	}
+	return "Unknown"
+}
+
 // Represents a node in the scheduling flow graph.
 type Node struct {
 	ID NodeID

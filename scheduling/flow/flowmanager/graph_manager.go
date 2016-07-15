@@ -302,7 +302,7 @@ func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings TaskMappi
 	for resourceID, resourceStatus := range rmap.UnsafeGet() {
 		rd := resourceStatus.Descriptor
 		runningTasks := rd.CurrentRunningTasks
-		for taskID := range runningTasks {
+		for _, taskID := range runningTasks {
 			taskNode := gm.nodeForTaskID(types.TaskID(taskID))
 			if taskNode == nil {
 				// There's no node for the task => we don't need to generate
@@ -511,6 +511,7 @@ func (gm *graphManager) ComputeTopologyStatistics(node *flowgraph.Node) {
 func (gm *graphManager) addEquivClassNode(ec types.EquivClass) *flowgraph.Node {
 	ecNode := gm.cm.AddNode(flowgraph.NodeTypeEquivClass, 0, dimacs.AddEquivClassNode, "AddEquivClassNode")
 	ecNode.EquivClass = &ec
+	fmt.Printf("Graph Manager: addEquivClassNode(%d) ec:%v\n", ecNode.ID, ec)
 	// Insert mapping taskEquivalenceClass to node, must not already exist
 	_, ok := gm.taskECToNode[ec]
 	if ok {
@@ -727,10 +728,12 @@ func (gm *graphManager) removeEquivClassNode(ecNode *flowgraph.Node) {
 func (gm *graphManager) removeInvalidECPrefArcs(node *flowgraph.Node, prefEcs []types.EquivClass, changeType dimacs.ChangeType) {
 	// Make a set of the preferred equivalence classes
 	prefECSet := make(map[types.EquivClass]struct{})
-	for ec := range prefEcs {
+	for _, ec := range prefEcs {
 		prefECSet[types.EquivClass(ec)] = struct{}{}
 	}
 	var toDelete []*flowgraph.Arc
+
+	fmt.Printf("Graph Manager: removeInvalidECPrefArcs: prefECSet:%v\n", prefECSet)
 
 	// For each arc, check if the preferredEC is actually an EC node and that it's not in the preferences slice(prefEC)
 	// If yes, remove that arc
@@ -759,7 +762,7 @@ func (gm *graphManager) removeInvalidECPrefArcs(node *flowgraph.Node, prefEcs []
 func (gm *graphManager) removeInvalidPrefResArcs(node *flowgraph.Node, prefResources []types.ResourceID, changeType dimacs.ChangeType) {
 	// Make a set of the preferred resources
 	prefResSet := make(map[types.ResourceID]struct{})
-	for rID := range prefResources {
+	for _, rID := range prefResources {
 		prefResSet[types.ResourceID(rID)] = struct{}{}
 	}
 	toDelete := make([]*flowgraph.Arc, 0)
@@ -1170,6 +1173,7 @@ func (gm *graphManager) updateTaskNode(taskNode *flowgraph.Node, nodeQueue queue
 		gm.updateRunningTaskNode(taskNode, gm.UpdatePreferencesRunningTask, nodeQueue, markedNodes)
 		return
 	}
+	fmt.Printf("Graph Manager: updateTaskNode: id (%s)\n", taskNode.Task.Name)
 	gm.updateTaskToUnscheduledAggArc(taskNode)
 	gm.updateTaskToEquivArcs(taskNode, nodeQueue, markedNodes)
 	gm.updateTaskToResArcs(taskNode, nodeQueue, markedNodes)
