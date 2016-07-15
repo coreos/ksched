@@ -743,7 +743,6 @@ func (gm *graphManager) removeInvalidECPrefArcs(node *flowgraph.Node, prefEcs []
 			continue
 		}
 		prefEC := *ecPtr
-		fmt.Printf("Looking for PrefEC:%v\n", prefEC)
 		if _, ok := prefECSet[prefEC]; ok {
 			continue
 		}
@@ -1192,7 +1191,6 @@ func (gm *graphManager) updateTaskToEquivArcs(taskNode *flowgraph.Node, nodeQueu
 	}
 
 	for _, prefEC := range prefECs {
-
 		prefECNode := gm.nodeForEquivClass(prefEC)
 		if prefECNode == nil {
 			prefECNode = gm.addEquivClassNode(prefEC)
