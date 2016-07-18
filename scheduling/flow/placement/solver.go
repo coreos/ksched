@@ -101,7 +101,7 @@ func (fs *flowlesslySolver) startSolver() {
 	if err != nil {
 		panic(err)
 	}
-	fs.toSolver = os.Stdout
+	fs.toConsole = os.Stdout
 	if err := cmd.Start(); err != nil {
 		panic(err)
 	}
