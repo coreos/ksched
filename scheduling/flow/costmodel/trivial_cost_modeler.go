@@ -91,7 +91,7 @@ func (t *trivialCostModeler) GetTaskEquivClasses(id types.TaskID) []types.EquivC
 		panic(fmt.Errorf("couldn't find task for (%d)", id))
 	}
 	// A level 0 Task EC is the hash of the task binary name.
-	res := []types.EquivClass{util.HashBytesToEquivClass(task.Binary)}
+	res := []types.EquivClass{} //util.HashBytesToEquivClass(task.Binary)}
 	// All tasks also have an arc to the cluster aggregator.
 	res = append(res, ClusterAggregatorEC)
 	return res

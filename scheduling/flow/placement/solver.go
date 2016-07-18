@@ -28,8 +28,9 @@ import (
 )
 
 var (
-	FlowlesslyBinary    = "bin/flowlessly/flow_scheduler"
+	FlowlesslyBinary    = "/usr/local/bin/flowlessly/flow_scheduler"
 	FlowlesslyAlgorithm = "successive_shortest_path"
+	Incremental         = false
 )
 
 type Solver interface {
@@ -40,6 +41,7 @@ type flowlesslySolver struct {
 	isSolverStarted bool
 	gm              flowmanager.GraphManager
 	toSolver        io.Writer
+	toConsole       io.Writer
 	fromSolver      io.Reader
 }
 
@@ -62,18 +64,17 @@ func (fs *flowlesslySolver) Solve() flowmanager.TaskMapping {
 		fs.isSolverStarted = true
 
 		// Uncomment once we run real sollver.
-		// fs.startSolver()
+		fs.startSolver()
 
 		// We must export graph and read from STDOUT/STDERR in parallel
 		// Otherwise, the solver might block if STDOUT/STDERR buffer gets full.
 		// (For example, if it outputs lots of warnings on STDERR.)
 
 		// go fs.writeGraph()
-		fs.toSolver = os.Stdout
 		fs.writeGraph()
 
 		// remove it.. once we run real sollver.
-		os.Exit(1)
+		//os.Exit(1)
 
 		tm := fs.readTaskMapping()
 		// Exporter should have already finished writing because reading goroutine
@@ -100,6 +101,7 @@ func (fs *flowlesslySolver) startSolver() {
 	if err != nil {
 		panic(err)
 	}
+	fs.toSolver = os.Stdout
 	if err := cmd.Start(); err != nil {
 		panic(err)
 	}
@@ -108,6 +110,7 @@ func (fs *flowlesslySolver) startSolver() {
 func (fs *flowlesslySolver) writeGraph() {
 	// TODO: make sure proper locking on graph, manager
 	dimacs.Export(fs.gm.GraphChangeManager().Graph(), fs.toSolver)
+	dimacs.Export(fs.gm.GraphChangeManager().Graph(), fs.toConsole)
 	fs.gm.GraphChangeManager().ResetChanges()
 }
 
@@ -237,6 +240,11 @@ func (fs *flowlesslySolver) getBinConfig() (string, []string) {
 		"--graph_has_node_types=true",
 		fmt.Sprintf("--algorithm=%s", FlowlesslyAlgorithm),
 		"--print_assignments=false",
+		"--debug_output=true",
+		"--graph_has_node_types=true",
+	}
+	if !Incremental {
+		args = append(args, "--daemon=false")
 	}
 
 	return FlowlesslyBinary, args
