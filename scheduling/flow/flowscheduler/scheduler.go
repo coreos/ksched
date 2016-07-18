@@ -56,7 +56,7 @@ func NewScheduler(resourceMap *types.ResourceMap, jobMap *types.JobMap, taskMap 
 	// Initialize graph manager with trivial cost model
 	leafResourceIDs := make(map[types.ResourceID]struct{})
 	dimacsStats := &dimacs.ChangeStats{}
-	costModeler := costmodel.NewTrivial(resourceMap, taskMap, leafResourceIDs)
+	costModeler := costmodel.NewTrivial(resourceMap, taskMap, leafResourceIDs, maxTasksPerPu)
 	gm := flowmanager.NewGraphManager(costModeler, leafResourceIDs, dimacsStats, maxTasksPerPu)
 	// Set up the initial flow graph
 	gm.AddResourceTopology(root)

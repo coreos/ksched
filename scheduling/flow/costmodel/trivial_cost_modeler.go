@@ -23,14 +23,17 @@ type trivialCostModeler struct {
 	// Mapping betweeen machine res id and resource topology node descriptor.
 	// It's updated in Add, Remove Machine methods.
 	machineToResTopo map[types.ResourceID]*pb.ResourceTopologyNodeDescriptor
+	//Flag set on initialization
+	maxTasksPerPu uint64
 }
 
-func NewTrivial(resourceMap *types.ResourceMap, taskMap *types.TaskMap, leafResIDset map[types.ResourceID]struct{}) *trivialCostModeler {
+func NewTrivial(resourceMap *types.ResourceMap, taskMap *types.TaskMap, leafResIDset map[types.ResourceID]struct{}, maxTasksPerPu uint64) *trivialCostModeler {
 	return &trivialCostModeler{
 		resourceMap:      resourceMap,
 		taskMap:          taskMap,
 		leafResIDset:     leafResIDset,
 		machineToResTopo: make(map[types.ResourceID]*pb.ResourceTopologyNodeDescriptor),
+		maxTasksPerPu:    maxTasksPerPu,
 	}
 }
 
@@ -144,7 +147,7 @@ func (t *trivialCostModeler) GatherStats(accumulator *flowgraph.Node, other *flo
 	if !other.IsResourceNode() {
 		if other.Type == flowgraph.NodeTypeSink {
 			accumulator.ResourceDescriptor.NumRunningTasksBelow = uint64(len(accumulator.ResourceDescriptor.CurrentRunningTasks))
-			accumulator.ResourceDescriptor.NumSlotsBelow = MaxTasksPerPu
+			accumulator.ResourceDescriptor.NumSlotsBelow = t.maxTasksPerPu
 		}
 		return accumulator
 	}
