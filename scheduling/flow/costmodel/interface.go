@@ -43,8 +43,7 @@ const (
 )
 
 var (
-	ClusterAggregatorEC        = util.HashBytesToEquivClass([]byte("CLUSTER_AGG"))
-	MaxTasksPerPu       uint64 = 10 // randomly picked up number. Maybe set via flag?
+	ClusterAggregatorEC = util.HashBytesToEquivClass([]byte("CLUSTER_AGG"))
 )
 
 // CostModeler provides APIs:
