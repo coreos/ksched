@@ -1,6 +1,7 @@
 package flowscheduler
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/coreos/ksched/pkg/types"
@@ -266,6 +267,7 @@ func (s *scheduler) runSchedulingIteration() (uint64, []pb.SchedulingDelta) {
 	deltas := s.gm.SchedulingDeltasForPreemptedTasks(taskMappings, s.resourceMap)
 
 	for taskNodeID, resourceNodeID := range taskMappings {
+		fmt.Printf("taskNode:%d going to resourceNode:%d\n", taskNodeID, resourceNodeID)
 		// Note: Ignore those completed, removal check...
 		delta := s.gm.NodeBindingToSchedulingDelta(taskNodeID, resourceNodeID, s.TaskBindings)
 		deltas = append(deltas, *delta)
