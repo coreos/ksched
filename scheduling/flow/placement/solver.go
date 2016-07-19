@@ -77,6 +77,7 @@ func (fs *flowlesslySolver) Solve() flowmanager.TaskMapping {
 		//os.Exit(1)
 
 		tm := fs.readTaskMapping()
+		fmt.Printf("TaskMappings:%v\n", tm)
 		// Exporter should have already finished writing because reading goroutine
 		// have also finished.
 		return tm
@@ -127,29 +128,41 @@ func (fs *flowlesslySolver) readTaskMapping() flowmanager.TaskMapping {
 }
 
 // readFlowGraph returns a map of dst to a list of its corresponding src and flow capacity.
-func (fs *flowlesslySolver) readFlowGraph() map[flowgraph.NodeID]flowPairList {
-	adjList := map[flowgraph.NodeID]flowPairList{}
+func (fs *flowlesslySolver) readFlowGraph() map[flowgraph.NodeID]flowPairMap {
+	// The dstToSrcAndFlow map stores the flow pairs responsible for sending flow into the dst node
+	// As a multimap it is keyed by the dst node where the flow is being sent.
+	// The value is a map of flowpairs showing where all the flows to this dst are coming from
+	dstToSrcAndFlow := make(map[flowgraph.NodeID]flowPairMap)
 	scanner := bufio.NewScanner(fs.fromSolver)
 	for scanner.Scan() {
 		line := scanner.Text()
+		fmt.Printf("Line Read:%s\n", line)
 		switch line[0] {
 		case 'f':
 			var src, dst, flowCap uint64
-			n, err := fmt.Sscanf(line, "%*c %d %d %d", &src, &dst, &flowCap)
+			var discard string
+			n, err := fmt.Sscanf(line, "%s %d %d %d", &discard, &src, &dst, &flowCap)
 			if err != nil {
 				panic(err)
 			}
-			if n != 3 {
-				panic("expected reading 3 items")
+			if n != 4 {
+				panic("expected reading 4 items")
 			}
+
+			fmt.Printf("discard:%s src:%d dst:%d flowCap:%d\n", discard, src, dst, flowCap)
 
 			if flowCap > 0 {
 				pair := &flowPair{flowgraph.NodeID(src), flowCap}
-				adjList[flowgraph.NodeID(dst)].Insert(pair)
+				// If a flow map for this dst does not exist, then make one
+				if dstToSrcAndFlow[flowgraph.NodeID(dst)] == nil {
+					dstToSrcAndFlow[flowgraph.NodeID(dst)] = make(flowPairMap)
+				}
+				dstToSrcAndFlow[flowgraph.NodeID(dst)][pair.srcNodeID] = pair
 			}
 		case 'c':
 			if line == "c EOI" {
-				return adjList
+				fmt.Printf("Adj List:%v\n", dstToSrcAndFlow)
+				return dstToSrcAndFlow
 			} else if line == "c ALGORITHM TIME" {
 				// Ignore. This is metrics of runtime.
 			}
@@ -164,7 +177,9 @@ func (fs *flowlesslySolver) readFlowGraph() map[flowgraph.NodeID]flowPairList {
 
 // Maps worker|root tasks to leaves. It expects a extracted_flow containing
 // only the arcs with positive flow (i.e. what ReadFlowGraph returns).
-func (fs *flowlesslySolver) parseFlowToMapping(extractedFlow map[flowgraph.NodeID]flowPairList) flowmanager.TaskMapping {
+func (fs *flowlesslySolver) parseFlowToMapping(extractedFlow map[flowgraph.NodeID]flowPairMap) flowmanager.TaskMapping {
+	fmt.Printf("Extracted Flow:%v\n", extractedFlow)
+
 	taskToPU := flowmanager.TaskMapping{}
 	// Note: recording a node's PUs so that a node can assign the PUs to its source itself
 	puIDs := make(map[flowgraph.NodeID][]flowgraph.NodeID)
@@ -176,11 +191,18 @@ func (fs *flowlesslySolver) parseFlowToMapping(extractedFlow map[flowgraph.NodeI
 
 	for leafID := range leafIDs {
 		visited[leafID] = true
-		flow, ok := extractedFlow[sink.ID].Find(leafID)
+		// Get the flowPairMap for the sink
+		flowPairMap, ok := extractedFlow[sink.ID]
 		if !ok {
 			continue
 		}
-		for i := uint64(0); i < flow.capacity; i++ { // capacity of flow
+		// Check if the current leaf contributes a flow pair
+		flowPair, ok := flowPairMap[leafID]
+		if !ok {
+			continue
+		}
+
+		for i := uint64(0); i < flowPair.flow; i++ {
 			puIDs[leafID] = append(puIDs[leafID], leafID)
 		}
 		toVisit = append(toVisit, leafID)
@@ -193,6 +215,7 @@ func (fs *flowlesslySolver) parseFlowToMapping(extractedFlow map[flowgraph.NodeI
 		visited[nodeID] = true
 
 		if fs.gm.GraphChangeManager().Graph().Node(nodeID).IsTaskNode() {
+			fmt.Printf("Task Node found\n")
 			// record the task mapping between task node and PU.
 			if len(puIDs[nodeID]) != 1 {
 				log.Panicf("Task Node to Resource Node should be 1:1 mapping")
@@ -201,30 +224,35 @@ func (fs *flowlesslySolver) parseFlowToMapping(extractedFlow map[flowgraph.NodeI
 			continue
 		}
 
-		addPUToSourceNodes(extractedFlow, puIDs, nodeID, visited, toVisit)
+		visited, toVisit = addPUToSourceNodes(extractedFlow, puIDs, nodeID, visited, toVisit)
 	}
 
 	return taskToPU
 }
 
-func addPUToSourceNodes(extractedFlow map[flowgraph.NodeID]flowPairList, puIDs map[flowgraph.NodeID][]flowgraph.NodeID, nodeID flowgraph.NodeID, visited []bool, toVisit []flowgraph.NodeID) {
+func addPUToSourceNodes(extractedFlow map[flowgraph.NodeID]flowPairMap, puIDs map[flowgraph.NodeID][]flowgraph.NodeID, nodeID flowgraph.NodeID, visited []bool, toVisit []flowgraph.NodeID) ([]bool, []flowgraph.NodeID) {
 	iter := 0
+	srcFlowsMap, ok := extractedFlow[nodeID]
+	if !ok {
+		return visited, toVisit
+	}
 	// search each source and assign all its downstream PUs to them.
-	for _, srcFlow := range extractedFlow[nodeID] {
+	for _, srcFlowPair := range srcFlowsMap {
+		// TODO: CHange this logic for map instead of slice
 		// Populate the PUs vector at the source of the arc with as many PU
 		// entries from the incoming set of PU IDs as there's flow on the arc.
-		for ; srcFlow.capacity > 0; srcFlow.capacity-- {
+		for ; srcFlowPair.flow > 0; srcFlowPair.flow-- {
 			if iter == len(puIDs[nodeID]) {
 				break
 			}
 			// It's an incoming arc with flow on it.
 			// Add the PU to the PUs vector of the source node.
-			puIDs[srcFlow.nodeID] = append(puIDs[srcFlow.nodeID], puIDs[nodeID][iter])
+			puIDs[srcFlowPair.srcNodeID] = append(puIDs[srcFlowPair.srcNodeID], puIDs[nodeID][iter])
 			iter++
 		}
-		if !visited[srcFlow.nodeID] {
-			toVisit = append(toVisit, srcFlow.nodeID)
-			visited[srcFlow.nodeID] = true
+		if !visited[srcFlowPair.srcNodeID] {
+			toVisit = append(toVisit, srcFlowPair.srcNodeID)
+			visited[srcFlowPair.srcNodeID] = true
 		}
 
 		if iter == len(puIDs[nodeID]) {
@@ -232,6 +260,7 @@ func addPUToSourceNodes(extractedFlow map[flowgraph.NodeID]flowPairList, puIDs m
 			break
 		}
 	}
+	return visited, toVisit
 }
 
 // TODO: We can definitely make it cleaner. But currently we just copy the code.
