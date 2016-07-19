@@ -109,17 +109,20 @@ func (t *trivialCostModeler) GetOutgoingEquivClassPrefArcs(ec types.EquivClass) 
 }
 
 func (t *trivialCostModeler) GetTaskPreferenceArcs(types.TaskID) []types.ResourceID {
-	for id := range t.leafResIDset {
-		// Pick first one.
-		// The original code picks randomly from the set. Too complicated.
-		return []types.ResourceID{id}
-	}
-	return nil
+	/*
+		for id := range t.leafResIDset {
+			// Pick first one.
+			// The original code picks randomly from the set. Too complicated.
+			return []types.ResourceID{id}
+		}
+	*/
+	// Return no preferences
+	return []types.ResourceID{}
 }
 
 func (t *trivialCostModeler) GetEquivClassToEquivClassesArcs(types.EquivClass) []types.EquivClass {
 	// The trivial cost model does not have any interconnected ECs.
-	return nil
+	return []types.EquivClass{}
 }
 
 func (t *trivialCostModeler) AddMachine(r *pb.ResourceTopologyNodeDescriptor) {
