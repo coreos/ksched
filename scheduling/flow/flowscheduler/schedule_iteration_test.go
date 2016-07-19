@@ -15,7 +15,10 @@ import (
 
 func TestOneScheduleIteration(t *testing.T) {
 
-	maxTasksPerPu := uint64(1)
+	numMachines := 2
+	numCoresPerMachine := 1
+	numPusPerCore := 1
+	maxTasksPerPu := 2
 
 	// Initialize empty resource, job and task maps.
 	// Initialize a root ResourceTpoplogyNodeDescriptor of type Coordinator
@@ -27,52 +30,59 @@ func TestOneScheduleIteration(t *testing.T) {
 	}
 
 	// Initialize the flow scheduler
-	scheduler := NewScheduler(resourceMap, jobMap, taskMap, rootNode, maxTasksPerPu)
+	scheduler := NewScheduler(resourceMap, jobMap, taskMap, rootNode, uint64(maxTasksPerPu))
 
-	// Add 2 Machines to the topology, (2 cores per machine, 1 Pu per core, 1 Task per Pu)
-	// addMachine(2, 1, 1, rootNode, resourceMap, scheduler)
-	// addMachine(2, 1, 1, rootNode, resourceMap, scheduler)
+	// Add Machines to the topology
+	for i := 0; i < numMachines; i++ {
+		addMachine(numCoresPerMachine, numPusPerCore, maxTasksPerPu, rootNode, resourceMap, scheduler)
+	}
 
-	addMachine(1, 1, 1, rootNode, resourceMap, scheduler)
-
-	// Add 2 Jobs, with 2 Tasks each
-	// jobID1 := types.JobID(util.RandUint64())
-	// addTaskToJob(jobID1, jobMap, taskMap)
-	// addTaskToJob(jobID1, jobMap, taskMap)
-	// jobID2 := types.JobID(util.RandUint64())
-	// addTaskToJob(jobID2, jobMap, taskMap)
-	// addTaskToJob(jobID2, jobMap, taskMap)
-
+	// Add 2 Jobs, with 3 Tasks each
 	jobID1 := types.JobID(util.RandUint64())
 	addTaskToJob(jobID1, jobMap, taskMap)
+	addTaskToJob(jobID1, jobMap, taskMap)
+	addTaskToJob(jobID1, jobMap, taskMap)
+	jobID2 := types.JobID(util.RandUint64())
+	addTaskToJob(jobID2, jobMap, taskMap)
+	addTaskToJob(jobID2, jobMap, taskMap)
+	addTaskToJob(jobID2, jobMap, taskMap)
 
 	// Register the jobs with scheduler
-	// job1 := jobMap.FindPtrOrNull(jobID1)
-	// job2 := jobMap.FindPtrOrNull(jobID2)
-	// if job1 == nil || job2 == nil {
-	// 	log.Panicf("All jobs should exist\n")
-	// }
-	// scheduler.AddJob(job1)
-	// scheduler.AddJob(job2)
-
 	job1 := jobMap.FindPtrOrNull(jobID1)
+	job2 := jobMap.FindPtrOrNull(jobID2)
+	if job1 == nil || job2 == nil {
+		log.Panicf("All jobs should exist\n")
+	}
 	scheduler.AddJob(job1)
+	scheduler.AddJob(job2)
 
 	// Don't need to worry about the resource usage or request vector since cost model is trivial
 	// Check simulator_bridge.cc and simulator_bridge_test.cc to see how machines and tasks are added
 
 	//Run one scheduling iteration
 	numScheduled, _ := scheduler.ScheduleAllJobs()
-	fmt.Printf("Number of tasks scheduled:%d\n", numScheduled)
+	fmt.Printf("\n\nNumber of tasks scheduled:%d\n", numScheduled)
 
 	// Finally what is the output to observe after 1 scheduling iteration?
 	// Print out the updated task bindings to see which task is placed on what resource
-	for taskID, resourceID := range scheduler.GetTaskBindings() {
+	taskBindings := scheduler.GetTaskBindings()
+	// Scheduled Tasks
+	for taskID, resourceID := range taskBindings {
 		taskDesc := taskMap.FindPtrOrNull(taskID)
 		resourceNode := resourceMap.FindPtrOrNull(resourceID).TopologyNode
 		resourceDesc := resourceMap.FindPtrOrNull(resourceID).Descriptor
 		parentMachine := findParentMachine(resourceNode, resourceMap)
-		fmt.Printf("Task:%v placed on resource:%v on machine:%v\n", taskDesc.Uid, resourceDesc.FriendlyName, parentMachine.FriendlyName)
+		fmt.Printf("Task:%v(Job:%v) placed on resource:%v on machine:%v\n", taskDesc.Uid, taskDesc.JobID, resourceDesc.FriendlyName, parentMachine.FriendlyName)
+	}
+
+	// Unscheduled Tasks
+	allTasks := taskMap.UnsafeGet()
+	for taskID, taskDesc := range allTasks {
+		_, ok := taskBindings[taskID]
+		if ok {
+			continue
+		}
+		fmt.Printf("Task:%v(Job:%v) unscheduled/not placed\n", taskID, taskDesc.JobID)
 	}
 }
 
