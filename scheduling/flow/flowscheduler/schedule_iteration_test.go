@@ -14,10 +14,10 @@ import (
 )
 
 func TestMultiScheduleIteration(t *testing.T) {
-	numMachines := 1
+	numMachines := 2
 	numCoresPerMachine := 1
 	numPusPerCore := 1
-	maxTasksPerPu := 2
+	maxTasksPerPu := 1
 
 	// Initialize empty resource, job and task maps.
 	// Initialize a root ResourceTpoplogyNodeDescriptor of type Coordinator
@@ -39,19 +39,23 @@ func TestMultiScheduleIteration(t *testing.T) {
 	// Add 2 Jobs, with 2 Tasks each
 	jobID1 := types.JobID(util.RandUint64())
 	addTaskToJob(jobID1, jobMap, taskMap)
-	addTaskToJob(jobID1, jobMap, taskMap)
+	//addTaskToJob(jobID1, jobMap, taskMap)
 	jobID2 := types.JobID(util.RandUint64())
 	addTaskToJob(jobID2, jobMap, taskMap)
-	addTaskToJob(jobID2, jobMap, taskMap)
+	//addTaskToJob(jobID2, jobMap, taskMap)
+	jobID3 := types.JobID(util.RandUint64())
+	addTaskToJob(jobID3, jobMap, taskMap)
 
 	// Register the jobs with scheduler
 	job1 := jobMap.FindPtrOrNull(jobID1)
 	job2 := jobMap.FindPtrOrNull(jobID2)
+	job3 := jobMap.FindPtrOrNull(jobID3)
 	if job1 == nil || job2 == nil {
 		log.Panicf("All jobs should exist\n")
 	}
 	scheduler.AddJob(job1)
 	scheduler.AddJob(job2)
+	scheduler.AddJob(job3)
 
 	// Don't need to worry about the resource usage or request vector since cost model is trivial
 	// Check simulator_bridge.cc and simulator_bridge_test.cc to see how machines and tasks are added
@@ -64,10 +68,26 @@ func TestMultiScheduleIteration(t *testing.T) {
 	// Print out the updated task bindings to see which task is placed on what resource
 	printTaskAssignments(scheduler, resourceMap, taskMap)
 
+	fmt.Printf("\nSECOND ITERATION\n")
+
+	fmt.Printf("\nADD NEW JOB\n")
+	jobID4 := types.JobID(util.RandUint64())
+	addTaskToJob(jobID4, jobMap, taskMap)
+	addTaskToJob(jobID4, jobMap, taskMap)
+	job4 := jobMap.FindPtrOrNull(jobID4)
+	scheduler.AddJob(job4)
+
+	// Do another scheduling iteration
+	numScheduled, _ = scheduler.ScheduleAllJobs()
+	fmt.Printf("\n\nNumber of tasks scheduled:%d\n", numScheduled)
+	printTaskAssignments(scheduler, resourceMap, taskMap)
+
+	fmt.Printf("\nTHIRD ITERATION\n")
+
 	fmt.Printf("\n\nTASK COMPLETION\n")
 
 	// Now pick n tasks that were running and handle their completion
-	n := 2
+	n := 4
 	count := 0
 	for _, taskDesc := range taskMap.UnsafeGet() {
 		if taskDesc.State == pb.TaskDescriptor_Running {
@@ -80,14 +100,19 @@ func TestMultiScheduleIteration(t *testing.T) {
 		}
 	}
 
-	fmt.Printf("\nSECOND ITERATION\n")
+	// Do another scheduling iteration
+	numScheduled, _ = scheduler.ScheduleAllJobs()
+	fmt.Printf("\n\nNumber of tasks scheduled:%d\n", numScheduled)
+	printTaskAssignments(scheduler, resourceMap, taskMap)
+
+	fmt.Printf("\nFOURTH ITERATION\n")
 
 	// Do another scheduling iteration
 	numScheduled, _ = scheduler.ScheduleAllJobs()
 	fmt.Printf("\n\nNumber of tasks scheduled:%d\n", numScheduled)
 	printTaskAssignments(scheduler, resourceMap, taskMap)
 
-	fmt.Printf("\nTHIRD ITERATION\n")
+	fmt.Printf("\nFIFTH ITERATION\n")
 
 	// Do another scheduling iteration
 	numScheduled, _ = scheduler.ScheduleAllJobs()
