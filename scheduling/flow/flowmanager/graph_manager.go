@@ -72,7 +72,7 @@ type GraphManager interface {
 	//  Removes the entire resource topology tree rooted at rd. The method also
 	//  updates the statistics of the nodes up to the root resource.
 	//  NOTE: Interface changed to return a slice of PUs to be removed by the caller
-	RemoveResourceTopology(rd pb.ResourceDescriptor) []flowgraph.NodeID
+	RemoveResourceTopology(rd *pb.ResourceDescriptor) []flowgraph.NodeID
 
 	TaskCompleted(id types.TaskID) flowgraph.NodeID
 	TaskEvicted(id types.TaskID, rid types.ResourceID)
@@ -358,7 +358,7 @@ func (gm *graphManager) PurgeUnconnectedEquivClassNodes() {
 // Removes the resource, and all of it's children from the flowgraph
 // Updates the capcaities, numRunningTasks and numSlotsBelow all the way
 // from this node up to the root of the flow graph
-func (gm *graphManager) RemoveResourceTopology(rd pb.ResourceDescriptor) []flowgraph.NodeID {
+func (gm *graphManager) RemoveResourceTopology(rd *pb.ResourceDescriptor) []flowgraph.NodeID {
 	rID := util.MustResourceIDFromString(rd.Uuid)
 	rNode := gm.nodeForResourceID(rID)
 	if rNode == nil {

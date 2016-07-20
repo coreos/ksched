@@ -105,7 +105,24 @@ func (s *scheduler) HandleJobCompletion(jobID types.JobID) {
 }
 
 func (s *scheduler) HandleTaskCompletion(td *pb.TaskDescriptor) {
-
+	// Event scheduler related work
+	// Find resource binded for this task
+	rID, ok := s.TaskBindings[types.TaskID(td.Uid)]
+	if !ok {
+		log.Panicf("Task:%v must be bounded to a resource\n", td.Uid)
+	}
+	resourceStatus := s.resourceMap.FindPtrOrNull(rID)
+	if resourceStatus == nil {
+		log.Panicf("Resource:%v must have a resource status in the resourceMap\n", rID)
+	}
+	// Free the resource
+	if !s.unbindTaskFromResource(td, rID) {
+		log.Panicf("Could not unbind task:%v from resource:%v for eviction\n", td.Uid, rID)
+	}
+	// Set task state as completed
+	td.State = pb.TaskDescriptor_Completed
+	// TODO: Not important but the executor would then set the finish time
+	// and total run time for the task descriptor for reporting purposes
 }
 
 func (s *scheduler) RegisterResource(rtnd *pb.ResourceTopologyNodeDescriptor) {
@@ -136,7 +153,53 @@ func (s *scheduler) RegisterResource(rtnd *pb.ResourceTopologyNodeDescriptor) {
 	}
 }
 
-func (s *scheduler) DeregisterResource(*pb.ResourceTopologyNodeDescriptor) {
+func (s *scheduler) DeregisterResource(rtnd *pb.ResourceTopologyNodeDescriptor) {
+	// Flow scheduler related work
+	// Traverse the resource topology tree in order to evict tasks.
+	// Do a dfs post order traversal to evict all tasks from the resource topology
+	s.dfsEvictTasks(rtnd)
+
+	// TODO: The scheduler is not an event based scheduler right now and so is not concurrent.
+	// If it is implemented in an event based fashion then we need to implement locks
+	// as well as make sure we don't place any tasks on the PUs that were removed
+	// while the solver was running. In a non event based setting this won't be an issue.
+	// pusRemovedDuringSolverRun := s.gm.RemoveResourceTopology(rtnd.ResourceDesc)
+	s.gm.RemoveResourceTopology(rtnd.ResourceDesc)
+
+	// If it is an entire machine that was removed
+	if rtnd.ParentId != "" {
+		delete(s.resourceRoots, rtnd)
+	}
+
+	// Event scheduler related work
+	s.dfsCleanUpResource(rtnd)
+	// We've finished using ResourceTopologyNodeDescriptor. We can now deconnect it from its parent.
+	if rtnd.ParentId != "" {
+		// Remove resource node from its parent's children list
+		parentID := util.MustResourceIDFromString(rtnd.ParentId)
+		parentResourceStatus := s.resourceMap.FindPtrOrNull(parentID)
+		if parentResourceStatus == nil {
+			log.Panicf("Parent resource status for node:%v must exist", rtnd.ResourceDesc.Uuid)
+		}
+		parentNode := parentResourceStatus.TopologyNode
+		children := parentNode.Children
+		index := -1
+		//Find the index of the child in the parent
+		for i, childNode := range children {
+			if childNode.ResourceDesc.Uuid == rtnd.ResourceDesc.Uuid {
+				index = i
+				break
+			}
+		}
+		// Remove the node from the parent's slice
+		if index == -1 {
+			log.Panicf("Resource node:%v not found as child of its parent:%v\n", rtnd.ResourceDesc.Uuid, parentID)
+		} else if index == 0 {
+			parentNode.Children = children[1:]
+		} else {
+			parentNode.Children = append(children[:index-1], children[index+1:]...)
+		}
+	}
 
 }
 
@@ -157,14 +220,6 @@ func (s *scheduler) HandleTaskPlacement(td *pb.TaskDescriptor, rd *pb.ResourceDe
 
 	// Execute the task on the resource
 	s.executeTask(td, rd)
-}
-
-func (s *scheduler) BoundResourceForTask(taskID types.TaskID) *types.ResourceID {
-	return nil
-}
-
-func (s *scheduler) BoundTasksForResource(resourceID types.ResourceID) []types.TaskID {
-	return nil
 }
 
 func (s *scheduler) HandleTaskEviction(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor) {
@@ -209,11 +264,39 @@ func (s *scheduler) HandleTaskMigration(td *pb.TaskDescriptor, rd *pb.ResourceDe
 }
 
 func (s *scheduler) HandleTaskFailure(td *pb.TaskDescriptor) {
+	taskID := types.TaskID(td.Uid)
+	// Flow scheduler related work
+	s.gm.TaskFailed(taskID)
 
+	// Event scheduler related work
+	// Find resource for task
+	rID, ok := s.TaskBindings[taskID]
+	if !ok {
+		log.Panicf("No resource found for task:%v that failed/should have been running\n", taskID)
+	}
+	// Remove the task's resource binding (as it is no longer currently bound)
+	s.unbindTaskFromResource(td, rID)
+	// Set the task to "failed" state and deal with the consequences
+	td.State = pb.TaskDescriptor_Failed
 }
 
 func (s *scheduler) KillRunningTask(taskID types.TaskID) {
+	// Flow scheduler related work
+	s.gm.TaskKilled(taskID)
 
+	// Event scheduler related work
+	td := s.taskMap.FindPtrOrNull(taskID)
+	if td == nil {
+		// TODO: This could just be an error instead of a panic
+		log.Panicf("Tried to kill unknown task:%v, not present in taskMap\n", taskID)
+	}
+	// Check if we have a bound resource for the task and if it is marked as running
+	_, ok := s.TaskBindings[taskID]
+	if td.State != pb.TaskDescriptor_Running || !ok {
+		// TODO: This could just be an error instead of a panic
+		log.Panicf("Task:%v not bound or running on any resource", taskID)
+	}
+	td.State = pb.TaskDescriptor_Aborted
 }
 
 // Flow scheduler method
@@ -430,4 +513,49 @@ func (s *scheduler) computeRunnableTasksForJob(jd *pb.JobDescriptor) TaskSet {
 	}
 	s.runnableTasks[jobID] = make(TaskSet)
 	return s.runnableTasks[jobID]
+}
+
+// DfsEvictTasks traverses the given root of a resource topology in a post order fashion
+// and evicts all tasks from every resource in the topology
+func (s *scheduler) dfsEvictTasks(rtnd *pb.ResourceTopologyNodeDescriptor) {
+	for _, childNode := range rtnd.Children {
+		s.dfsEvictTasks(childNode)
+	}
+	s.evictTasksFromResource(rtnd)
+}
+
+// DfsCleanUpResource traverses the given root of a resource topology in a post order fashion
+// and cleans up the meta data for every resource node in the topology
+func (s *scheduler) dfsCleanUpResource(rtnd *pb.ResourceTopologyNodeDescriptor) {
+	for _, childNode := range rtnd.Children {
+		s.dfsCleanUpResource(childNode)
+	}
+	s.cleanStateForDeregisteredResource(rtnd)
+}
+
+// EvictTasksFromResource updates the required metadata in order to evict all tasks bound to the resource
+func (s *scheduler) evictTasksFromResource(rtnd *pb.ResourceTopologyNodeDescriptor) {
+	resourceDesc := rtnd.ResourceDesc
+	rID := util.MustResourceIDFromString(resourceDesc.Uuid)
+	// Get the tasks bound to this resource
+	tasks, ok := s.resourceBindings[rID]
+	if !ok {
+		return
+	}
+	// Evict every task
+	for taskID, _ := range tasks {
+		taskDesc := s.taskMap.FindPtrOrNull(taskID)
+		if taskDesc == nil {
+			log.Panicf("Descriptor for task:%v must exist in taskMap\n", taskID)
+		}
+		s.HandleTaskEviction(taskDesc, resourceDesc)
+	}
+}
+
+// EvictTasksFromResource updates the resource bindings and resource maps on the removal of this resource
+func (s *scheduler) cleanStateForDeregisteredResource(rtnd *pb.ResourceTopologyNodeDescriptor) {
+	rID := util.MustResourceIDFromString(rtnd.ResourceDesc.Uuid)
+	// Originally had cleanups related to the executors and the trace generators but we don't need that
+	delete(s.resourceBindings, rID)
+	delete(s.resourceMap.UnsafeGet(), rID)
 }
