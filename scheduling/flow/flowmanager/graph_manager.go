@@ -691,11 +691,11 @@ func (gm *graphManager) pinTaskToNode(taskNode, resourceNode *flowgraph.Node) {
 		gm.cm.ChangeArc(arc, lowBoundCapacity, 1, newCost, dimacs.ChgArcRunningTask, "PinTaskToNode: transform to running arc")
 
 		// Insert mapping for Task to RunningArc, must not already exist
-		_, ok := gm.taskToRunningArc[types.TaskID(taskNode.ID)]
+		_, ok := gm.taskToRunningArc[types.TaskID(taskNode.Task.Uid)]
 		if ok {
-			log.Panicf("gm:pintTaskToNode Mapping for taskID:%v to running arc already present\n", taskNode.ID)
+			log.Panicf("gm:pintTaskToNode Mapping for taskID:%v to running arc already present\n", taskNode.Task.Uid)
 		}
-		gm.taskToRunningArc[types.TaskID(taskNode.ID)] = arc
+		gm.taskToRunningArc[types.TaskID(taskNode.Task.Uid)] = arc
 	}
 
 	// Decrement capacity from unsched agg node to sink.
@@ -706,11 +706,11 @@ func (gm *graphManager) pinTaskToNode(taskNode, resourceNode *flowgraph.Node) {
 		newArc := gm.cm.AddArc(taskNode, resourceNode, lowBoundCapacity, 1, newCost, flowgraph.ArcTypeRunning, dimacs.AddArcRunningTask, "PinTaskToNode: add running arc")
 
 		// Insert mapping for Task to RunningArc, must not already exist
-		_, ok := gm.taskToRunningArc[types.TaskID(taskNode.ID)]
+		_, ok := gm.taskToRunningArc[types.TaskID(taskNode.Task.Uid)]
 		if ok {
-			log.Panicf("gm:pintTaskToNode Mapping for taskID:%v to running arc already present\n", taskNode.ID)
+			log.Panicf("gm:pintTaskToNode Mapping for taskID:%v to running arc already present\n", taskNode.Task.Uid)
 		}
-		gm.taskToRunningArc[types.TaskID(taskNode.ID)] = newArc
+		gm.taskToRunningArc[types.TaskID(taskNode.Task.Uid)] = newArc
 	}
 
 }
