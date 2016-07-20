@@ -80,17 +80,6 @@ type Scheduler interface {
 	// indicating a successful placement of a task on a resource
 	HandleTaskPlacement(td *pb.TaskDescriptor, rd *pb.ResourceDescriptor)
 
-	// BoundResourceForTask finds the resource to which a particular task ID is currently bound.
-	// taskID: the id of the task for which to do the lookup
-	// Returns nil if the task does not exist or is not currently bound
-	// Otherwise, it returns its resource id
-	BoundResourceForTask(taskID types.TaskID) *types.ResourceID
-
-	// BoundTasksForResource finds the tasks which are bound to a particular resource ID
-	// resourceID: the id of the resource for which to do the lookup
-	// Returns a slice of task ids
-	BoundTasksForResource(resourceID types.ResourceID) []types.TaskID
-
 	// HandleTaskEviction handles the eviction of a task.
 	// td: The task descriptor of the evicted task
 	// rd: The resource descriptor of the resource from which the task was evicted
