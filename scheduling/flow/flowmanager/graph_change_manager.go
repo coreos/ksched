@@ -107,7 +107,7 @@ func (cm *changeManager) AddArc(src, dst *flowgraph.Node,
 	arc.Cost = cost
 	arc.Type = arcType
 
-	change := &dimacs.CreateArcChange{}
+	change := dimacs.NewCreateArcChange(arc)
 	change.SetComment(comment)
 	cm.addGraphChange(change)
 	cm.dimacsStats.UpdateStats(changeType)

@@ -28,6 +28,18 @@ type CreateArcChange struct {
 	Typ                                    flowgraph.ArcType
 }
 
+func NewCreateArcChange(a *flowgraph.Arc) *CreateArcChange {
+	cac := &CreateArcChange{
+		Src:           uint64(a.Src),
+		Dst:           uint64(a.Dst),
+		CapLowerBound: a.CapLowerBound,
+		CapUpperBound: a.CapUpperBound,
+		Cost:          a.Cost,
+		Typ:           a.Type,
+	}
+	return cac
+}
+
 // Returns the dimacs Arc Descriptor format
 func (cac *CreateArcChange) GenerateChange() string {
 	return "a " + strconv.FormatUint(cac.Src, 10) +
