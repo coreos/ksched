@@ -17,7 +17,7 @@ func TestMultiScheduleIteration(t *testing.T) {
 	numMachines := 1
 	numCoresPerMachine := 1
 	numPusPerCore := 1
-	maxTasksPerPu := 1
+	maxTasksPerPu := 2
 
 	// Initialize empty resource, job and task maps.
 	// Initialize a root ResourceTpoplogyNodeDescriptor of type Coordinator
@@ -39,10 +39,10 @@ func TestMultiScheduleIteration(t *testing.T) {
 	// Add 2 Jobs, with 2 Tasks each
 	jobID1 := types.JobID(util.RandUint64())
 	addTaskToJob(jobID1, jobMap, taskMap)
-	//addTaskToJob(jobID1, jobMap, taskMap)
+	addTaskToJob(jobID1, jobMap, taskMap)
 	jobID2 := types.JobID(util.RandUint64())
 	addTaskToJob(jobID2, jobMap, taskMap)
-	//addTaskToJob(jobID2, jobMap, taskMap)
+	addTaskToJob(jobID2, jobMap, taskMap)
 
 	// Register the jobs with scheduler
 	job1 := jobMap.FindPtrOrNull(jobID1)
@@ -66,12 +66,17 @@ func TestMultiScheduleIteration(t *testing.T) {
 
 	fmt.Printf("\n\nTASK COMPLETION\n")
 
-	// Now pick one task that was running and handle its completion
+	// Now pick n tasks that were running and handle their completion
+	n := 2
+	count := 0
 	for _, taskDesc := range taskMap.UnsafeGet() {
 		if taskDesc.State == pb.TaskDescriptor_Running {
+			count++
 			fmt.Printf("EVENT: task:%v completed\n", taskDesc.Name)
 			scheduler.HandleTaskCompletion(taskDesc)
-			break
+			if count >= n {
+				break
+			}
 		}
 	}
 
