@@ -84,7 +84,7 @@ func (fs *flowlesslySolver) Solve() flowmanager.TaskMapping {
 	}
 
 	fs.gm.UpdateAllCostsToUnscheduledAggs()
-	go fs.writeIncremental()
+	fs.writeIncremental()
 	tm := fs.readTaskMapping()
 	return tm
 }
@@ -118,6 +118,7 @@ func (fs *flowlesslySolver) writeGraph() {
 func (fs *flowlesslySolver) writeIncremental() {
 	// TODO: make sure proper locking on graph, manager
 	dimacs.ExportIncremental(fs.gm.GraphChangeManager().GetOptimizedGraphChanges(), fs.toSolver)
+	dimacs.ExportIncremental(fs.gm.GraphChangeManager().GetOptimizedGraphChanges(), fs.toConsole)
 	fs.gm.GraphChangeManager().ResetChanges()
 }
 
