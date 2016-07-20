@@ -30,7 +30,7 @@ import (
 var (
 	FlowlesslyBinary    = "/usr/local/bin/flowlessly/flow_scheduler"
 	FlowlesslyAlgorithm = "successive_shortest_path"
-	Incremental         = false
+	Incremental         = true
 )
 
 type Solver interface {

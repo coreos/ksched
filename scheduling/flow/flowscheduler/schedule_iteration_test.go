@@ -14,7 +14,7 @@ import (
 )
 
 func TestMultiScheduleIteration(t *testing.T) {
-	numMachines := 2
+	numMachines := 1
 	numCoresPerMachine := 1
 	numPusPerCore := 1
 	maxTasksPerPu := 1
@@ -39,10 +39,10 @@ func TestMultiScheduleIteration(t *testing.T) {
 	// Add 2 Jobs, with 2 Tasks each
 	jobID1 := types.JobID(util.RandUint64())
 	addTaskToJob(jobID1, jobMap, taskMap)
-	addTaskToJob(jobID1, jobMap, taskMap)
+	//addTaskToJob(jobID1, jobMap, taskMap)
 	jobID2 := types.JobID(util.RandUint64())
 	addTaskToJob(jobID2, jobMap, taskMap)
-	addTaskToJob(jobID2, jobMap, taskMap)
+	//addTaskToJob(jobID2, jobMap, taskMap)
 
 	// Register the jobs with scheduler
 	job1 := jobMap.FindPtrOrNull(jobID1)
@@ -64,6 +64,17 @@ func TestMultiScheduleIteration(t *testing.T) {
 	// Print out the updated task bindings to see which task is placed on what resource
 	printTaskAssignments(scheduler, resourceMap, taskMap)
 
+	fmt.Printf("\n\nTASK COMPLETION\n")
+
+	// Now pick one task that was running and handle its completion
+	for _, taskDesc := range taskMap.UnsafeGet() {
+		if taskDesc.State == pb.TaskDescriptor_Running {
+			fmt.Printf("EVENT: task:%v completed\n", taskDesc.Name)
+			scheduler.HandleTaskCompletion(taskDesc)
+			break
+		}
+	}
+
 	fmt.Printf("\nSECOND ITERATION\n")
 
 	// Do another scheduling iteration
@@ -71,19 +82,16 @@ func TestMultiScheduleIteration(t *testing.T) {
 	fmt.Printf("\n\nNumber of tasks scheduled:%d\n", numScheduled)
 	printTaskAssignments(scheduler, resourceMap, taskMap)
 
-	/*
-		// Now pick one task that was running and handle its completion
-		tID := types.TaskID(0)
-		for taskID, taskDesc := range taskMap.UnsafeGet() {
-			if taskDesc.State == pb.TaskDescriptor_Running {
-				tID := taskID
-				fmt.Printf("EVENT: task:%v completed\n", taskDesc.Name)
-				scheduler.HandleTaskCompletion(taskDesc)
-			}
-		}
-	*/
+	fmt.Printf("\nTHIRD ITERATION\n")
+
+	// Do another scheduling iteration
+	numScheduled, _ = scheduler.ScheduleAllJobs()
+	fmt.Printf("\n\nNumber of tasks scheduled:%d\n", numScheduled)
+	printTaskAssignments(scheduler, resourceMap, taskMap)
+
 }
 
+/*
 func TestOneScheduleIteration(t *testing.T) {
 	numMachines := 2
 	numCoresPerMachine := 1
@@ -137,6 +145,7 @@ func TestOneScheduleIteration(t *testing.T) {
 	// Print out the updated task bindings to see which task is placed on what resource
 	printTaskAssignments(scheduler, resourceMap, taskMap)
 }
+*/
 
 // PrintTaskAssignments prints out for every task if and which resource is it scheduled on
 func printTaskAssignments(scheduler Scheduler, resourceMap *types.ResourceMap, taskMap *types.TaskMap) {
