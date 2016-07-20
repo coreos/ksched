@@ -130,7 +130,6 @@ func (cm *changeManager) AddNode(t flowgraph.NodeType, excess int64, changeType 
 }
 
 func (cm *changeManager) DeleteNode(n *flowgraph.Node, changeType dimacs.ChangeType, comment string) {
-	cm.flowGraph.DeleteNode(n)
 	log.Printf("Change:%s - Deleted node(%s):%d", comment, n.Type, n.ID)
 
 	change := &dimacs.RemoveNodeChange{
