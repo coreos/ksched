@@ -511,7 +511,7 @@ func (gm *graphManager) ComputeTopologyStatistics(node *flowgraph.Node) {
 func (gm *graphManager) addEquivClassNode(ec types.EquivClass) *flowgraph.Node {
 	ecNode := gm.cm.AddNode(flowgraph.NodeTypeEquivClass, 0, dimacs.AddEquivClassNode, "AddEquivClassNode")
 	ecNode.EquivClass = &ec
-	fmt.Printf("Graph Manager: addEquivClassNode(%d) ec:%v\n", ecNode.ID, ec)
+	// fmt.Printf("Graph Manager: addEquivClassNode(%d) ec:%v\n", ecNode.ID, ec)
 	// Insert mapping taskEquivalenceClass to node, must not already exist
 	_, ok := gm.taskECToNode[ec]
 	if ok {
@@ -691,11 +691,11 @@ func (gm *graphManager) pinTaskToNode(taskNode, resourceNode *flowgraph.Node) {
 		gm.cm.ChangeArc(arc, lowBoundCapacity, 1, newCost, dimacs.ChgArcRunningTask, "PinTaskToNode: transform to running arc")
 
 		// Insert mapping for Task to RunningArc, must not already exist
-		_, ok := gm.taskToRunningArc[types.TaskID(taskNode.ID)]
+		_, ok := gm.taskToRunningArc[types.TaskID(taskNode.Task.Uid)]
 		if ok {
-			log.Panicf("gm:pintTaskToNode Mapping for taskID:%v to running arc already present\n", taskNode.ID)
+			log.Panicf("gm:pintTaskToNode Mapping for taskID:%v to running arc already present\n", taskNode.Task.Uid)
 		}
-		gm.taskToRunningArc[types.TaskID(taskNode.ID)] = arc
+		gm.taskToRunningArc[types.TaskID(taskNode.Task.Uid)] = arc
 	}
 
 	// Decrement capacity from unsched agg node to sink.
@@ -706,11 +706,11 @@ func (gm *graphManager) pinTaskToNode(taskNode, resourceNode *flowgraph.Node) {
 		newArc := gm.cm.AddArc(taskNode, resourceNode, lowBoundCapacity, 1, newCost, flowgraph.ArcTypeRunning, dimacs.AddArcRunningTask, "PinTaskToNode: add running arc")
 
 		// Insert mapping for Task to RunningArc, must not already exist
-		_, ok := gm.taskToRunningArc[types.TaskID(taskNode.ID)]
+		_, ok := gm.taskToRunningArc[types.TaskID(taskNode.Task.Uid)]
 		if ok {
-			log.Panicf("gm:pintTaskToNode Mapping for taskID:%v to running arc already present\n", taskNode.ID)
+			log.Panicf("gm:pintTaskToNode Mapping for taskID:%v to running arc already present\n", taskNode.Task.Uid)
 		}
-		gm.taskToRunningArc[types.TaskID(taskNode.ID)] = newArc
+		gm.taskToRunningArc[types.TaskID(taskNode.Task.Uid)] = newArc
 	}
 
 }
@@ -733,7 +733,7 @@ func (gm *graphManager) removeInvalidECPrefArcs(node *flowgraph.Node, prefEcs []
 	}
 	var toDelete []*flowgraph.Arc
 
-	fmt.Printf("Graph Manager: removeInvalidECPrefArcs: prefECSet:%v\n", prefECSet)
+	// fmt.Printf("Graph Manager: removeInvalidECPrefArcs: prefECSet:%v\n", prefECSet)
 
 	// For each arc, check if the preferredEC is actually an EC node and that it's not in the preferences slice(prefEC)
 	// If yes, remove that arc

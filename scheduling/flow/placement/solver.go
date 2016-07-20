@@ -30,7 +30,7 @@ import (
 var (
 	FlowlesslyBinary    = "/usr/local/bin/flowlessly/flow_scheduler"
 	FlowlesslyAlgorithm = "successive_shortest_path"
-	Incremental         = false
+	Incremental         = true
 )
 
 type Solver interface {
@@ -84,7 +84,7 @@ func (fs *flowlesslySolver) Solve() flowmanager.TaskMapping {
 	}
 
 	fs.gm.UpdateAllCostsToUnscheduledAggs()
-	go fs.writeIncremental()
+	fs.writeIncremental()
 	tm := fs.readTaskMapping()
 	return tm
 }
@@ -118,6 +118,7 @@ func (fs *flowlesslySolver) writeGraph() {
 func (fs *flowlesslySolver) writeIncremental() {
 	// TODO: make sure proper locking on graph, manager
 	dimacs.ExportIncremental(fs.gm.GraphChangeManager().GetOptimizedGraphChanges(), fs.toSolver)
+	dimacs.ExportIncremental(fs.gm.GraphChangeManager().GetOptimizedGraphChanges(), fs.toConsole)
 	fs.gm.GraphChangeManager().ResetChanges()
 }
 
@@ -183,9 +184,8 @@ func (fs *flowlesslySolver) parseFlowToMapping(extractedFlow map[flowgraph.NodeI
 	taskToPU := flowmanager.TaskMapping{}
 	// Note: recording a node's PUs so that a node can assign the PUs to its source itself
 	puIDs := make(map[flowgraph.NodeID][]flowgraph.NodeID)
-	graph := fs.gm.GraphChangeManager().Graph()
-	visited := make([]bool, graph.NumNodes()+1) // assuming node ID range is 1 to N.
-	toVisit := make([]flowgraph.NodeID, 0)      // fifo queue
+	visited := make(map[flowgraph.NodeID]bool)
+	toVisit := make([]flowgraph.NodeID, 0) // fifo queue
 	leafIDs := fs.gm.LeafNodeIDs()
 	sink := fs.gm.SinkNode()
 
@@ -224,17 +224,17 @@ func (fs *flowlesslySolver) parseFlowToMapping(extractedFlow map[flowgraph.NodeI
 			continue
 		}
 
-		visited, toVisit = addPUToSourceNodes(extractedFlow, puIDs, nodeID, visited, toVisit)
+		toVisit = addPUToSourceNodes(extractedFlow, puIDs, nodeID, visited, toVisit)
 	}
 
 	return taskToPU
 }
 
-func addPUToSourceNodes(extractedFlow map[flowgraph.NodeID]flowPairMap, puIDs map[flowgraph.NodeID][]flowgraph.NodeID, nodeID flowgraph.NodeID, visited []bool, toVisit []flowgraph.NodeID) ([]bool, []flowgraph.NodeID) {
+func addPUToSourceNodes(extractedFlow map[flowgraph.NodeID]flowPairMap, puIDs map[flowgraph.NodeID][]flowgraph.NodeID, nodeID flowgraph.NodeID, visited map[flowgraph.NodeID]bool, toVisit []flowgraph.NodeID) []flowgraph.NodeID {
 	iter := 0
 	srcFlowsMap, ok := extractedFlow[nodeID]
 	if !ok {
-		return visited, toVisit
+		return toVisit
 	}
 	// search each source and assign all its downstream PUs to them.
 	for _, srcFlowPair := range srcFlowsMap {
@@ -260,7 +260,7 @@ func addPUToSourceNodes(extractedFlow map[flowgraph.NodeID]flowPairMap, puIDs ma
 			break
 		}
 	}
-	return visited, toVisit
+	return toVisit
 }
 
 // TODO: We can definitely make it cleaner. But currently we just copy the code.

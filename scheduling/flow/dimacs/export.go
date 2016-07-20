@@ -23,6 +23,7 @@ func Export(g *flowgraph.Graph, w io.Writer) {
 		generateArc(r, w)
 	}
 
+	// Add end of iteration comment.
 	fmt.Fprintf(w, "c EOI\n")
 }
 
@@ -30,6 +31,9 @@ func ExportIncremental(changes []Change, w io.Writer) {
 	for _, change := range changes {
 		fmt.Fprint(w, change.GenerateChange())
 	}
+
+	// Add end of iteration comment.
+	fmt.Fprintf(w, "c EOI\n")
 }
 
 func generateNode(n *flowgraph.Node, w io.Writer) {

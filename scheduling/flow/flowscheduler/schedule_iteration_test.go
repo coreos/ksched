@@ -13,8 +13,91 @@ import (
 	pb "github.com/coreos/ksched/proto"
 )
 
-func TestOneScheduleIteration(t *testing.T) {
+func TestMultiScheduleIteration(t *testing.T) {
+	numMachines := 1
+	numCoresPerMachine := 1
+	numPusPerCore := 1
+	maxTasksPerPu := 2
 
+	// Initialize empty resource, job and task maps.
+	// Initialize a root ResourceTpoplogyNodeDescriptor of type Coordinator
+	resourceMap := types.NewResourceMap()
+	jobMap := types.NewJobMap()
+	taskMap := types.NewTaskMap()
+	rootNode := &pb.ResourceTopologyNodeDescriptor{
+		ResourceDesc: createResourceDesc(pb.ResourceDescriptor_ResourceCoordinator, 0),
+	}
+
+	// Initialize the flow scheduler
+	scheduler := NewScheduler(resourceMap, jobMap, taskMap, rootNode, uint64(maxTasksPerPu))
+
+	// Add Machines to the topology
+	for i := 0; i < numMachines; i++ {
+		addMachine(numCoresPerMachine, numPusPerCore, maxTasksPerPu, rootNode, resourceMap, scheduler)
+	}
+
+	// Add 2 Jobs, with 2 Tasks each
+	jobID1 := types.JobID(util.RandUint64())
+	addTaskToJob(jobID1, jobMap, taskMap)
+	addTaskToJob(jobID1, jobMap, taskMap)
+	jobID2 := types.JobID(util.RandUint64())
+	addTaskToJob(jobID2, jobMap, taskMap)
+	addTaskToJob(jobID2, jobMap, taskMap)
+
+	// Register the jobs with scheduler
+	job1 := jobMap.FindPtrOrNull(jobID1)
+	job2 := jobMap.FindPtrOrNull(jobID2)
+	if job1 == nil || job2 == nil {
+		log.Panicf("All jobs should exist\n")
+	}
+	scheduler.AddJob(job1)
+	scheduler.AddJob(job2)
+
+	// Don't need to worry about the resource usage or request vector since cost model is trivial
+	// Check simulator_bridge.cc and simulator_bridge_test.cc to see how machines and tasks are added
+
+	//Run one scheduling iteration
+	numScheduled, _ := scheduler.ScheduleAllJobs()
+	fmt.Printf("\n\nNumber of tasks scheduled:%d\n", numScheduled)
+
+	// Finally what is the output to observe after 1 scheduling iteration?
+	// Print out the updated task bindings to see which task is placed on what resource
+	printTaskAssignments(scheduler, resourceMap, taskMap)
+
+	fmt.Printf("\n\nTASK COMPLETION\n")
+
+	// Now pick n tasks that were running and handle their completion
+	n := 2
+	count := 0
+	for _, taskDesc := range taskMap.UnsafeGet() {
+		if taskDesc.State == pb.TaskDescriptor_Running {
+			count++
+			fmt.Printf("EVENT: task:%v completed\n", taskDesc.Name)
+			scheduler.HandleTaskCompletion(taskDesc)
+			if count >= n {
+				break
+			}
+		}
+	}
+
+	fmt.Printf("\nSECOND ITERATION\n")
+
+	// Do another scheduling iteration
+	numScheduled, _ = scheduler.ScheduleAllJobs()
+	fmt.Printf("\n\nNumber of tasks scheduled:%d\n", numScheduled)
+	printTaskAssignments(scheduler, resourceMap, taskMap)
+
+	fmt.Printf("\nTHIRD ITERATION\n")
+
+	// Do another scheduling iteration
+	numScheduled, _ = scheduler.ScheduleAllJobs()
+	fmt.Printf("\n\nNumber of tasks scheduled:%d\n", numScheduled)
+	printTaskAssignments(scheduler, resourceMap, taskMap)
+
+}
+
+/*
+func TestOneScheduleIteration(t *testing.T) {
 	numMachines := 2
 	numCoresPerMachine := 1
 	numPusPerCore := 1
@@ -65,6 +148,12 @@ func TestOneScheduleIteration(t *testing.T) {
 
 	// Finally what is the output to observe after 1 scheduling iteration?
 	// Print out the updated task bindings to see which task is placed on what resource
+	printTaskAssignments(scheduler, resourceMap, taskMap)
+}
+*/
+
+// PrintTaskAssignments prints out for every task if and which resource is it scheduled on
+func printTaskAssignments(scheduler Scheduler, resourceMap *types.ResourceMap, taskMap *types.TaskMap) {
 	taskBindings := scheduler.GetTaskBindings()
 	// Scheduled Tasks
 	for taskID, resourceID := range taskBindings {

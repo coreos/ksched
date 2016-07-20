@@ -1,7 +1,6 @@
 package flowscheduler
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/coreos/ksched/pkg/types"
@@ -123,6 +122,13 @@ func (s *scheduler) HandleTaskCompletion(td *pb.TaskDescriptor) {
 	td.State = pb.TaskDescriptor_Completed
 	// TODO: Not important but the executor would then set the finish time
 	// and total run time for the task descriptor for reporting purposes
+
+	// Flow scheduler related work
+	s.gm.TaskCompleted(types.TaskID(td.Uid))
+	// TODO: If the scheduler is ever made asynchronous or event based then
+	// we need to take care of the fact that the task may have completed during the
+	// the solver run. See original
+
 }
 
 func (s *scheduler) RegisterResource(rtnd *pb.ResourceTopologyNodeDescriptor) {
@@ -350,10 +356,12 @@ func (s *scheduler) runSchedulingIteration() (uint64, []pb.SchedulingDelta) {
 	deltas := s.gm.SchedulingDeltasForPreemptedTasks(taskMappings, s.resourceMap)
 
 	for taskNodeID, resourceNodeID := range taskMappings {
-		fmt.Printf("taskNode:%d going to resourceNode:%d\n", taskNodeID, resourceNodeID)
+		// fmt.Printf("taskNode:%d going to resourceNode:%d\n", taskNodeID, resourceNodeID)
 		// Note: Ignore those completed, removal check...
 		delta := s.gm.NodeBindingToSchedulingDelta(taskNodeID, resourceNodeID, s.TaskBindings)
-		deltas = append(deltas, *delta)
+		if delta != nil {
+			deltas = append(deltas, *delta)
+		}
 	}
 
 	numScheduled := s.applySchedulingDeltas(deltas)
@@ -381,6 +389,7 @@ func (s *scheduler) applySchedulingDeltas(deltas []pb.SchedulingDelta) uint64 {
 
 		switch d.Type {
 		case pb.SchedulingDelta_PLACE:
+			log.Printf("TASK PLACEMENT: task:%v on resource:%v\n", td.Uid, rs.Descriptor.FriendlyName)
 			jd := s.jobMap.FindPtrOrNull(util.MustJobIDFromString(td.JobID))
 			if jd.State != pb.JobDescriptor_Running {
 				jd.State = pb.JobDescriptor_Running
@@ -388,8 +397,10 @@ func (s *scheduler) applySchedulingDeltas(deltas []pb.SchedulingDelta) uint64 {
 			s.HandleTaskPlacement(td, rs.Descriptor)
 			numScheduled++
 		case pb.SchedulingDelta_PREEMPT:
+			log.Printf("TASK PREEMPTION: task:%v from resource:%v\n", td.Uid, rs.Descriptor.FriendlyName)
 			s.HandleTaskEviction(td, rs.Descriptor)
 		case pb.SchedulingDelta_MIGRATE:
+			log.Printf("TASK MIGRATION: task:%v to resource:%v\n", td.Uid, rs.Descriptor.FriendlyName)
 			s.HandleTaskMigration(td, rs.Descriptor)
 		case pb.SchedulingDelta_NOOP:
 			log.Println("NOOP Delta type:", d.Type)
