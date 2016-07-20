@@ -511,7 +511,7 @@ func (gm *graphManager) ComputeTopologyStatistics(node *flowgraph.Node) {
 func (gm *graphManager) addEquivClassNode(ec types.EquivClass) *flowgraph.Node {
 	ecNode := gm.cm.AddNode(flowgraph.NodeTypeEquivClass, 0, dimacs.AddEquivClassNode, "AddEquivClassNode")
 	ecNode.EquivClass = &ec
-	fmt.Printf("Graph Manager: addEquivClassNode(%d) ec:%v\n", ecNode.ID, ec)
+	// fmt.Printf("Graph Manager: addEquivClassNode(%d) ec:%v\n", ecNode.ID, ec)
 	// Insert mapping taskEquivalenceClass to node, must not already exist
 	_, ok := gm.taskECToNode[ec]
 	if ok {
@@ -733,7 +733,7 @@ func (gm *graphManager) removeInvalidECPrefArcs(node *flowgraph.Node, prefEcs []
 	}
 	var toDelete []*flowgraph.Arc
 
-	fmt.Printf("Graph Manager: removeInvalidECPrefArcs: prefECSet:%v\n", prefECSet)
+	// fmt.Printf("Graph Manager: removeInvalidECPrefArcs: prefECSet:%v\n", prefECSet)
 
 	// For each arc, check if the preferredEC is actually an EC node and that it's not in the preferences slice(prefEC)
 	// If yes, remove that arc
