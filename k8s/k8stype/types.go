@@ -1,11 +1,11 @@
 package k8stype
 
 type Pod struct {
-	PodID string
+	ID string
 }
 
 type Node struct {
-	NodeID string
+	ID string
 }
 
 type Binding struct {
