@@ -35,7 +35,7 @@ type k8scheduler struct {
 	// Capacity on number of tasks per PU(or node in this case since 1 node: 1 PU)
 }
 
-func Newk8scheduler(client *k8sclient.Client, maxTasksPerPu int) *k8scheduler {
+func New(client *k8sclient.Client, maxTasksPerPu int) *k8scheduler {
 	resourceMap := types.NewResourceMap()
 	jobMap := types.NewJobMap()
 	taskMap := types.NewTaskMap()
@@ -59,9 +59,22 @@ func Newk8scheduler(client *k8sclient.Client, maxTasksPerPu int) *k8scheduler {
 	}
 }
 
+func main() {
+	// Max pods per node
+	maxTasksPerPu := 4
+	// Initialize the kubernetes client, need to determine
+	config := k8sclient.Config{}
+	client := k8sclient.New(config)
+
+	// Initialize the scheduler
+	scheduler := New(client, maxTasksPerPu)
+
+	// Start the scheduler
+	scheduler.Run()
+}
+
 // The main workflow of the scheduler happens here
 func (ks *k8scheduler) Run() {
-
 	// Initialize the resource topology by polling the node channel for 5 seconds
 	ks.initResourceTopology()
 
@@ -88,6 +101,12 @@ func (ks *k8scheduler) Run() {
 				// Do nothing to do a non blocking read
 			}
 		}
+
+		// No need to schedule or assign task bindings if no new pods
+		if len(newPods) == 0 {
+			continue
+		}
+
 		// Add every new pod as a new task in the flowgraph
 		// TODO: Need to rethink later if a Pod should be a Task or a Job
 		for _, pod := range newPods {
