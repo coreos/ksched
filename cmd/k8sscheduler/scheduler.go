@@ -12,6 +12,7 @@ import (
 	"github.com/coreos/ksched/pkg/types"
 	"github.com/coreos/ksched/pkg/types/resourcestatus"
 	"github.com/coreos/ksched/pkg/util"
+	"github.com/coreos/ksched/pkg/util/idgenerator"
 	"github.com/coreos/ksched/pkg/util/queue"
 	pb "github.com/coreos/ksched/proto"
 	"github.com/coreos/ksched/scheduling/flow/flowscheduler"
@@ -63,12 +64,17 @@ func New(client *k8sclient.Client, maxTasksPerPu int) *k8scheduler {
 func main() {
 	args := os.Args[1:]
 	if len(args) != 2 {
-		fmt.Printf("Usage: ./scheduler <API-Server-Address> <Max-Number-Of-Pods-Per-Node>\n")
+		fmt.Printf("Usage: ./scheduler <API-Server-Address> <Number of Machines/Nodes> <Max-Number-Of-Pods-Per-Node>\n")
 		os.Exit(1)
 	}
 	address := args[0]
+	// Number of nodes in topology
+	numMachines, err := strconv.Atoi(args[1])
+	if err != nil {
+		log.Panicf(err.Error())
+	}
 	// Max pods per node
-	maxTasksPerPu, err := strconv.Atoi(args[1])
+	maxTasksPerPu, err := strconv.Atoi(args[2])
 	if err != nil {
 		log.Panicf(err.Error())
 	}
@@ -82,6 +88,9 @@ func main() {
 	// Initialize the scheduler
 	scheduler := New(client, maxTasksPerPu)
 
+	// Fake the topology
+	scheduler.fakeResourceTopology(numMachines)
+
 	// Start the scheduler
 	scheduler.Run()
 }
@@ -89,7 +98,7 @@ func main() {
 // The main workflow of the scheduler happens here
 func (ks *k8scheduler) Run() {
 	// Initialize the resource topology by polling the node channel for 5 seconds
-	ks.initResourceTopology()
+	// ks.initResourceTopology()
 
 	// Get the pod channel from the client
 	podChan := ks.client.GetUnscheduledPodChan()
@@ -97,16 +106,24 @@ func (ks *k8scheduler) Run() {
 	// Add one Job to the graph, under which all incoming pods will be added as tasks
 	jobID := addNewJob(ks.jobMap, ks.flowScheduler)
 
+	log.Printf("Starting scheduling loop\n")
 	// Loop: Read pods, Schedule, and Assign Bindings
 	for {
+
+		// Poll on the channel
+		if len(podChan) == 0 {
+			continue
+		}
+
 		// Process new Pod updates
 		newPods := make([]*k8stype.Pod, 0)
 		// Read all outstanding pods in the channel
 		for len(podChan) > 0 {
 			select {
 			case pod := <-podChan:
+				log.Printf("Got Pod request id:%v", pod.ID)
 				// Skip addition if duplicate podID
-				if _, ok := ks.podToTaskID[pod.PodID]; ok {
+				if _, ok := ks.podToTaskID[pod.ID]; ok {
 					continue
 				}
 				newPods = append(newPods, pod)
@@ -120,18 +137,21 @@ func (ks *k8scheduler) Run() {
 			continue
 		}
 
+		log.Printf("Adding Pods as tasks to scheduler\n")
 		// Add every new pod as a new task in the flowgraph
 		// TODO: Need to rethink later if a Pod should be a Task or a Job
 		for _, pod := range newPods {
 			// Add the task to the job
 			taskID := addTaskToJob(jobID, ks.jobMap, ks.taskMap)
 			// Insert mapping for task to pod
-			ks.podToTaskID[pod.PodID] = uint64(taskID)
-			ks.taskToPodID[uint64(taskID)] = pod.PodID
+			ks.podToTaskID[pod.ID] = uint64(taskID)
+			ks.taskToPodID[uint64(taskID)] = pod.ID
 		}
 
+		log.Printf("\nPerforming scheduling iteration\n\n")
 		// Peform a scheduling iteration
 		ks.flowScheduler.ScheduleAllJobs()
+		log.Printf("\nScheduling iteration done\n\n")
 
 		// Prepare the Pod to Node bindings
 		podToNodeBindings := make([]*k8stype.Binding, 0)
@@ -147,6 +167,7 @@ func (ks *k8scheduler) Run() {
 			nodeID := ks.machineToNodeID[machineID]
 			// Get the podID corresponding to the taskID
 			podID := ks.taskToPodID[uint64(taskID)]
+			log.Printf("Binding: pod:%v to node:%v\n", podID, nodeID)
 			// Create binding
 			binding := &k8stype.Binding{
 				PodID:  podID,
@@ -157,6 +178,20 @@ func (ks *k8scheduler) Run() {
 
 		// Report the bindings for the newly scheduled pods
 		ks.client.AssignBinding(podToNodeBindings)
+		log.Printf("TaskBindings assigned\n")
+	}
+}
+
+func (ks *k8scheduler) fakeResourceTopology(numMachines int) {
+	nodeIDGen := idgenerator.New(false)
+	// Add machines
+	for i := 0; i < numMachines; i++ {
+		nextID := strconv.FormatUint(nodeIDGen.NextID(), 10)
+		// Add the node as a machine to the root ResourceTopologyNodeDescriptor
+		machineNode := addMachine(nextID, ks.maxTasksPerPu, ks.rootNode, ks.resourceMap, ks.flowScheduler)
+		// Insert mapping for node to machine resource in both maps
+		ks.nodeToMachineID[nextID] = machineNode.ResourceDesc.Uuid
+		ks.machineToNodeID[machineNode.ResourceDesc.Uuid] = nextID
 	}
 }
 
@@ -179,15 +214,15 @@ func (ks *k8scheduler) initResourceTopology() {
 		select {
 		case node := <-nodeChan:
 			// Skip addition if duplicate nodeID
-			if _, ok := ks.nodeToMachineID[node.NodeID]; ok {
-				log.Printf("Duplicate nodeID%v recieved from node channel\n", node.NodeID)
+			if _, ok := ks.nodeToMachineID[node.ID]; ok {
+				log.Printf("Duplicate nodeID%v recieved from node channel\n", node.ID)
 				continue
 			}
 			// Add the node as a machine to the root ResourceTopologyNodeDescriptor
-			machineNode := addMachine(node.NodeID, ks.maxTasksPerPu, ks.rootNode, ks.resourceMap, ks.flowScheduler)
+			machineNode := addMachine(node.ID, ks.maxTasksPerPu, ks.rootNode, ks.resourceMap, ks.flowScheduler)
 			// Insert mapping for node to machine resource in both maps
-			ks.nodeToMachineID[node.NodeID] = machineNode.ResourceDesc.Uuid
-			ks.machineToNodeID[machineNode.ResourceDesc.Uuid] = node.NodeID
+			ks.nodeToMachineID[node.ID] = machineNode.ResourceDesc.Uuid
+			ks.machineToNodeID[machineNode.ResourceDesc.Uuid] = node.ID
 		case <-done:
 			finish = true
 		default:
