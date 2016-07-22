@@ -3,6 +3,7 @@ package k8sscheduler
 import (
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"time"
 
@@ -60,11 +61,20 @@ func New(client *k8sclient.Client, maxTasksPerPu int) *k8scheduler {
 }
 
 func main() {
+	args := os.Args[1:]
+	if len(args) != 1 {
+		fmt.Printf("Usage: ./scheduler <API-Server-Address>\n")
+		os.Exit(1)
+	}
+	address := args[0]
 	// Max pods per node
 	maxTasksPerPu := 4
 	// Initialize the kubernetes client, need to determine
-	config := k8sclient.Config{}
-	client := k8sclient.New(config)
+	config := k8sclient.Config{Addr: address}
+	client, err := k8sclient.New(config)
+	if err != nil {
+		log.Panicf(err.Error())
+	}
 
 	// Initialize the scheduler
 	scheduler := New(client, maxTasksPerPu)
