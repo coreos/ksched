@@ -1,4 +1,4 @@
-package k8scheduler
+package k8sscheduler
 
 import (
 	"fmt"
