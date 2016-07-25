@@ -82,8 +82,9 @@ func main() {
 	config := k8sclient.Config{Addr: address}
 	client, err := k8sclient.New(config)
 	if err != nil {
-		log.Panicf(err.Error())
+		panic(err)
 	}
+	fmt.Println("client created!")
 
 	// Initialize the scheduler
 	scheduler := New(client, maxTasksPerPu)
