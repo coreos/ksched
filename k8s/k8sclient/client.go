@@ -1,6 +1,7 @@
 package k8sclient
 
 import (
+	"log"
 	"path"
 
 	"github.com/coreos/ksched/k8s/k8stype"
@@ -47,12 +48,14 @@ func New(cfg Config) (*Client, error) {
 			0,
 			framework.ResourceEventHandlerFuncs{
 				AddFunc: func(obj interface{}) {
+					log.Printf("PodInformer/AddFunc: called")
 					pod := obj.(*api.Pod)
 					ourPod := &k8stype.Pod{
 						ID: makePodID(pod.Namespace, pod.Name),
 					}
 					nsMap[ourPod.ID] = pod.Namespace
 					pch <- ourPod
+					log.Printf("PodInformer/AddFunc: Sent on pod:%v on the pod channel\n", ourPod.ID)
 
 				},
 				UpdateFunc: func(oldObj, newObj interface{}) {},
