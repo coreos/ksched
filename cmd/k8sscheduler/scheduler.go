@@ -1,4 +1,4 @@
-package k8sscheduler
+package main
 
 import (
 	"fmt"
@@ -63,7 +63,7 @@ func New(client *k8sclient.Client, maxTasksPerPu int) *k8scheduler {
 
 func main() {
 	args := os.Args[1:]
-	if len(args) != 2 {
+	if len(args) != 3 {
 		fmt.Printf("Usage: ./scheduler <API-Server-Address> <Number of Machines/Nodes> <Max-Number-Of-Pods-Per-Node>\n")
 		os.Exit(1)
 	}
