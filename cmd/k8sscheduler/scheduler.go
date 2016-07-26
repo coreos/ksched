@@ -77,31 +77,16 @@ func New(client *k8sclient.Client, maxTasksPerPu int) *k8scheduler {
 }
 
 func main() {
-	/*
-		args := os.Args[1:]
-		if len(args) != 3 {
-			fmt.Printf("Usage: ./scheduler <API-Server-Address> <Number of Machines/Nodes> <Max-Number-Of-Pods-Per-Node>\n")
-			os.Exit(1)
-		}
-	*/
-	// address := args[0]
-	// // Number of nodes in topology
-	// numMachines, err := strconv.Atoi(args[1])
-	// if err != nil {
-	// 	log.Panicf(err.Error())
-	// }
-	// // Max pods per node
-	// maxTasksPerPu, err := strconv.Atoi(args[2])
-	// if err != nil {
-	// 	log.Panicf(err.Error())
-	// }
 	// Initialize the kubernetes client
 	config := k8sclient.Config{Addr: address}
 	client, err := k8sclient.New(config)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("client created!")
+
+	// DEBUGGING. Remove it.
+	for {
+	}
 
 	// Initialize the scheduler
 	scheduler := New(client, maxTasksPerPu)

@@ -12,6 +12,8 @@ import (
 	kc "k8s.io/kubernetes/pkg/client/unversioned"
 	"k8s.io/kubernetes/pkg/controller/framework"
 	"k8s.io/kubernetes/pkg/fields"
+	"k8s.io/kubernetes/pkg/runtime"
+	"k8s.io/kubernetes/pkg/watch"
 )
 
 type Config struct {
@@ -27,7 +29,6 @@ type Client struct {
 }
 
 func New(cfg Config) (*Client, error) {
-	log.Printf("\n\nCreating CLIENT (%s) for scheduler\n\n", cfg.Addr)
 	restCfg := &restclient.Config{
 		Host:  fmt.Sprintf("http://%s", cfg.Addr),
 		QPS:   1000,
@@ -37,105 +38,44 @@ func New(cfg Config) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := c.Pods(api.NamespaceAll).List(api.ListOptions{}); err != nil {
-		return nil, err
-	}
+	fmt.Printf("Created K8S CLIENT (%s)\n", cfg.Addr)
 
 	pch := make(chan *k8stype.Pod, 100)
 	nsMap := make(map[string]string)
 
-	log.Printf("\n\nHere 1\n\n")
-
-	// go func() {
-	//selector := fields.ParseSelectorOrDie( /* "spec.nodeName==" + "" + */ "status.phase!=" + string(api.PodSucceeded) + ",status.phase!=" + string(api.PodFailed))
-	lw := cache.NewListWatchFromClient(c, "pods", api.NamespaceAll, fields.Everything())
-
-	store, ctrl1 := framework.NewInformer(
-		lw,
-		&api.Pod{},
-		0,
-		framework.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {
-				fmt.Printf("\n\nPodInformer/AddFunc: called\n\n")
-				// pod := obj.(*api.Pod)
-				// ourPod := &k8stype.Pod{
-				// 	ID: makePodID(pod.Namespace, pod.Name),
-				// }
-				// nsMap[ourPod.ID] = pod.Namespace
-				// pch <- ourPod
-				// fmt.Printf("PodInformer/AddFunc: Sent on pod:%v on the pod channel\n", ourPod.ID)
-
+	sel := fields.ParseSelectorOrDie("spec.nodeName==" + "" + ",status.phase!=" + string(api.PodSucceeded) + ",status.phase!=" + string(api.PodFailed))
+	informer := framework.NewSharedInformer(
+		&cache.ListWatch{
+			ListFunc: func(options api.ListOptions) (runtime.Object, error) {
+				options.FieldSelector = sel
+				return c.Pods(api.NamespaceAll).List(options)
 			},
-			UpdateFunc: func(oldObj, newObj interface{}) {
-				fmt.Printf("PodInformer/UpdateFunc: called\n")
-			},
-			DeleteFunc: func(obj interface{}) {
-				fmt.Printf("PodInformer/DeleteFunc: called\n")
+			WatchFunc: func(options api.ListOptions) (watch.Interface, error) {
+				options.FieldSelector = sel
+				return c.Pods(api.NamespaceAll).Watch(options)
 			},
 		},
+		&api.Pod{},
+		0,
 	)
-	stopCh1 := make(chan struct{})
-	log.Printf("informer: Informer running\n")
-	go ctrl1.Run(stopCh1)
-	// )}
+	informer.AddEventHandler(framework.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			pod := obj.(*api.Pod)
 
-	// go func() {
-	// 	for {
-	// 		l, err := c.Pods("default").List(api.ListOptions{})
-	// 		if err != nil {
-	// 			panic(err)
-	// 		}
-	// 		for i := range l.Items {
-	// 			pod := &l.Items[i]
-	// 			fmt.Println(pod.Name)
-	// 		}
-	// 	}
-	// }()
+			//DEBUGGING. Remove it afterwards.
+			fmt.Printf("informer: addfunc, pod (%s/%s)\n", pod.Namespace, pod.Name)
 
-	// informer := framework.NewSharedInformer(lw, &api.Pod{}, 0)
-	// informer.AddEventHandler(framework.ResourceEventHandlerFuncs{
-	// 	AddFunc: func(obj interface{}) {
-	// 		fmt.Printf("\n\nPodInformer/AddFunc: called\n\n")
-	// 		// pod := obj.(*api.Pod)
-	// 		// ourPod := &k8stype.Pod{
-	// 		// 	ID: makePodID(pod.Namespace, pod.Name),
-	// 		// }
-	// 		// nsMap[ourPod.ID] = pod.Namespace
-	// 		// pch <- ourPod
-	// 		// fmt.Printf("PodInformer/AddFunc: Sent on pod:%v on the pod channel\n", ourPod.ID)
-
-	// 	},
-	// 	UpdateFunc: func(oldObj, newObj interface{}) {
-	// 		fmt.Printf("PodInformer/UpdateFunc: called\n")
-	// 	},
-	// 	DeleteFunc: func(obj interface{}) {
-	// 		fmt.Printf("PodInformer/DeleteFunc: called\n")
-	// 	},
-	// })
-
-	// stopCh1 := make(chan struct{})
-	// log.Printf("informer: Informer running\n")
-	// go informer.Run(stopCh1)
-	// go ctrl1.Run(stopCh1)
-
-	// store.List()
-	/*
-		go func() {
-			for {
-				time.Sleep(1 * time.Second)
-				fmt.Println("Go Func Loop: items num:", len(store.List()))
-			}
-		}()
-	*/
-	/*
-		for i := 0; i < 20; i++ {
-			time.Sleep(1 * time.Second)
-			fmt.Println("Normal: items num:", len(store.List()))
-		}
-	*/
-	// }()
-
-	// log.Printf("\n\nHere 2\n\n")
+			// ourPod := &k8stype.Pod{
+			// 	ID: makePodID(pod.Namespace, pod.Name),
+			// }
+			// nsMap[ourPod.ID] = pod.Namespace
+			// pch <- ourPod
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {},
+		DeleteFunc: func(obj interface{}) {},
+	})
+	stopCh := make(chan struct{})
+	informer.Run(stopCh)
 
 	// nch := make(chan *k8stype.Node, 100)
 
@@ -165,7 +105,6 @@ func New(cfg Config) (*Client, error) {
 		apisrvClient:     c,
 		unscheduledPodCh: pch,
 		// nodeCh:           nch,
-		KeepAround:    store,
 		idToNamespace: nsMap,
 	}, nil
 }
