@@ -2,8 +2,8 @@ package k8sclient
 
 import (
 	"fmt"
-	"log"
 	"path"
+	"sync"
 
 	"github.com/coreos/ksched/k8s/k8stype"
 	"k8s.io/kubernetes/pkg/api"
@@ -24,7 +24,7 @@ type Client struct {
 	apisrvClient     *kc.Client
 	unscheduledPodCh chan *k8stype.Pod
 	nodeCh           chan *k8stype.Node
-	KeepAround       interface{}
+	idToNSMu         *sync.Mutex
 	idToNamespace    map[string]string
 }
 
@@ -58,6 +58,7 @@ func New(cfg Config) (*Client, error) {
 		&api.Pod{},
 		0,
 	)
+	var idToNSMu sync.Mutex
 	informer.AddEventHandler(framework.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pod := obj.(*api.Pod)
@@ -65,17 +66,20 @@ func New(cfg Config) (*Client, error) {
 			//DEBUGGING. Remove it afterwards.
 			fmt.Printf("informer: addfunc, pod (%s/%s)\n", pod.Namespace, pod.Name)
 
-			// ourPod := &k8stype.Pod{
-			// 	ID: makePodID(pod.Namespace, pod.Name),
-			// }
-			// nsMap[ourPod.ID] = pod.Namespace
-			// pch <- ourPod
+			ourPod := &k8stype.Pod{
+				ID: makePodID(pod.Namespace, pod.Name),
+			}
+			// TODO: not a good idea to block in handler..
+			idToNSMu.Lock()
+			nsMap[ourPod.ID] = pod.Namespace
+			idToNSMu.Unlock()
+			pch <- ourPod
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {},
 		DeleteFunc: func(obj interface{}) {},
 	})
 	stopCh := make(chan struct{})
-	informer.Run(stopCh)
+	go informer.Run(stopCh)
 
 	// nch := make(chan *k8stype.Node, 100)
 
@@ -100,11 +104,11 @@ func New(cfg Config) (*Client, error) {
 	// go ctrl2.Run(stopCh2)
 	// }()
 
-	log.Printf("Returning Client\n")
 	return &Client{
 		apisrvClient:     c,
 		unscheduledPodCh: pch,
 		// nodeCh:           nch,
+		idToNSMu:      &idToNSMu,
 		idToNamespace: nsMap,
 	}, nil
 }
@@ -123,7 +127,11 @@ func (c *Client) GetNodeChan() NodeChan {
 
 func (c *Client) AssignBinding(bindings []*k8stype.Binding) error {
 	for _, b := range bindings {
-		ctx := api.WithNamespace(api.NewContext(), c.idToNamespace[b.PodID])
+		c.idToNSMu.Lock()
+		ns := c.idToNamespace[b.PodID]
+		c.idToNSMu.Unlock()
+
+		ctx := api.WithNamespace(api.NewContext(), ns)
 		err := c.apisrvClient.Post().Namespace(api.NamespaceValue(ctx)).Resource("bindings").Body(b).Do().Error()
 		if err != nil {
 			panic(err)

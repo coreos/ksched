@@ -16,7 +16,6 @@ import (
 	"github.com/coreos/ksched/pkg/util/queue"
 	pb "github.com/coreos/ksched/proto"
 	"github.com/coreos/ksched/scheduling/flow/flowscheduler"
-	"k8s.io/kubernetes/pkg/client/cache"
 )
 
 var (
@@ -84,8 +83,16 @@ func main() {
 		panic(err)
 	}
 
+	fmt.Println("start looping")
+
 	// DEBUGGING. Remove it.
 	for {
+		select {
+		case p := <-client.GetUnscheduledPodChan():
+			fmt.Println(p.ID)
+		case <-time.After(1 * time.Second):
+			fmt.Println("haha")
+		}
 	}
 
 	// Initialize the scheduler
@@ -112,8 +119,6 @@ func (ks *k8scheduler) Run() {
 	log.Printf("Starting scheduling loop\n")
 	// Loop: Read pods, Schedule, and Assign Bindings
 	for {
-
-		ks.client.KeepAround.(cache.Store).List()
 		time.Sleep(1 * time.Second)
 		//fmt.Println("Normal: items num:", len(ks.client.KeepAround.(cache.Store).List()))
 
