@@ -77,7 +77,7 @@ func (fs *flowlesslySolver) Solve() flowmanager.TaskMapping {
 		//os.Exit(1)
 
 		tm := fs.readTaskMapping()
-		fmt.Printf("TaskMappings:%v\n", tm)
+		// fmt.Printf("TaskMappings:%v\n", tm)
 		// Exporter should have already finished writing because reading goroutine
 		// have also finished.
 		return tm
@@ -150,7 +150,7 @@ func (fs *flowlesslySolver) readFlowGraph() map[flowgraph.NodeID]flowPairMap {
 				panic("expected reading 4 items")
 			}
 
-			fmt.Printf("discard:%s src:%d dst:%d flowCap:%d\n", discard, src, dst, flowCap)
+			// fmt.Printf("discard:%s src:%d dst:%d flowCap:%d\n", discard, src, dst, flowCap)
 
 			if flowCap > 0 {
 				pair := &flowPair{flowgraph.NodeID(src), flowCap}
@@ -162,7 +162,7 @@ func (fs *flowlesslySolver) readFlowGraph() map[flowgraph.NodeID]flowPairMap {
 			}
 		case 'c':
 			if line == "c EOI" {
-				fmt.Printf("Adj List:%v\n", dstToSrcAndFlow)
+				// fmt.Printf("Adj List:%v\n", dstToSrcAndFlow)
 				return dstToSrcAndFlow
 			} else if line == "c ALGORITHM TIME" {
 				// Ignore. This is metrics of runtime.
@@ -179,7 +179,7 @@ func (fs *flowlesslySolver) readFlowGraph() map[flowgraph.NodeID]flowPairMap {
 // Maps worker|root tasks to leaves. It expects a extracted_flow containing
 // only the arcs with positive flow (i.e. what ReadFlowGraph returns).
 func (fs *flowlesslySolver) parseFlowToMapping(extractedFlow map[flowgraph.NodeID]flowPairMap) flowmanager.TaskMapping {
-	fmt.Printf("Extracted Flow:%v\n", extractedFlow)
+	// fmt.Printf("Extracted Flow:%v\n", extractedFlow)
 
 	taskToPU := flowmanager.TaskMapping{}
 	// Note: recording a node's PUs so that a node can assign the PUs to its source itself
@@ -215,7 +215,7 @@ func (fs *flowlesslySolver) parseFlowToMapping(extractedFlow map[flowgraph.NodeI
 		visited[nodeID] = true
 
 		if fs.gm.GraphChangeManager().Graph().Node(nodeID).IsTaskNode() {
-			fmt.Printf("Task Node found\n")
+			// fmt.Printf("Task Node found\n")
 			// record the task mapping between task node and PU.
 			if len(puIDs[nodeID]) != 1 {
 				log.Panicf("Task Node to Resource Node should be 1:1 mapping")
