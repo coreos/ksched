@@ -97,7 +97,7 @@ func (cm *changeManager) AddArc(src, dst *flowgraph.Node,
 	changeType dimacs.ChangeType,
 	comment string) *flowgraph.Arc {
 
-	//log.Printf("Change:%s - Added arc from src(%s):%d to dst(%s):%d", comment, src.Type, src.ID, dst.Type, dst.ID)
+	//log.Printf("Change:%s - Added arc from src(%s):%d to dst(%s):%d\n", comment, src.Type, src.ID, dst.Type, dst.ID)
 
 	arc := cm.flowGraph.AddArc(src, dst)
 	arc.CapLowerBound = capLowerBound
@@ -118,7 +118,7 @@ func (cm *changeManager) AddNode(t flowgraph.NodeType, excess int64, changeType 
 	n.Excess = excess
 	n.Comment = comment
 
-	//log.Printf("Change:%s - Added node(%s):%d", comment, n.Type, n.ID)
+	//log.Printf("Change:%s - Added node(%s):%d\n", comment, n.Type, n.ID)
 
 	change := dimacs.NewAddNodeChange(n)
 	change.SetComment(comment)
@@ -128,7 +128,7 @@ func (cm *changeManager) AddNode(t flowgraph.NodeType, excess int64, changeType 
 }
 
 func (cm *changeManager) DeleteNode(n *flowgraph.Node, changeType dimacs.ChangeType, comment string) {
-	//log.Printf("Change:%s - Deleted node(%s):%d", comment, n.Type, n.ID)
+	//log.Printf("Change:%s - Deleted node(%s):%d\n", comment, n.Type, n.ID)
 
 	change := &dimacs.RemoveNodeChange{
 		ID: uint64(n.ID),
@@ -185,7 +185,7 @@ func (cm *changeManager) ChangeArcCost(arc *flowgraph.Arc, cost int64, changeTyp
 func (cm *changeManager) DeleteArc(arc *flowgraph.Arc, changeType dimacs.ChangeType, comment string) {
 	arc.CapUpperBound = 0
 	arc.CapLowerBound = 0
-	//log.Printf("Change:%s - Deleted arc from src(%s):%d to dst(%s):%d", comment, arc.SrcNode.Type, arc.SrcNode.ID, arc.DstNode.Type, arc.DstNode.ID)
+	//log.Printf("Change:%s - Deleted arc from src(%s):%d to dst(%s):%d\n", comment, arc.SrcNode.Type, arc.SrcNode.ID, arc.DstNode.Type, arc.DstNode.ID)
 	change := dimacs.NewUpdateArcChange(arc, arc.Cost)
 	change.SetComment(comment)
 	cm.addGraphChange(change)

@@ -39,15 +39,16 @@ type k8scheduler struct {
 	nodeToMachineID map[string]string
 	machineToNodeID map[string]string
 	// Internal mapping for k8s nodeID(string) to the task's Uid(uint64) number
-	podToTaskID   map[string]uint64
-	taskToPodID   map[uint64]string
-	resourceMap   *types.ResourceMap
-	jobMap        *types.JobMap
-	taskMap       *types.TaskMap
-	rootNode      *pb.ResourceTopologyNodeDescriptor
-	flowScheduler flowscheduler.Scheduler
-	client        *k8sclient.Client
-	maxTasksPerPu int
+	podToTaskID     map[string]uint64
+	taskToPodID     map[uint64]string
+	oldTaskBindings map[types.TaskID]types.ResourceID
+	resourceMap     *types.ResourceMap
+	jobMap          *types.JobMap
+	taskMap         *types.TaskMap
+	rootNode        *pb.ResourceTopologyNodeDescriptor
+	flowScheduler   flowscheduler.Scheduler
+	client          *k8sclient.Client
+	maxTasksPerPu   int
 	// Capacity on number of tasks per PU(or node in this case since 1 node: 1 PU)
 }
 
@@ -65,6 +66,7 @@ func New(client *k8sclient.Client, maxTasksPerPu int) *k8scheduler {
 		machineToNodeID: make(map[string]string),
 		podToTaskID:     make(map[string]uint64),
 		taskToPodID:     make(map[uint64]string),
+		oldTaskBindings: make(map[types.TaskID]types.ResourceID),
 		resourceMap:     resourceMap,
 		jobMap:          jobMap,
 		taskMap:         taskMap,
@@ -98,6 +100,8 @@ func main() {
 
 	// Fake the topology
 	scheduler.fakeResourceTopology(numMachines)
+
+	fmt.Printf("NodeToMachine Mappings:%v\n", scheduler.nodeToMachineID)
 
 	// Start the scheduler
 	scheduler.Run()
@@ -162,6 +166,14 @@ func (ks *k8scheduler) Run() {
 		// taskBindings will contain old placements as well
 		taskBindings := ks.flowScheduler.GetTaskBindings()
 		for taskID, resourceID := range taskBindings {
+			// If an unchange task binding, skip
+			if ks.oldTaskBindings[taskID] == resourceID {
+				continue
+			}
+			// Otherwise update the new task binding
+			// TODO: Very hacky, need a better way to not assign stale bindings
+			ks.oldTaskBindings[taskID] = resourceID
+
 			// The resourceID is for the PU, so we get it's machineID first
 			puNode := ks.resourceMap.FindPtrOrNull(resourceID).TopologyNode
 			machineID := findParentMachine(puNode, ks.resourceMap).Uuid
@@ -182,7 +194,7 @@ func (ks *k8scheduler) Run() {
 
 		// Report the bindings for the newly scheduled pods
 		ks.client.AssignBinding(podToNodeBindings)
-		log.Printf("TaskBindings assigned\n")
+		fmt.Printf("TaskBindings assigned\n")
 	}
 }
 

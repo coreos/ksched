@@ -171,7 +171,7 @@ func (gm *graphManager) AddOrUpdateJobNodes(jobs []*pb.JobDescriptor) {
 	// 1. Add/Update its unscheduled agg node
 	// 2. Add its root task to the nodeQueue
 	for _, job := range jobs {
-		//fmt.Printf("Graph Manager: AddOrUpdateJobNodes: job: %s\n", job.Name)
+		//log.Printf("Graph Manager: AddOrUpdateJobNodes: job: %s\n", job.Name)
 		jid := util.MustJobIDFromString(job.Uuid)
 		// First add an unscheduled aggregator node for this job if none exists already.
 		unschedAggNode := gm.jobUnschedToNode[jid]
@@ -188,6 +188,7 @@ func (gm *graphManager) AddOrUpdateJobNodes(jobs []*pb.JobDescriptor) {
 		}
 
 		if taskNeedNode(rootTD) {
+			//log.Printf("AddOrUpdateJobNode: task:%v needs node\n", rootTD.Name)
 			rootTaskNode = gm.addTaskNode(jid, rootTD)
 			// Increment capacity from unsched agg node to sink.
 			gm.updateUnscheduledAggNode(unschedAggNode, 1)
@@ -267,7 +268,7 @@ func (gm *graphManager) NodeBindingToSchedulingDelta(tid, rid flowgraph.NodeID, 
 	boundRes, ok := tb[types.TaskID(task.Uid)]
 	if !ok {
 		// Place the task.
-		//log.Printf("flowmanager: place %v on %v", task.Uid, res.Uuid)
+		////log.Printf("flowmanager: place %v on %v", task.Uid, res.Uuid)
 		sd := &pb.SchedulingDelta{
 			Type:       pb.SchedulingDelta_PLACE,
 			TaskId:     task.Uid,
@@ -278,7 +279,7 @@ func (gm *graphManager) NodeBindingToSchedulingDelta(tid, rid flowgraph.NodeID, 
 
 	// Task already running somewhere.
 	if boundRes != util.MustResourceIDFromString(res.Uuid) {
-		//log.Printf("flowmanager: migrate %v from %v to %v", task.Uid, boundRes, res.Uuid)
+		////log.Printf("flowmanager: migrate %v from %v to %v", task.Uid, boundRes, res.Uuid)
 		sd := &pb.SchedulingDelta{
 			Type:       pb.SchedulingDelta_MIGRATE,
 			TaskId:     task.Uid,
@@ -313,7 +314,7 @@ func (gm *graphManager) SchedulingDeltasForPreemptedTasks(taskMappings TaskMappi
 			if !ok {
 				// The task doesn't exist in the mappings => the task has been
 				// preempted.
-				//log.Printf("PREEMPTION: take %v off %v\n", taskID, resourceID)
+				////log.Printf("PREEMPTION: take %v off %v\n", taskID, resourceID)
 				preemptDelta := pb.SchedulingDelta{
 					TaskId:     uint64(taskID),
 					ResourceId: rd.Uuid,
@@ -475,7 +476,7 @@ func (gm *graphManager) UpdateAllCostsToUnscheduledAggs() {
 // ComputeTopologyStatistics does a BFS traversal starting from the sink
 // to gather and update the usage statistics for the resource topology
 func (gm *graphManager) ComputeTopologyStatistics(node *flowgraph.Node) {
-	//log.Printf("Updating resource statistics in flow graph\n")
+	////log.Printf("Updating resource statistics in flow graph\n")
 	// XXX(ionel): The function only works correctly as long as the topology is a
 	// tree. If the topology is a DAG then it does not work correctly! It does
 	// not work in the DAG case because the function implements BFS. Hence,
@@ -510,7 +511,7 @@ func (gm *graphManager) ComputeTopologyStatistics(node *flowgraph.Node) {
 func (gm *graphManager) addEquivClassNode(ec types.EquivClass) *flowgraph.Node {
 	ecNode := gm.cm.AddNode(flowgraph.NodeTypeEquivClass, 0, dimacs.AddEquivClassNode, "AddEquivClassNode")
 	ecNode.EquivClass = &ec
-	// //fmt.Printf("Graph Manager: addEquivClassNode(%d) ec:%v\n", ecNode.ID, ec)
+	//log.Printf("Graph Manager: addEquivClassNode(%d) ec:%v\n", ecNode.ID, ec)
 	// Insert mapping taskEquivalenceClass to node, must not already exist
 	_, ok := gm.taskECToNode[ec]
 	if ok {
@@ -630,7 +631,7 @@ func (gm *graphManager) addTaskNode(jobID types.JobID, td *pb.TaskDescriptor) *f
 	// trace.traceGenerator.TaskSubmitted(td)
 	gm.costModeler.AddTask(types.TaskID(td.Uid))
 	taskNode := gm.cm.AddNode(flowgraph.NodeTypeUnscheduledTask, 1, dimacs.AddTaskNode, "AddTaskNode")
-	//fmt.Printf("Graph Manager: addTaskNode: name (%s)\n", td.Name)
+	//log.Printf("Graph Manager: addTaskNode: name (%s)\n", td.Name)
 	taskNode.Task = td
 	taskNode.JobID = jobID
 	gm.sinkNode.Excess--
@@ -732,7 +733,7 @@ func (gm *graphManager) removeInvalidECPrefArcs(node *flowgraph.Node, prefEcs []
 	}
 	var toDelete []*flowgraph.Arc
 
-	// //fmt.Printf("Graph Manager: removeInvalidECPrefArcs: prefECSet:%v\n", prefECSet)
+	//log.Printf("Graph Manager: removeInvalidECPrefArcs: prefECSet:%v\n", prefECSet)
 
 	// For each arc, check if the preferredEC is actually an EC node and that it's not in the preferences slice(prefEC)
 	// If yes, remove that arc
@@ -745,7 +746,7 @@ func (gm *graphManager) removeInvalidECPrefArcs(node *flowgraph.Node, prefEcs []
 		if _, ok := prefECSet[prefEC]; ok {
 			continue
 		}
-		//log.Printf("Deleting no-longer-current arc to EC:%v", prefEC)
+		////log.Printf("Deleting no-longer-current arc to EC:%v", prefEC)
 		toDelete = append(toDelete, arc)
 	}
 
@@ -774,7 +775,7 @@ func (gm *graphManager) removeInvalidPrefResArcs(node *flowgraph.Node, prefResou
 			continue
 		}
 		if _, ok := prefResSet[rID]; !ok {
-			//log.Printf("Deleting no-longer-current arc to resource:%v", rID)
+			////log.Printf("Deleting no-longer-current arc to resource:%v", rID)
 			toDelete = append(toDelete, arc)
 		}
 	}
@@ -786,7 +787,7 @@ func (gm *graphManager) removeInvalidPrefResArcs(node *flowgraph.Node, prefResou
 
 func (gm *graphManager) removeResourceNode(resNode *flowgraph.Node) {
 	if _, ok := gm.nodeToParentNode[resNode]; !ok {
-		//log.Printf("Warning: Removing root resource node\n")
+		////log.Printf("Warning: Removing root resource node\n")
 	}
 	delete(gm.nodeToParentNode, resNode)
 	delete(gm.leafNodeIDs, resNode.ID)
@@ -890,8 +891,11 @@ func (gm *graphManager) updateChildrenTasks(td *pb.TaskDescriptor, nodeQueue que
 	// We do actually need to push tasks even if they are already completed,
 	// failed or running, since they may have children eligible for
 	// scheduling.
+	//log.Printf("Updating children of task:%v\n", td.Name)
+	//log.Printf("Length of children:%v\n", len(td.Spawned))
 	for _, childTask := range td.Spawned {
 		childTaskNode := gm.nodeForTaskID(types.TaskID(childTask.Uid))
+		//log.Printf("Updating child task:%v\n", childTask.Name)
 
 		// If childTaskNode does not have a marked node
 		if childTaskNode != nil {
@@ -899,13 +903,14 @@ func (gm *graphManager) updateChildrenTasks(td *pb.TaskDescriptor, nodeQueue que
 				nodeQueue.Push(&taskOrNode{Node: childTaskNode, TaskDesc: childTask})
 				markedNodes[childTaskNode.ID] = struct{}{}
 			}
-			return
+			continue
 		}
 
 		// ChildTask has no node
 		if !taskNeedNode(childTask) {
+			//log.Printf("Child task:%v does not need node\n", childTask.Name)
 			nodeQueue.Push(&taskOrNode{Node: nil, TaskDesc: childTask})
-			return
+			continue
 		}
 
 		// ChildTask needs a node
@@ -1009,6 +1014,7 @@ func (gm *graphManager) updateFlowGraph(nodeQueue queue.FIFO, markedNodes map[fl
 			// We're handling a task that doesn't have an associated flow graph node.
 			gm.updateChildrenTasks(task, nodeQueue, markedNodes)
 		case node.IsTaskNode():
+			//log.Printf("Updating taskNode:%v task:%v\n", node.ID, node.Task.Name)
 			gm.updateTaskNode(node, nodeQueue, markedNodes)
 			gm.updateChildrenTasks(task, nodeQueue, markedNodes)
 		case node.IsEquivalenceClassNode():
@@ -1172,7 +1178,7 @@ func (gm *graphManager) updateTaskNode(taskNode *flowgraph.Node, nodeQueue queue
 		gm.updateRunningTaskNode(taskNode, gm.UpdatePreferencesRunningTask, nodeQueue, markedNodes)
 		return
 	}
-	//fmt.Printf("Graph Manager: updateTaskNode: id (%s)\n", taskNode.Task.Name)
+	//log.Printf("Graph Manager: updateTaskNode: id (%s)\n", taskNode.Task.Name)
 	gm.updateTaskToUnscheduledAggArc(taskNode)
 	gm.updateTaskToEquivArcs(taskNode, nodeQueue, markedNodes)
 	gm.updateTaskToResArcs(taskNode, nodeQueue, markedNodes)
