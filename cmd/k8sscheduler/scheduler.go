@@ -1,9 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 	"time"
 
@@ -16,7 +16,22 @@ import (
 	"github.com/coreos/ksched/pkg/util/queue"
 	pb "github.com/coreos/ksched/proto"
 	"github.com/coreos/ksched/scheduling/flow/flowscheduler"
+	"k8s.io/kubernetes/pkg/client/cache"
 )
+
+var (
+	numMachines   int
+	address       string
+	maxTasksPerPu int
+)
+
+func init() {
+	flag.StringVar(&address, "addr", "127.0.0.1:8080", "APIServer addr")
+	flag.IntVar(&numMachines, "nm", 2, "number of machines")
+	flag.IntVar(&maxTasksPerPu, "mt", 10, "max tasks")
+
+	flag.Parse()
+}
 
 type k8scheduler struct {
 	// TODO: Abstract the two maps into a wrapper
@@ -62,28 +77,31 @@ func New(client *k8sclient.Client, maxTasksPerPu int) *k8scheduler {
 }
 
 func main() {
-	args := os.Args[1:]
-	if len(args) != 3 {
-		fmt.Printf("Usage: ./scheduler <API-Server-Address> <Number of Machines/Nodes> <Max-Number-Of-Pods-Per-Node>\n")
-		os.Exit(1)
-	}
-	address := args[0]
-	// Number of nodes in topology
-	numMachines, err := strconv.Atoi(args[1])
-	if err != nil {
-		log.Panicf(err.Error())
-	}
-	// Max pods per node
-	maxTasksPerPu, err := strconv.Atoi(args[2])
-	if err != nil {
-		log.Panicf(err.Error())
-	}
+	/*
+		args := os.Args[1:]
+		if len(args) != 3 {
+			fmt.Printf("Usage: ./scheduler <API-Server-Address> <Number of Machines/Nodes> <Max-Number-Of-Pods-Per-Node>\n")
+			os.Exit(1)
+		}
+	*/
+	// address := args[0]
+	// // Number of nodes in topology
+	// numMachines, err := strconv.Atoi(args[1])
+	// if err != nil {
+	// 	log.Panicf(err.Error())
+	// }
+	// // Max pods per node
+	// maxTasksPerPu, err := strconv.Atoi(args[2])
+	// if err != nil {
+	// 	log.Panicf(err.Error())
+	// }
 	// Initialize the kubernetes client
 	config := k8sclient.Config{Addr: address}
 	client, err := k8sclient.New(config)
 	if err != nil {
-		log.Panicf(err.Error())
+		panic(err)
 	}
+	fmt.Println("client created!")
 
 	// Initialize the scheduler
 	scheduler := New(client, maxTasksPerPu)
@@ -109,6 +127,10 @@ func (ks *k8scheduler) Run() {
 	log.Printf("Starting scheduling loop\n")
 	// Loop: Read pods, Schedule, and Assign Bindings
 	for {
+
+		ks.client.KeepAround.(cache.Store).List()
+		time.Sleep(1 * time.Second)
+		//fmt.Println("Normal: items num:", len(ks.client.KeepAround.(cache.Store).List()))
 
 		// Poll on the channel
 		if len(podChan) == 0 {
