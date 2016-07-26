@@ -117,6 +117,7 @@ func (c *Client) GetNodeChan() NodeChan {
 func (c *Client) AssignBinding(bindings []*k8stype.Binding) error {
 	for _, ob := range bindings {
 		ns, name := parsePodID(ob.PodID)
+		fmt.Printf("NS:%v podName:%v\n", ns, name)
 		b := &api.Binding{
 			ObjectMeta: api.ObjectMeta{Namespace: ns, Name: name},
 			Target: api.ObjectReference{
@@ -138,7 +139,10 @@ func makePodID(namespace, name string) string {
 }
 
 func parsePodID(id string) (string, string) {
-	return path.Split(id)
+	ns, podName := path.Split(id)
+	// Get rid of the / at the end
+	ns = ns[:len(ns)-1]
+	return ns, podName
 }
 
 func parseNodeID(id string) string {
