@@ -15,7 +15,6 @@
 package flowgraph
 
 import (
-	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -86,7 +85,7 @@ func (fg *Graph) ChangeArc(arc *Arc, l, u uint64, c int64) {
 
 func (fg *Graph) AddNode() *Node {
 	id := fg.NextId()
-	fmt.Printf("AddNode called for id:%v\n", id)
+	// fmt.Printf("AddNode called for id:%v\n", id)
 	node := &Node{
 		ID:             id,
 		IncomingArcMap: make(map[NodeID]*Arc),
@@ -132,7 +131,7 @@ func (fg *Graph) Nodes() map[NodeID]*Node {
 func (fg *Graph) DeleteNode(node *Node) {
 	// Reuse this ID for later
 	fg.unusedIDs.Push(node.ID)
-	fmt.Printf("DeleteNode called for id:%v\n", node.ID)
+	// fmt.Printf("DeleteNode called for id:%v\n", node.ID)
 	// First remove all outgoing arcs
 	for dstID, arc := range node.OutgoingArcMap {
 		if dstID != arc.Dst {
@@ -156,7 +155,7 @@ func (fg *Graph) DeleteNode(node *Node) {
 		fg.DeleteArc(arc)
 	}
 	// Remove node from nodeMap
-	log.Printf("Deleting nodeID:%v from nodeMap\n", node.ID)
+	// log.Printf("Deleting nodeID:%v from nodeMap\n", node.ID)
 	delete(fg.nodeMap, node.ID)
 
 }

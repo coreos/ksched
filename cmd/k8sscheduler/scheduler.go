@@ -83,17 +83,15 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("start looping")
-
 	// DEBUGGING. Remove it.
-	for {
-		select {
-		case p := <-client.GetUnscheduledPodChan():
-			fmt.Println(p.ID)
-		case <-time.After(1 * time.Second):
-			fmt.Println("haha")
-		}
-	}
+	// for {
+	// 	select {
+	// 	case p := <-client.GetUnscheduledPodChan():
+	// 		fmt.Println(p.ID)
+	// 	case <-time.After(1 * time.Second):
+	// 		fmt.Println("haha")
+	// 	}
+	// }
 
 	// Initialize the scheduler
 	scheduler := New(client, maxTasksPerPu)
@@ -119,29 +117,20 @@ func (ks *k8scheduler) Run() {
 	log.Printf("Starting scheduling loop\n")
 	// Loop: Read pods, Schedule, and Assign Bindings
 	for {
-		time.Sleep(1 * time.Second)
-		//fmt.Println("Normal: items num:", len(ks.client.KeepAround.(cache.Store).List()))
-
-		// Poll on the channel
-		if len(podChan) == 0 {
-			continue
-		}
-
 		// Process new Pod updates
 		newPods := make([]*k8stype.Pod, 0)
-		// Read all outstanding pods in the channel
-		for len(podChan) > 0 {
-			select {
-			case pod := <-podChan:
-				log.Printf("Got Pod request id:%v", pod.ID)
-				// Skip addition if duplicate podID
-				if _, ok := ks.podToTaskID[pod.ID]; ok {
-					continue
-				}
-				newPods = append(newPods, pod)
-			default:
-				// Do nothing to do a non blocking read
+		// Read one pod only
+		// TODO: Change this to a batch channel later to read multiple pods at once
+		select {
+		case pod := <-podChan:
+			log.Printf("Got Pod request id:%v", pod.ID)
+			// Skip addition if duplicate podID
+			if _, ok := ks.podToTaskID[pod.ID]; ok {
+				continue
 			}
+			newPods = append(newPods, pod)
+		default:
+			// Do nothing to do a non blocking read
 		}
 
 		// No need to schedule or assign task bindings if no new pods
@@ -158,15 +147,17 @@ func (ks *k8scheduler) Run() {
 			// Insert mapping for task to pod
 			ks.podToTaskID[pod.ID] = uint64(taskID)
 			ks.taskToPodID[uint64(taskID)] = pod.ID
+			fmt.Printf("Pod:%v ==> Task:%v", pod.ID, taskID)
 		}
 
-		log.Printf("\nPerforming scheduling iteration\n\n")
+		fmt.Printf("\nPerforming scheduling iteration\n")
 		// Peform a scheduling iteration
 		ks.flowScheduler.ScheduleAllJobs()
-		log.Printf("\nScheduling iteration done\n\n")
+		fmt.Printf("\nScheduling iteration done\n")
 
 		// Prepare the Pod to Node bindings
 		podToNodeBindings := make([]*k8stype.Binding, 0)
+		fmt.Printf("Prepare Pod to Node bindings\n")
 		// Collect scheduling decisions/bindings only for the newly scheduled pods
 		// taskBindings will contain old placements as well
 		taskBindings := ks.flowScheduler.GetTaskBindings()
@@ -174,12 +165,13 @@ func (ks *k8scheduler) Run() {
 			// The resourceID is for the PU, so we get it's machineID first
 			puNode := ks.resourceMap.FindPtrOrNull(resourceID).TopologyNode
 			machineID := findParentMachine(puNode, ks.resourceMap).Uuid
+			fmt.Printf("Task binding: task:%v to machine:%v\n", taskID, machineID)
 
 			// Get the nodeID corresponding to the machineID
 			nodeID := ks.machineToNodeID[machineID]
 			// Get the podID corresponding to the taskID
 			podID := ks.taskToPodID[uint64(taskID)]
-			log.Printf("Binding: pod:%v to node:%v\n", podID, nodeID)
+			fmt.Printf("Pod binding: pod:%v to node:%v\n", podID, nodeID)
 			// Create binding
 			binding := &k8stype.Binding{
 				PodID:  podID,
