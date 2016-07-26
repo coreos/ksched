@@ -3,7 +3,6 @@ package k8sclient
 import (
 	"fmt"
 	"path"
-	"sync"
 
 	"github.com/coreos/ksched/k8s/k8stype"
 	"k8s.io/kubernetes/pkg/api"
@@ -24,8 +23,6 @@ type Client struct {
 	apisrvClient     *kc.Client
 	unscheduledPodCh chan *k8stype.Pod
 	nodeCh           chan *k8stype.Node
-	idToNSMu         *sync.Mutex
-	idToNamespace    map[string]string
 }
 
 func New(cfg Config) (*Client, error) {
@@ -41,7 +38,6 @@ func New(cfg Config) (*Client, error) {
 	fmt.Printf("Created K8S CLIENT (%s)\n", cfg.Addr)
 
 	pch := make(chan *k8stype.Pod, 100)
-	nsMap := make(map[string]string)
 
 	sel := fields.ParseSelectorOrDie("spec.nodeName==" + "" + ",status.phase!=" + string(api.PodSucceeded) + ",status.phase!=" + string(api.PodFailed))
 	informer := framework.NewSharedInformer(
@@ -58,7 +54,6 @@ func New(cfg Config) (*Client, error) {
 		&api.Pod{},
 		0,
 	)
-	var idToNSMu sync.Mutex
 	informer.AddEventHandler(framework.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pod := obj.(*api.Pod)
@@ -69,10 +64,6 @@ func New(cfg Config) (*Client, error) {
 			ourPod := &k8stype.Pod{
 				ID: makePodID(pod.Namespace, pod.Name),
 			}
-			// TODO: not a good idea to block in handler..
-			idToNSMu.Lock()
-			nsMap[ourPod.ID] = pod.Namespace
-			idToNSMu.Unlock()
 			pch <- ourPod
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {},
@@ -108,8 +99,6 @@ func New(cfg Config) (*Client, error) {
 		apisrvClient:     c,
 		unscheduledPodCh: pch,
 		// nodeCh:           nch,
-		idToNSMu:      &idToNSMu,
-		idToNamespace: nsMap,
 	}, nil
 }
 
@@ -126,11 +115,15 @@ func (c *Client) GetNodeChan() NodeChan {
 }
 
 func (c *Client) AssignBinding(bindings []*k8stype.Binding) error {
-	for _, b := range bindings {
-		c.idToNSMu.Lock()
-		ns := c.idToNamespace[b.PodID]
-		c.idToNSMu.Unlock()
-
+	for _, ob := range bindings {
+		ns, name := parsePodID(ob.PodID)
+		b := &api.Binding{
+			ObjectMeta: api.ObjectMeta{Namespace: ns, Name: name},
+			Target: api.ObjectReference{
+				Kind: "Node",
+				Name: parseNodeID(ob.NodeID),
+			},
+		}
 		ctx := api.WithNamespace(api.NewContext(), ns)
 		err := c.apisrvClient.Post().Namespace(api.NamespaceValue(ctx)).Resource("bindings").Body(b).Do().Error()
 		if err != nil {
@@ -142,4 +135,12 @@ func (c *Client) AssignBinding(bindings []*k8stype.Binding) error {
 
 func makePodID(namespace, name string) string {
 	return path.Join(namespace, name)
+}
+
+func parsePodID(id string) (string, string) {
+	return path.Split(id)
+}
+
+func parseNodeID(id string) string {
+	return id
 }
