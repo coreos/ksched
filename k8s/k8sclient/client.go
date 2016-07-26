@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"path"
-	"time"
 
 	"github.com/coreos/ksched/k8s/k8stype"
 	"k8s.io/kubernetes/pkg/api"
@@ -23,6 +22,7 @@ type Client struct {
 	apisrvClient     *kc.Client
 	unscheduledPodCh chan *k8stype.Pod
 	nodeCh           chan *k8stype.Node
+	KeepAround       interface{}
 	idToNamespace    map[string]string
 }
 
@@ -47,7 +47,6 @@ func New(cfg Config) (*Client, error) {
 	log.Printf("\n\nHere 1\n\n")
 
 	// go func() {
-	log.Printf("\n\nGO FUNC: Pod Informer\n\n")
 	//selector := fields.ParseSelectorOrDie( /* "spec.nodeName==" + "" + */ "status.phase!=" + string(api.PodSucceeded) + ",status.phase!=" + string(api.PodFailed))
 	lw := cache.NewListWatchFromClient(c, "pods", api.NamespaceAll, fields.Everything())
 
@@ -78,12 +77,62 @@ func New(cfg Config) (*Client, error) {
 	stopCh1 := make(chan struct{})
 	log.Printf("informer: Informer running\n")
 	go ctrl1.Run(stopCh1)
-	go func() {
-		for {
+	// )}
+
+	// go func() {
+	// 	for {
+	// 		l, err := c.Pods("default").List(api.ListOptions{})
+	// 		if err != nil {
+	// 			panic(err)
+	// 		}
+	// 		for i := range l.Items {
+	// 			pod := &l.Items[i]
+	// 			fmt.Println(pod.Name)
+	// 		}
+	// 	}
+	// }()
+
+	// informer := framework.NewSharedInformer(lw, &api.Pod{}, 0)
+	// informer.AddEventHandler(framework.ResourceEventHandlerFuncs{
+	// 	AddFunc: func(obj interface{}) {
+	// 		fmt.Printf("\n\nPodInformer/AddFunc: called\n\n")
+	// 		// pod := obj.(*api.Pod)
+	// 		// ourPod := &k8stype.Pod{
+	// 		// 	ID: makePodID(pod.Namespace, pod.Name),
+	// 		// }
+	// 		// nsMap[ourPod.ID] = pod.Namespace
+	// 		// pch <- ourPod
+	// 		// fmt.Printf("PodInformer/AddFunc: Sent on pod:%v on the pod channel\n", ourPod.ID)
+
+	// 	},
+	// 	UpdateFunc: func(oldObj, newObj interface{}) {
+	// 		fmt.Printf("PodInformer/UpdateFunc: called\n")
+	// 	},
+	// 	DeleteFunc: func(obj interface{}) {
+	// 		fmt.Printf("PodInformer/DeleteFunc: called\n")
+	// 	},
+	// })
+
+	// stopCh1 := make(chan struct{})
+	// log.Printf("informer: Informer running\n")
+	// go informer.Run(stopCh1)
+	// go ctrl1.Run(stopCh1)
+
+	// store.List()
+	/*
+		go func() {
+			for {
+				time.Sleep(1 * time.Second)
+				fmt.Println("Go Func Loop: items num:", len(store.List()))
+			}
+		}()
+	*/
+	/*
+		for i := 0; i < 20; i++ {
 			time.Sleep(1 * time.Second)
-			fmt.Println("items num:", len(store.List()))
+			fmt.Println("Normal: items num:", len(store.List()))
 		}
-	}()
+	*/
 	// }()
 
 	// log.Printf("\n\nHere 2\n\n")
@@ -116,6 +165,7 @@ func New(cfg Config) (*Client, error) {
 		apisrvClient:     c,
 		unscheduledPodCh: pch,
 		// nodeCh:           nch,
+		KeepAround:    store,
 		idToNamespace: nsMap,
 	}, nil
 }
