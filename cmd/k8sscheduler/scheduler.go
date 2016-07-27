@@ -99,9 +99,16 @@ func main() {
 	scheduler := New(client, maxTasksPerPu)
 
 	// Fake the topology
-	scheduler.fakeResourceTopology(numMachines)
+	// scheduler.fakeResourceTopology(numMachines)
+
+	// Initialize the resource topology by polling the node channel for 5 seconds
+	scheduler.initResourceTopology()
 
 	fmt.Printf("NodeToMachine Mappings:%v\n", scheduler.nodeToMachineID)
+
+	// DEBUG: Block here
+	for {
+	}
 
 	// Start the scheduler
 	scheduler.Run()
@@ -109,8 +116,6 @@ func main() {
 
 // The main workflow of the scheduler happens here
 func (ks *k8scheduler) Run() {
-	// Initialize the resource topology by polling the node channel for 5 seconds
-	// ks.initResourceTopology()
 
 	// Get the pod channel from the client
 	podChan := ks.client.GetUnscheduledPodChan()

@@ -72,33 +72,35 @@ func New(cfg Config) (*Client, error) {
 	stopCh := make(chan struct{})
 	go informer.Run(stopCh)
 
-	// nch := make(chan *k8stype.Node, 100)
+	nch := make(chan *k8stype.Node, 100)
 
-	// // go func() {
-	// _, ctrl2 := framework.NewInformer(
-	// 	cache.NewListWatchFromClient(c, "nodes", api.NamespaceAll, fields.ParseSelectorOrDie("")),
-	// 	&api.Node{},
-	// 	0,
-	// 	framework.ResourceEventHandlerFuncs{
-	// 		AddFunc: func(obj interface{}) {
-	// 			node := obj.(*api.Node)
-	// 			ourNode := &k8stype.Node{
-	// 				ID: node.Name,
-	// 			}
-	// 			nch <- ourNode
-	// 		},
-	// 		UpdateFunc: func(oldObj, newObj interface{}) {},
-	// 		DeleteFunc: func(obj interface{}) {},
-	// 	},
-	// )
-	// stopCh2 := make(chan struct{})
-	// go ctrl2.Run(stopCh2)
-	// }()
+	_, nodeInformer := framework.NewInformer(
+		cache.NewListWatchFromClient(c, "nodes", api.NamespaceAll, fields.ParseSelectorOrDie("spec.unschedulable!=true")),
+		&api.Node{},
+		0,
+		framework.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				node := obj.(*api.Node)
+
+				//DEBUGGING. Remove it afterwards.
+				fmt.Printf("NodeInformer: addfunc, node (%s/%s)\n", node.Namespace, node.Name)
+
+				ourNode := &k8stype.Node{
+					ID: node.Name,
+				}
+				nch <- ourNode
+			},
+			UpdateFunc: func(oldObj, newObj interface{}) {},
+			DeleteFunc: func(obj interface{}) {},
+		},
+	)
+	stopCh2 := make(chan struct{})
+	go nodeInformer.Run(stopCh2)
 
 	return &Client{
 		apisrvClient:     c,
 		unscheduledPodCh: pch,
-		// nodeCh:           nch,
+		nodeCh:           nch,
 	}, nil
 }
 
