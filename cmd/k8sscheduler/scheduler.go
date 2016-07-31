@@ -85,16 +85,6 @@ func main() {
 		panic(err)
 	}
 
-	// DEBUGGING. Remove it.
-	// for {
-	// 	select {
-	// 	case p := <-client.GetUnscheduledPodChan():
-	// 		fmt.Println(p.ID)
-	// 	case <-time.After(1 * time.Second):
-	// 		fmt.Println("haha")
-	// 	}
-	// }
-
 	// Initialize the scheduler
 	scheduler := New(client, maxTasksPerPu)
 
@@ -105,10 +95,6 @@ func main() {
 	scheduler.initResourceTopology()
 
 	fmt.Printf("NodeToMachine Mappings:%v\n", scheduler.nodeToMachineID)
-
-	// DEBUG: Block here
-	for {
-	}
 
 	// Start the scheduler
 	scheduler.Run()
