@@ -75,7 +75,7 @@ func New(cfg Config) (*Client, error) {
 	nch := make(chan *k8stype.Node, 100)
 
 	_, nodeInformer := framework.NewInformer(
-		cache.NewListWatchFromClient(c, "nodes", api.NamespaceAll, fields.ParseSelectorOrDie("spec.unschedulable!=true")),
+		cache.NewListWatchFromClient(c, "nodes", api.NamespaceAll, fields.ParseSelectorOrDie("")),
 		&api.Node{},
 		0,
 		framework.ResourceEventHandlerFuncs{
@@ -84,6 +84,10 @@ func New(cfg Config) (*Client, error) {
 
 				//DEBUGGING. Remove it afterwards.
 				fmt.Printf("NodeInformer: addfunc, node (%s/%s)\n", node.Namespace, node.Name)
+				if node.Spec.Unschedulable {
+					fmt.Printf("Skipping node\n")
+					return
+				}
 
 				ourNode := &k8stype.Node{
 					ID: node.Name,
