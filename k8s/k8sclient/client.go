@@ -61,7 +61,7 @@ func New(cfg Config, podChanSize int) (*Client, error) {
 			pod := obj.(*api.Pod)
 
 			//DEBUGGING. Remove it afterwards.
-			//fmt.Printf("informer: addfunc, pod (%s/%s)\n", pod.Namespace, pod.Name)
+			fmt.Printf("informer: addfunc, pod (%s/%s)\n", pod.Namespace, pod.Name)
 
 			ourPod := &k8stype.Pod{
 				ID: makePodID(pod.Namespace, pod.Name),
