@@ -22,12 +22,14 @@ var (
 	numMachines   int
 	address       string
 	maxTasksPerPu int
+	batchTimeout  int
 )
 
 func init() {
 	flag.StringVar(&address, "addr", "127.0.0.1:8080", "APIServer addr")
 	flag.IntVar(&numMachines, "nm", 2, "number of machines")
 	flag.IntVar(&maxTasksPerPu, "mt", 10, "max tasks")
+	flag.IntVar(&batchTimeout, "bt", 10, "pods batch timeout in seconds")
 
 	flag.Parse()
 }
@@ -97,14 +99,11 @@ func main() {
 	fmt.Printf("NodeToMachine Mappings:%v\n", scheduler.nodeToMachineID)
 
 	// Start the scheduler
-	scheduler.Run()
+	scheduler.Run(client)
 }
 
 // The main workflow of the scheduler happens here
-func (ks *k8scheduler) Run() {
-
-	// Get the pod channel from the client
-	podChan := ks.client.GetUnscheduledPodChan()
+func (ks *k8scheduler) Run(client *k8sclient.Client) {
 
 	// Add one Job to the graph, under which all incoming pods will be added as tasks
 	jobID := addNewJob(ks.jobMap, ks.flowScheduler)
@@ -112,21 +111,8 @@ func (ks *k8scheduler) Run() {
 	log.Printf("Starting scheduling loop\n")
 	// Loop: Read pods, Schedule, and Assign Bindings
 	for {
-		// Process new Pod updates
-		newPods := make([]*k8stype.Pod, 0)
-		// Read one pod only
-		// TODO: Change this to a batch channel later to read multiple pods at once
-		select {
-		case pod := <-podChan:
-			log.Printf("Got Pod request id:%v", pod.ID)
-			// Skip addition if duplicate podID
-			if _, ok := ks.podToTaskID[pod.ID]; ok {
-				continue
-			}
-			newPods = append(newPods, pod)
-		default:
-			// Do nothing to do a non blocking read
-		}
+		// Process batch of new Pod updates
+		newPods := client.GetPodBatch(time.Duration(batchTimeout) * time.Second)
 
 		// No need to schedule or assign task bindings if no new pods
 		if len(newPods) == 0 {
@@ -137,6 +123,10 @@ func (ks *k8scheduler) Run() {
 		// Add every new pod as a new task in the flowgraph
 		// TODO: Need to rethink later if a Pod should be a Task or a Job
 		for _, pod := range newPods {
+			// Skip addition if duplicate podID
+			if _, ok := ks.podToTaskID[pod.ID]; ok {
+				continue
+			}
 			// Add the task to the job
 			taskID := addTaskToJob(jobID, ks.jobMap, ks.taskMap)
 			// Insert mapping for task to pod
