@@ -389,7 +389,7 @@ func (s *scheduler) applySchedulingDeltas(deltas []pb.SchedulingDelta) uint64 {
 
 		switch d.Type {
 		case pb.SchedulingDelta_PLACE:
-			log.Printf("TASK PLACEMENT: task:%v on resource:%v\n", td.Uid, rs.Descriptor.FriendlyName)
+			// log.Printf("TASK PLACEMENT: task:%v on resource:%v\n", td.Uid, rs.Descriptor.FriendlyName)
 			jd := s.jobMap.FindPtrOrNull(util.MustJobIDFromString(td.JobID))
 			if jd.State != pb.JobDescriptor_Running {
 				jd.State = pb.JobDescriptor_Running

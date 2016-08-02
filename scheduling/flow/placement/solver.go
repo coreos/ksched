@@ -137,7 +137,7 @@ func (fs *flowlesslySolver) readFlowGraph() map[flowgraph.NodeID]flowPairMap {
 	scanner := bufio.NewScanner(fs.fromSolver)
 	for scanner.Scan() {
 		line := scanner.Text()
-		fmt.Printf("Line Read:%s\n", line)
+		//fmt.Printf("Line Read:%s\n", line)
 		switch line[0] {
 		case 'f':
 			var src, dst, flowCap uint64

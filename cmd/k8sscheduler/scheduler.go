@@ -96,7 +96,7 @@ func main() {
 	// Initialize the resource topology by polling the node channel for 5 seconds
 	scheduler.initResourceTopology()
 
-	fmt.Printf("NodeToMachine Mappings:%v\n", scheduler.nodeToMachineID)
+	//fmt.Printf("NodeToMachine Mappings:%v\n", scheduler.nodeToMachineID)
 
 	// Start the scheduler
 	scheduler.Run(client)
@@ -108,7 +108,7 @@ func (ks *k8scheduler) Run(client *k8sclient.Client) {
 	// Add one Job to the graph, under which all incoming pods will be added as tasks
 	jobID := addNewJob(ks.jobMap, ks.flowScheduler)
 
-	log.Printf("Starting scheduling loop\n")
+	//log.Printf("Starting scheduling loop\n")
 	// Loop: Read pods, Schedule, and Assign Bindings
 	for {
 		// Process batch of new Pod updates
@@ -132,17 +132,19 @@ func (ks *k8scheduler) Run(client *k8sclient.Client) {
 			// Insert mapping for task to pod
 			ks.podToTaskID[pod.ID] = uint64(taskID)
 			ks.taskToPodID[uint64(taskID)] = pod.ID
-			fmt.Printf("Pod:%v ==> Task:%v", pod.ID, taskID)
+			//fmt.Printf("Pod:%v ==> Task:%v", pod.ID, taskID)
 		}
 
-		fmt.Printf("\nPerforming scheduling iteration\n")
+		fmt.Printf("\nScheduling all tasks\n")
+		start := time.Now()
 		// Peform a scheduling iteration
 		ks.flowScheduler.ScheduleAllJobs()
-		fmt.Printf("\nScheduling iteration done\n")
+		elapsed := time.Since(start)
+		fmt.Printf("\nDone in:%s\n", elapsed)
 
 		// Prepare the Pod to Node bindings
 		podToNodeBindings := make([]*k8stype.Binding, 0)
-		fmt.Printf("Prepare Pod to Node bindings\n")
+		fmt.Printf("Preparing Pod to Node bindings\n")
 		// Collect scheduling decisions/bindings only for the newly scheduled pods
 		// taskBindings will contain old placements as well
 		taskBindings := ks.flowScheduler.GetTaskBindings()
@@ -158,13 +160,13 @@ func (ks *k8scheduler) Run(client *k8sclient.Client) {
 			// The resourceID is for the PU, so we get it's machineID first
 			puNode := ks.resourceMap.FindPtrOrNull(resourceID).TopologyNode
 			machineID := findParentMachine(puNode, ks.resourceMap).Uuid
-			fmt.Printf("Task binding: task:%v to machine:%v\n", taskID, machineID)
+			//fmt.Printf("Task binding: task:%v to machine:%v\n", taskID, machineID)
 
 			// Get the nodeID corresponding to the machineID
 			nodeID := ks.machineToNodeID[machineID]
 			// Get the podID corresponding to the taskID
 			podID := ks.taskToPodID[uint64(taskID)]
-			fmt.Printf("Pod binding: pod:%v to node:%v\n", podID, nodeID)
+			//fmt.Printf("Pod binding: pod:%v to node:%v\n", podID, nodeID)
 			// Create binding
 			binding := &k8stype.Binding{
 				PodID:  podID,
@@ -175,7 +177,7 @@ func (ks *k8scheduler) Run(client *k8sclient.Client) {
 
 		// Report the bindings for the newly scheduled pods
 		ks.client.AssignBinding(podToNodeBindings)
-		fmt.Printf("TaskBindings assigned\n")
+		fmt.Printf("Pod Bindings assigned\n")
 	}
 }
 
@@ -212,7 +214,7 @@ func (ks *k8scheduler) initResourceTopology() {
 		case node := <-nodeChan:
 			// Skip addition if duplicate nodeID
 			if _, ok := ks.nodeToMachineID[node.ID]; ok {
-				log.Printf("Duplicate nodeID%v recieved from node channel\n", node.ID)
+				//log.Printf("Duplicate nodeID%v recieved from node channel\n", node.ID)
 				continue
 			}
 			// Add the node as a machine to the root ResourceTopologyNodeDescriptor
@@ -353,7 +355,7 @@ func createResourceDesc(resourceType pb.ResourceDescriptor_ResourceType, taskCap
 	IDString := strconv.FormatUint(util.RandUint64(), 10)
 	// Resource name = type + IDString
 	name := fmt.Sprintf("%s-%s", pb.ResourceDescriptor_ResourceType_name[int32(resourceType)], IDString)
-	fmt.Printf("Created Resource: %s\n", name)
+	//fmt.Printf("Created Resource: %s\n", name)
 	return &pb.ResourceDescriptor{
 		Uuid:         IDString,
 		FriendlyName: name,
@@ -381,7 +383,7 @@ func findParentMachine(node *pb.ResourceTopologyNodeDescriptor, resourceMap *typ
 		parentNode := resourceMap.FindPtrOrNull(parentID)
 		if parentNode == nil {
 			// reached the root
-			fmt.Printf("Machine not found\n")
+			//fmt.Printf("Machine not found\n")
 			return nil
 		}
 		node = parentNode.TopologyNode
