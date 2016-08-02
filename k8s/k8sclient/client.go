@@ -3,6 +3,7 @@ package k8sclient
 import (
 	"fmt"
 	"path"
+	"time"
 
 	"github.com/coreos/ksched/k8s/k8stype"
 	"k8s.io/kubernetes/pkg/api"
@@ -21,6 +22,7 @@ type Config struct {
 
 type Client struct {
 	apisrvClient     *kc.Client
+	batchedPods      []*k8stype.Pod
 	unscheduledPodCh chan *k8stype.Pod
 	nodeCh           chan *k8stype.Node
 }
@@ -138,6 +140,43 @@ func (c *Client) AssignBinding(bindings []*k8stype.Binding) error {
 		}
 	}
 	return nil
+}
+
+// Returns a batch of pods or blocks until there is at least on pod creation call back
+// The timeout specifies how long to wait for another pod on the pod channel before returning
+// the batch of pods that need to be scheduled
+func (c *Client) GetPodBatch(timeout time.Duration) []*k8stype.Pod {
+	batchedPods := make([]*k8stype.Pod, 0)
+
+	// Check for first pod, block until at least 1 is available
+	pod := <-c.unscheduledPodCh
+	batchedPods = append(batchedPods, pod)
+
+	// Set timer for timeout between successive pods
+	timer := time.NewTimer(timeout)
+	done := make(chan bool)
+	go func() {
+		<-timer.C
+		done <- true
+	}()
+
+	// Poll until done from timeout
+	// TODO: Put a cap on the batch size since this could go on forever
+	finish := false
+	for !finish {
+		select {
+		case pod = <-c.unscheduledPodCh:
+			batchedPods = append(batchedPods, pod)
+			// Refresh the timeout for next pod
+			timer.Reset(timeout)
+		case <-done:
+			finish = true
+		default:
+			// Do nothing and keep polling until timeout
+		}
+	}
+	// Return the batch collected so far. Size should be at least 1
+	return batchedPods
 }
 
 func makePodID(namespace, name string) string {
