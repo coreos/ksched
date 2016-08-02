@@ -22,7 +22,6 @@ type Config struct {
 
 type Client struct {
 	apisrvClient     *kc.Client
-	batchReadySignal chan interface{}
 	batchedPods      []*k8stype.Pod
 	unscheduledPodCh chan *k8stype.Pod
 	nodeCh           chan *k8stype.Node
