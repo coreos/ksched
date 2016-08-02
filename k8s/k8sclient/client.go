@@ -37,6 +37,7 @@ func New(cfg Config, podChanSize int) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	//fmt.Printf("Created K8S CLIENT (%s)\n", cfg.Addr)
 
 	pch := make(chan *k8stype.Pod, podChanSize)
@@ -164,7 +165,7 @@ func (c *Client) GetPodBatch(timeout time.Duration) []*k8stype.Pod {
 
 	fmt.Printf("Batching pod scheduling requests\n")
 	numPods := 1
-	fmt.Printf("Number of pods requests: %d", numPods)
+	//fmt.Printf("Number of pods requests: %d", numPods)
 	// Poll until done from timeout
 	// TODO: Put a cap on the batch size since this could go on forever
 	finish := false
@@ -172,7 +173,7 @@ func (c *Client) GetPodBatch(timeout time.Duration) []*k8stype.Pod {
 		select {
 		case pod = <-c.unscheduledPodCh:
 			numPods++
-			fmt.Printf("\rNumber of pods requests: %d", numPods)
+			//fmt.Printf("\rNumber of pods requests: %d", numPods)
 			batchedPods = append(batchedPods, pod)
 			// Refresh the timeout for next pod
 			timer.Reset(timeout)
@@ -184,6 +185,7 @@ func (c *Client) GetPodBatch(timeout time.Duration) []*k8stype.Pod {
 		}
 	}
 	// Return the batch collected so far. Size should be at least 1
+	fmt.Printf("Number of pods requests: %d\n", numPods)
 	return batchedPods
 }
 

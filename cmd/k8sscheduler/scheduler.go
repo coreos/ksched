@@ -130,6 +130,7 @@ func (ks *k8scheduler) Run(client *k8sclient.Client) {
 		for _, pod := range newPods {
 			// Skip addition if duplicate podID
 			if _, ok := ks.podToTaskID[pod.ID]; ok {
+				fmt.Printf("Skipping Pod:%v ==> Task:%v", pod.ID, ks.podToTaskID[pod.ID])
 				continue
 			}
 			// Add the task to the job
