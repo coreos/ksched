@@ -19,17 +19,21 @@ import (
 )
 
 var (
-	numMachines   int
-	address       string
-	maxTasksPerPu int
-	batchTimeout  int
+	numMachines      int
+	address          string
+	maxTasksPerPu    int
+	batchTimeout     int
+	nodeBatchTimeout int
+	podChanSize      int
 )
 
 func init() {
 	flag.StringVar(&address, "addr", "127.0.0.1:8080", "APIServer addr")
 	flag.IntVar(&numMachines, "nm", 2, "number of machines")
 	flag.IntVar(&maxTasksPerPu, "mt", 10, "max tasks")
-	flag.IntVar(&batchTimeout, "bt", 10, "pods batch timeout in seconds")
+	flag.IntVar(&batchTimeout, "bt", 2, "pods batch timeout in seconds")
+	flag.IntVar(&nodeBatchTimeout, "nbt", 2, "pods batch timeout in seconds")
+	flag.IntVar(&podChanSize, "pcs", 1000, "pod channel size in client's pod informer")
 
 	flag.Parse()
 }
@@ -82,7 +86,7 @@ func New(client *k8sclient.Client, maxTasksPerPu int) *k8scheduler {
 func main() {
 	// Initialize the kubernetes client
 	config := k8sclient.Config{Addr: address}
-	client, err := k8sclient.New(config)
+	client, err := k8sclient.New(config, podChanSize)
 	if err != nil {
 		panic(err)
 	}
@@ -94,6 +98,7 @@ func main() {
 	// scheduler.fakeResourceTopology(numMachines)
 
 	// Initialize the resource topology by polling the node channel for 5 seconds
+	fmt.Printf("Initializing nodes in resource topology\n")
 	scheduler.initResourceTopology()
 
 	//fmt.Printf("NodeToMachine Mappings:%v\n", scheduler.nodeToMachineID)
@@ -200,9 +205,9 @@ func (ks *k8scheduler) initResourceTopology() {
 	nodeChan := ks.client.GetNodeChan()
 
 	done := make(chan bool)
-	// Send a done signal after 5 seconds
+	// Send a done signal after nodeBatchTimeout seconds
 	go func() {
-		<-time.After(5 * time.Second)
+		<-time.After(time.Duration(nodeBatchTimeout) * time.Second)
 		done <- true
 	}()
 

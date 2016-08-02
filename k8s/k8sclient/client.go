@@ -27,7 +27,7 @@ type Client struct {
 	nodeCh           chan *k8stype.Node
 }
 
-func New(cfg Config) (*Client, error) {
+func New(cfg Config, podChanSize int) (*Client, error) {
 	restCfg := &restclient.Config{
 		Host:  fmt.Sprintf("http://%s", cfg.Addr),
 		QPS:   1000,
@@ -39,7 +39,7 @@ func New(cfg Config) (*Client, error) {
 	}
 	//fmt.Printf("Created K8S CLIENT (%s)\n", cfg.Addr)
 
-	pch := make(chan *k8stype.Pod, 1000)
+	pch := make(chan *k8stype.Pod, podChanSize)
 
 	sel := fields.ParseSelectorOrDie("spec.nodeName==" + "" + ",status.phase!=" + string(api.PodSucceeded) + ",status.phase!=" + string(api.PodFailed))
 	informer := framework.NewSharedInformer(
@@ -172,7 +172,7 @@ func (c *Client) GetPodBatch(timeout time.Duration) []*k8stype.Pod {
 		select {
 		case pod = <-c.unscheduledPodCh:
 			numPods++
-			fmt.Printf("\x0cNumber of pods requests: %d", numPods)
+			fmt.Printf("\rNumber of pods requests: %d", numPods)
 			batchedPods = append(batchedPods, pod)
 			// Refresh the timeout for next pod
 			timer.Reset(timeout)
