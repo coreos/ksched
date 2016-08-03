@@ -29,11 +29,11 @@ var (
 
 func init() {
 	flag.StringVar(&address, "addr", "127.0.0.1:8080", "APIServer addr")
-	flag.IntVar(&numMachines, "nm", 2, "number of machines")
-	flag.IntVar(&maxTasksPerPu, "mt", 10, "max tasks")
+	flag.IntVar(&numMachines, "nm", 2, "number of machines, only needed if faking the resource topology")
+	flag.IntVar(&maxTasksPerPu, "mt", 1000, "max tasks")
 	flag.IntVar(&batchTimeout, "bt", 2, "pods batch timeout in seconds")
 	flag.IntVar(&nodeBatchTimeout, "nbt", 2, "pods batch timeout in seconds")
-	flag.IntVar(&podChanSize, "pcs", 1000, "pod channel size in client's pod informer")
+	flag.IntVar(&podChanSize, "pcs", 5000, "pod channel size in client's pod informer")
 
 	flag.Parse()
 }
@@ -100,6 +100,7 @@ func main() {
 	// Initialize the resource topology by polling the node channel for 5 seconds
 	fmt.Printf("Initializing nodes in resource topology\n")
 	scheduler.initResourceTopology()
+	fmt.Printf("Done\n")
 
 	//fmt.Printf("NodeToMachine Mappings:%v\n", scheduler.nodeToMachineID)
 
@@ -130,7 +131,7 @@ func (ks *k8scheduler) Run(client *k8sclient.Client) {
 		for _, pod := range newPods {
 			// Skip addition if duplicate podID
 			if _, ok := ks.podToTaskID[pod.ID]; ok {
-				fmt.Printf("Skipping Pod:%v ==> Task:%v", pod.ID, ks.podToTaskID[pod.ID])
+				fmt.Printf("Skipping already existing Pod:%v ==> Task:%v", pod.ID, ks.podToTaskID[pod.ID])
 				continue
 			}
 			// Add the task to the job
@@ -146,11 +147,11 @@ func (ks *k8scheduler) Run(client *k8sclient.Client) {
 		// Peform a scheduling iteration
 		ks.flowScheduler.ScheduleAllJobs()
 		elapsed := time.Since(start)
-		fmt.Printf("\nDone in:%s\n", elapsed)
+		fmt.Printf("Time taken to schedule all tasks:%s\n", elapsed)
 
 		// Prepare the Pod to Node bindings
 		podToNodeBindings := make([]*k8stype.Binding, 0)
-		fmt.Printf("Preparing Pod to Node bindings\n")
+		//fmt.Printf("Preparing Pod to Node bindings\n")
 		// Collect scheduling decisions/bindings only for the newly scheduled pods
 		// taskBindings will contain old placements as well
 		taskBindings := ks.flowScheduler.GetTaskBindings()
@@ -183,7 +184,7 @@ func (ks *k8scheduler) Run(client *k8sclient.Client) {
 
 		// Report the bindings for the newly scheduled pods
 		ks.client.AssignBinding(podToNodeBindings)
-		fmt.Printf("Pod Bindings assigned\n")
+		fmt.Printf("Pod Bindings assigned\n\n")
 	}
 }
 

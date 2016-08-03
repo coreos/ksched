@@ -22,7 +22,6 @@ type Config struct {
 
 type Client struct {
 	apisrvClient     *kc.Client
-	batchedPods      []*k8stype.Pod
 	unscheduledPodCh chan *k8stype.Pod
 	nodeCh           chan *k8stype.Node
 }
@@ -62,7 +61,7 @@ func New(cfg Config, podChanSize int) (*Client, error) {
 			pod := obj.(*api.Pod)
 
 			//DEBUGGING. Remove it afterwards.
-			fmt.Printf("informer: addfunc, pod (%s/%s)\n", pod.Namespace, pod.Name)
+			//fmt.Printf("informer: addfunc, pod (%s/%s)\n", pod.Namespace, pod.Name)
 
 			ourPod := &k8stype.Pod{
 				ID: makePodID(pod.Namespace, pod.Name),
@@ -173,7 +172,7 @@ func (c *Client) GetPodBatch(timeout time.Duration) []*k8stype.Pod {
 		select {
 		case pod = <-c.unscheduledPodCh:
 			numPods++
-			//fmt.Printf("\rNumber of pods requests: %d", numPods)
+			fmt.Printf("\rNumber of pods requests: %d", numPods)
 			batchedPods = append(batchedPods, pod)
 			// Refresh the timeout for next pod
 			timer.Reset(timeout)
@@ -185,7 +184,7 @@ func (c *Client) GetPodBatch(timeout time.Duration) []*k8stype.Pod {
 		}
 	}
 	// Return the batch collected so far. Size should be at least 1
-	fmt.Printf("Number of pods requests: %d\n", numPods)
+	//fmt.Printf("Number of pods requests: %d\n", numPods)
 	return batchedPods
 }
 

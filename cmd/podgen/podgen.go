@@ -16,11 +16,15 @@ import (
 var (
 	address string
 	numPods int
+	image   string
+	ns      string
 )
 
 func init() {
-	flag.StringVar(&address, "addr", "localhost:8080", "APIServer addr")
+	flag.StringVar(&address, "endpoint", "localhost:8080", "API server address")
 	flag.IntVar(&numPods, "numPods", 1, "Number of pods to create")
+	flag.StringVar(&image, "image", "nginx", "The image for the container in the pod(s)")
+	flag.StringVar(&ns, "ns", "default", "Namespace for the new pod(s)")
 	flag.Parse()
 }
 
@@ -36,12 +40,10 @@ func main() {
 		panic(err.Error())
 	}
 
-	// Create one pod
-	ns := "default"
-
+	// Generate the specified number of pods
 	for i := 0; i < numPods; i++ {
 		id := util.RandUint64()
-		podName := "nginx-" + strconv.FormatUint(id, 10)
+		podName := image + strconv.FormatUint(id, 10)
 		_, err := c.Pods(ns).Create(&api.Pod{
 			TypeMeta: unversioned.TypeMeta{
 				Kind: "Pod",
@@ -53,7 +55,7 @@ func main() {
 				Containers: []api.Container{
 					{
 						Name:  podName,
-						Image: "none",
+						Image: image,
 					},
 				},
 			},
@@ -61,7 +63,7 @@ func main() {
 
 		if err != nil {
 			fmt.Printf("Failed to create pod:%s\n", podName)
-			fmt.Printf("Error:%s", err.Error())
+			fmt.Printf("Error:%s\n", err.Error())
 			i--
 		}
 
