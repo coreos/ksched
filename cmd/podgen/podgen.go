@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/coreos/ksched/pkg/util"
+
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/api/unversioned"
 	"k8s.io/kubernetes/pkg/client/restclient"
@@ -17,7 +19,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&address, "addr", "130.211.169.84:8080", "APIServer addr")
+	flag.StringVar(&address, "addr", "localhost:8080", "APIServer addr")
 	flag.IntVar(&numPods, "numPods", 1, "Number of pods to create")
 	flag.Parse()
 }
@@ -38,7 +40,8 @@ func main() {
 	ns := "default"
 
 	for i := 0; i < numPods; i++ {
-		podName := "Pod-" + strconv.Itoa(i)
+		id := util.RandUint64()
+		podName := "nginx-" + strconv.FormatUint(id, 10)
 		_, err := c.Pods(ns).Create(&api.Pod{
 			TypeMeta: unversioned.TypeMeta{
 				Kind: "Pod",
@@ -59,6 +62,7 @@ func main() {
 		if err != nil {
 			fmt.Printf("Failed to create pod:%s\n", podName)
 			fmt.Printf("Error:%s", err.Error())
+			i--
 		}
 
 	}
