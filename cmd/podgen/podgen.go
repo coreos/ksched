@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/coreos/ksched/pkg/util"
 
@@ -41,6 +42,7 @@ func main() {
 	}
 
 	// Generate the specified number of pods
+	util.SeedRNGWithInt(time.Now().UnixNano())
 	for i := 0; i < numPods; i++ {
 		id := util.RandUint64()
 		podName := image + strconv.FormatUint(id, 10)

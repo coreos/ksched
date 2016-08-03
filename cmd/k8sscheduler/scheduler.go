@@ -131,11 +131,12 @@ func (ks *k8scheduler) Run(client *k8sclient.Client) {
 		for _, pod := range newPods {
 			// Skip addition if duplicate podID
 			if _, ok := ks.podToTaskID[pod.ID]; ok {
-				fmt.Printf("Skipping already existing Pod:%v ==> Task:%v", pod.ID, ks.podToTaskID[pod.ID])
+				fmt.Printf("Skipping already existing Pod:%v ==> Task:%v\n", pod.ID, ks.podToTaskID[pod.ID])
 				continue
 			}
 			// Add the task to the job
 			taskID := addTaskToJob(jobID, ks.jobMap, ks.taskMap)
+			//fmt.Printf("Assigning: Pod:%v ==> TaskID:%v", pod.ID, taskID)
 			// Insert mapping for task to pod
 			ks.podToTaskID[pod.ID] = uint64(taskID)
 			ks.taskToPodID[uint64(taskID)] = pod.ID
@@ -156,8 +157,9 @@ func (ks *k8scheduler) Run(client *k8sclient.Client) {
 		// taskBindings will contain old placements as well
 		taskBindings := ks.flowScheduler.GetTaskBindings()
 		for taskID, resourceID := range taskBindings {
-			// If an unchange task binding, skip
+			// If an unchanged task binding, skip
 			if ks.oldTaskBindings[taskID] == resourceID {
+				//fmt.Printf("Skip Binding: taskID:%v ==> resourceID:%v\n", taskID, resourceID)
 				continue
 			}
 			// Otherwise update the new task binding
@@ -184,7 +186,8 @@ func (ks *k8scheduler) Run(client *k8sclient.Client) {
 
 		// Report the bindings for the newly scheduled pods
 		ks.client.AssignBinding(podToNodeBindings)
-		fmt.Printf("Pod Bindings assigned\n\n")
+		fmt.Printf("%d Pod Bindings assigned\n", len(podToNodeBindings))
+		fmt.Printf("From Pod informer: Created:%v Deleted:%v\n\n", k8sclient.PodsCreated, k8sclient.PodsDeleted)
 	}
 }
 

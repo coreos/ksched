@@ -16,6 +16,12 @@ import (
 	"k8s.io/kubernetes/pkg/watch"
 )
 
+// DEBUG Global counters
+var (
+	PodsCreated int
+	PodsDeleted int
+)
+
 type Config struct {
 	Addr string
 }
@@ -58,6 +64,7 @@ func New(cfg Config, podChanSize int) (*Client, error) {
 	)
 	informer.AddEventHandler(framework.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
+			PodsCreated++
 			pod := obj.(*api.Pod)
 
 			//DEBUGGING. Remove it afterwards.
@@ -69,7 +76,9 @@ func New(cfg Config, podChanSize int) (*Client, error) {
 			pch <- ourPod
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {},
-		DeleteFunc: func(obj interface{}) {},
+		DeleteFunc: func(obj interface{}) {
+			PodsDeleted++
+		},
 	})
 	stopCh := make(chan struct{})
 	go informer.Run(stopCh)
@@ -138,6 +147,7 @@ func (c *Client) AssignBinding(bindings []*k8stype.Binding) error {
 		if err != nil {
 			panic(err)
 		}
+		//fmt.Printf("Binding:pod:%v ==> node:%v\n", name, ob.NodeID)
 	}
 	return nil
 }
