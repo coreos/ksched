@@ -22,12 +22,11 @@ type Config struct {
 
 type Client struct {
 	apisrvClient     *kc.Client
-	batchedPods      []*k8stype.Pod
 	unscheduledPodCh chan *k8stype.Pod
 	nodeCh           chan *k8stype.Node
 }
 
-func New(cfg Config) (*Client, error) {
+func New(cfg Config, podChanSize int) (*Client, error) {
 	restCfg := &restclient.Config{
 		Host:  fmt.Sprintf("http://%s", cfg.Addr),
 		QPS:   1000,
@@ -37,9 +36,10 @@ func New(cfg Config) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Created K8S CLIENT (%s)\n", cfg.Addr)
 
-	pch := make(chan *k8stype.Pod, 100)
+	//fmt.Printf("Created K8S CLIENT (%s)\n", cfg.Addr)
+
+	pch := make(chan *k8stype.Pod, podChanSize)
 
 	sel := fields.ParseSelectorOrDie("spec.nodeName==" + "" + ",status.phase!=" + string(api.PodSucceeded) + ",status.phase!=" + string(api.PodFailed))
 	informer := framework.NewSharedInformer(
@@ -61,7 +61,7 @@ func New(cfg Config) (*Client, error) {
 			pod := obj.(*api.Pod)
 
 			//DEBUGGING. Remove it afterwards.
-			fmt.Printf("informer: addfunc, pod (%s/%s)\n", pod.Namespace, pod.Name)
+			//fmt.Printf("informer: addfunc, pod (%s/%s)\n", pod.Namespace, pod.Name)
 
 			ourPod := &k8stype.Pod{
 				ID: makePodID(pod.Namespace, pod.Name),
@@ -69,7 +69,8 @@ func New(cfg Config) (*Client, error) {
 			pch <- ourPod
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {},
-		DeleteFunc: func(obj interface{}) {},
+		DeleteFunc: func(obj interface{}) {
+		},
 	})
 	stopCh := make(chan struct{})
 	go informer.Run(stopCh)
@@ -85,9 +86,9 @@ func New(cfg Config) (*Client, error) {
 				node := obj.(*api.Node)
 
 				//DEBUGGING. Remove it afterwards.
-				fmt.Printf("NodeInformer: addfunc, node (%s/%s)\n", node.Namespace, node.Name)
+				//fmt.Printf("NodeInformer: addfunc, node (%s/%s)\n", node.Namespace, node.Name)
 				if node.Spec.Unschedulable {
-					fmt.Printf("Skipping node\n")
+					//fmt.Printf("Skipping node\n")
 					return
 				}
 
@@ -125,7 +126,7 @@ func (c *Client) GetNodeChan() NodeChan {
 func (c *Client) AssignBinding(bindings []*k8stype.Binding) error {
 	for _, ob := range bindings {
 		ns, name := parsePodID(ob.PodID)
-		fmt.Printf("NS:%v podName:%v\n", ns, name)
+		//fmt.Printf("NS:%v podName:%v\n", ns, name)
 		b := &api.Binding{
 			ObjectMeta: api.ObjectMeta{Namespace: ns, Name: name},
 			Target: api.ObjectReference{
@@ -138,6 +139,7 @@ func (c *Client) AssignBinding(bindings []*k8stype.Binding) error {
 		if err != nil {
 			panic(err)
 		}
+		//fmt.Printf("Binding:pod:%v ==> node:%v\n", name, ob.NodeID)
 	}
 	return nil
 }
@@ -147,6 +149,8 @@ func (c *Client) AssignBinding(bindings []*k8stype.Binding) error {
 // the batch of pods that need to be scheduled
 func (c *Client) GetPodBatch(timeout time.Duration) []*k8stype.Pod {
 	batchedPods := make([]*k8stype.Pod, 0)
+
+	fmt.Printf("Waiting for a pod scheduling request\n")
 
 	// Check for first pod, block until at least 1 is available
 	pod := <-c.unscheduledPodCh
@@ -160,22 +164,29 @@ func (c *Client) GetPodBatch(timeout time.Duration) []*k8stype.Pod {
 		done <- true
 	}()
 
+	fmt.Printf("Batching pod scheduling requests\n")
+	numPods := 1
+	//fmt.Printf("Number of pods requests: %d", numPods)
 	// Poll until done from timeout
 	// TODO: Put a cap on the batch size since this could go on forever
 	finish := false
 	for !finish {
 		select {
 		case pod = <-c.unscheduledPodCh:
+			numPods++
+			fmt.Printf("\rNumber of pods requests: %d", numPods)
 			batchedPods = append(batchedPods, pod)
 			// Refresh the timeout for next pod
 			timer.Reset(timeout)
 		case <-done:
 			finish = true
+			fmt.Printf("\n")
 		default:
 			// Do nothing and keep polling until timeout
 		}
 	}
 	// Return the batch collected so far. Size should be at least 1
+	//fmt.Printf("Number of pods requests: %d\n", numPods)
 	return batchedPods
 }
 

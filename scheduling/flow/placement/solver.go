@@ -111,14 +111,14 @@ func (fs *flowlesslySolver) startSolver() {
 func (fs *flowlesslySolver) writeGraph() {
 	// TODO: make sure proper locking on graph, manager
 	dimacs.Export(fs.gm.GraphChangeManager().Graph(), fs.toSolver)
-	dimacs.Export(fs.gm.GraphChangeManager().Graph(), fs.toConsole)
+	//dimacs.Export(fs.gm.GraphChangeManager().Graph(), fs.toConsole)
 	fs.gm.GraphChangeManager().ResetChanges()
 }
 
 func (fs *flowlesslySolver) writeIncremental() {
 	// TODO: make sure proper locking on graph, manager
 	dimacs.ExportIncremental(fs.gm.GraphChangeManager().GetOptimizedGraphChanges(), fs.toSolver)
-	dimacs.ExportIncremental(fs.gm.GraphChangeManager().GetOptimizedGraphChanges(), fs.toConsole)
+	//dimacs.ExportIncremental(fs.gm.GraphChangeManager().GetOptimizedGraphChanges(), fs.toConsole)
 	fs.gm.GraphChangeManager().ResetChanges()
 }
 
@@ -137,7 +137,7 @@ func (fs *flowlesslySolver) readFlowGraph() map[flowgraph.NodeID]flowPairMap {
 	scanner := bufio.NewScanner(fs.fromSolver)
 	for scanner.Scan() {
 		line := scanner.Text()
-		fmt.Printf("Line Read:%s\n", line)
+		//fmt.Printf("Line Read:%s\n", line)
 		switch line[0] {
 		case 'f':
 			var src, dst, flowCap uint64
