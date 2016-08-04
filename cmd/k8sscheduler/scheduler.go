@@ -186,8 +186,7 @@ func (ks *k8scheduler) Run(client *k8sclient.Client) {
 
 		// Report the bindings for the newly scheduled pods
 		ks.client.AssignBinding(podToNodeBindings)
-		fmt.Printf("%d Pod Bindings assigned\n", len(podToNodeBindings))
-		fmt.Printf("From Pod informer: Created:%v Deleted:%v\n\n", k8sclient.PodsCreated, k8sclient.PodsDeleted)
+		fmt.Printf("%d Pod Bindings assigned\n\n", len(podToNodeBindings))
 	}
 }
 
