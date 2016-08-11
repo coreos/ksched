@@ -25,15 +25,18 @@ var (
 	batchTimeout     int
 	nodeBatchTimeout int
 	podChanSize      int
+	fakeMachines     bool
 )
 
 func init() {
 	flag.StringVar(&address, "addr", "127.0.0.1:8080", "APIServer addr")
-	flag.IntVar(&numMachines, "nm", 2, "number of machines, only needed if faking the resource topology")
 	flag.IntVar(&maxTasksPerPu, "mt", 1000, "max tasks")
-	flag.IntVar(&batchTimeout, "bt", 2, "pods batch timeout in seconds")
-	flag.IntVar(&nodeBatchTimeout, "nbt", 2, "pods batch timeout in seconds")
+	flag.IntVar(&batchTimeout, "pbt", 2, "pods batch timeout in seconds")
+	flag.IntVar(&nodeBatchTimeout, "nbt", 2, "node batch timeout in seconds")
 	flag.IntVar(&podChanSize, "pcs", 5000, "pod channel size in client's pod informer")
+	// Fake the machine topology, only useful for testing when the API server has no nodes
+	flag.BoolVar(&fakeMachines, "fakeMachines", false, "fake the machine topology if running without a real cluster")
+	flag.IntVar(&numMachines, "nm", 2, "number of machines, only needed if faking the resource topology")
 
 	flag.Parse()
 }
@@ -94,15 +97,14 @@ func main() {
 	// Initialize the scheduler
 	scheduler := New(client, maxTasksPerPu)
 
-	// Fake the topology
-	// scheduler.fakeResourceTopology(numMachines)
-
 	// Initialize the resource topology by polling the node channel for 5 seconds
 	fmt.Printf("Initializing nodes in resource topology\n")
-	scheduler.initResourceTopology()
+	if fakeMachines {
+		scheduler.fakeResourceTopology(numMachines)
+	} else {
+		scheduler.initResourceTopology()
+	}
 	fmt.Printf("Done\n")
-
-	//fmt.Printf("NodeToMachine Mappings:%v\n", scheduler.nodeToMachineID)
 
 	// Start the scheduler
 	scheduler.Run(client)
@@ -111,10 +113,10 @@ func main() {
 // The main workflow of the scheduler happens here
 func (ks *k8scheduler) Run(client *k8sclient.Client) {
 
+	// TODO: Need to rethink later on how to distinguish whether a Pod should be a Task or a Job
 	// Add one Job to the graph, under which all incoming pods will be added as tasks
 	jobID := addNewJob(ks.jobMap, ks.flowScheduler)
 
-	//log.Printf("Starting scheduling loop\n")
 	// Loop: Read pods, Schedule, and Assign Bindings
 	for {
 		// Process batch of new Pod updates
@@ -127,7 +129,6 @@ func (ks *k8scheduler) Run(client *k8sclient.Client) {
 
 		log.Printf("Adding Pods as tasks to scheduler\n")
 		// Add every new pod as a new task in the flowgraph
-		// TODO: Need to rethink later if a Pod should be a Task or a Job
 		for _, pod := range newPods {
 			// Skip addition if duplicate podID
 			if _, ok := ks.podToTaskID[pod.ID]; ok {
@@ -136,11 +137,9 @@ func (ks *k8scheduler) Run(client *k8sclient.Client) {
 			}
 			// Add the task to the job
 			taskID := addTaskToJob(jobID, ks.jobMap, ks.taskMap)
-			//fmt.Printf("Assigning: Pod:%v ==> TaskID:%v", pod.ID, taskID)
 			// Insert mapping for task to pod
 			ks.podToTaskID[pod.ID] = uint64(taskID)
 			ks.taskToPodID[uint64(taskID)] = pod.ID
-			//fmt.Printf("Pod:%v ==> Task:%v", pod.ID, taskID)
 		}
 
 		fmt.Printf("\nScheduling all tasks\n")
@@ -152,30 +151,29 @@ func (ks *k8scheduler) Run(client *k8sclient.Client) {
 
 		// Prepare the Pod to Node bindings
 		podToNodeBindings := make([]*k8stype.Binding, 0)
-		//fmt.Printf("Preparing Pod to Node bindings\n")
-		// Collect scheduling decisions/bindings only for the newly scheduled pods
+		// Collect and write out scheduling decisions/bindings only for the newly scheduled pods
 		// taskBindings will contain old placements as well
+		// TODO: In the rewrite will need to compare the task bindings from every scheduling iteration
+		// with the old task bindings to deduce new actions such as placements, migrations and unscheduling
 		taskBindings := ks.flowScheduler.GetTaskBindings()
 		for taskID, resourceID := range taskBindings {
 			// If an unchanged task binding, skip
 			if ks.oldTaskBindings[taskID] == resourceID {
-				//fmt.Printf("Skip Binding: taskID:%v ==> resourceID:%v\n", taskID, resourceID)
 				continue
 			}
 			// Otherwise update the new task binding
 			// TODO: Very hacky, need a better way to not assign stale bindings
 			ks.oldTaskBindings[taskID] = resourceID
 
-			// The resourceID is for the PU, so we get it's machineID first
+			// Current resourceID is for the PU, so we get it's machineID first
 			puNode := ks.resourceMap.FindPtrOrNull(resourceID).TopologyNode
 			machineID := findParentMachine(puNode, ks.resourceMap).Uuid
-			//fmt.Printf("Task binding: task:%v to machine:%v\n", taskID, machineID)
 
 			// Get the nodeID corresponding to the machineID
 			nodeID := ks.machineToNodeID[machineID]
 			// Get the podID corresponding to the taskID
 			podID := ks.taskToPodID[uint64(taskID)]
-			//fmt.Printf("Pod binding: pod:%v to node:%v\n", podID, nodeID)
+
 			// Create binding
 			binding := &k8stype.Binding{
 				PodID:  podID,
@@ -364,7 +362,7 @@ func createResourceDesc(resourceType pb.ResourceDescriptor_ResourceType, taskCap
 	IDString := strconv.FormatUint(util.RandUint64(), 10)
 	// Resource name = type + IDString
 	name := fmt.Sprintf("%s-%s", pb.ResourceDescriptor_ResourceType_name[int32(resourceType)], IDString)
-	//fmt.Printf("Created Resource: %s\n", name)
+
 	return &pb.ResourceDescriptor{
 		Uuid:         IDString,
 		FriendlyName: name,
