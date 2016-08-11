@@ -37,10 +37,9 @@ func New(cfg Config, podChanSize int) (*Client, error) {
 		return nil, err
 	}
 
-	//fmt.Printf("Created K8S CLIENT (%s)\n", cfg.Addr)
-
 	pch := make(chan *k8stype.Pod, podChanSize)
 
+	// Create informer to watch on unscheduled Pods (non-failed non-succeeded pods with an empty node binding)
 	sel := fields.ParseSelectorOrDie("spec.nodeName==" + "" + ",status.phase!=" + string(api.PodSucceeded) + ",status.phase!=" + string(api.PodFailed))
 	informer := framework.NewSharedInformer(
 		&cache.ListWatch{
@@ -56,16 +55,14 @@ func New(cfg Config, podChanSize int) (*Client, error) {
 		&api.Pod{},
 		0,
 	)
+	// Add event handlers for the addition, update and deletion of the pods watched by the above informer
 	informer.AddEventHandler(framework.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pod := obj.(*api.Pod)
-
-			//DEBUGGING. Remove it afterwards.
-			//fmt.Printf("informer: addfunc, pod (%s/%s)\n", pod.Namespace, pod.Name)
-
 			ourPod := &k8stype.Pod{
 				ID: makePodID(pod.Namespace, pod.Name),
 			}
+			// For now every new pod is just added to the channel being polled by the batch mechanism
 			pch <- ourPod
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {},
@@ -76,7 +73,7 @@ func New(cfg Config, podChanSize int) (*Client, error) {
 	go informer.Run(stopCh)
 
 	nch := make(chan *k8stype.Node, 100)
-
+	// Informer for watching the addition and removal of nodes in the cluster
 	_, nodeInformer := framework.NewInformer(
 		cache.NewListWatchFromClient(c, "nodes", api.NamespaceAll, fields.ParseSelectorOrDie("")),
 		&api.Node{},
@@ -84,17 +81,15 @@ func New(cfg Config, podChanSize int) (*Client, error) {
 		framework.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				node := obj.(*api.Node)
-
-				//DEBUGGING. Remove it afterwards.
-				//fmt.Printf("NodeInformer: addfunc, node (%s/%s)\n", node.Namespace, node.Name)
+				// Skip the master node
 				if node.Spec.Unschedulable {
-					//fmt.Printf("Skipping node\n")
 					return
 				}
-
 				ourNode := &k8stype.Node{
 					ID: node.Name,
 				}
+				// Add every new node seen to the channel being polled by the
+				// resource topology initializer mechanism
 				nch <- ourNode
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {},
@@ -123,10 +118,10 @@ func (c *Client) GetNodeChan() NodeChan {
 	return c.nodeCh
 }
 
+// Write out node bindings
 func (c *Client) AssignBinding(bindings []*k8stype.Binding) error {
 	for _, ob := range bindings {
 		ns, name := parsePodID(ob.PodID)
-		//fmt.Printf("NS:%v podName:%v\n", ns, name)
 		b := &api.Binding{
 			ObjectMeta: api.ObjectMeta{Namespace: ns, Name: name},
 			Target: api.ObjectReference{
@@ -139,7 +134,6 @@ func (c *Client) AssignBinding(bindings []*k8stype.Binding) error {
 		if err != nil {
 			panic(err)
 		}
-		//fmt.Printf("Binding:pod:%v ==> node:%v\n", name, ob.NodeID)
 	}
 	return nil
 }
@@ -185,8 +179,6 @@ func (c *Client) GetPodBatch(timeout time.Duration) []*k8stype.Pod {
 			// Do nothing and keep polling until timeout
 		}
 	}
-	// Return the batch collected so far. Size should be at least 1
-	//fmt.Printf("Number of pods requests: %d\n", numPods)
 	return batchedPods
 }
 

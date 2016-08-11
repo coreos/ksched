@@ -20,6 +20,7 @@ type idGen struct {
 	// Queue storing the ids that we've previously removed.
 	unusedIDs queue.FIFO
 	// NOTE: Randomized mode is only unique for the first run
+	// TODO: Randomized mode is probably useless, remove it later
 	RandomizeIDs bool
 }
 
