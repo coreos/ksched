@@ -63,4 +63,11 @@ podgen -numPods=<number-of-pods> -image=nginx
 ### Option 2: Run with Kubernetes API server:
 You can test the scheduler without the real cluster by only having the `kube-api` binary running. The setup is a little more involved for this case.
 
-You will need to have the same environment set up as is for the ksched image in the first scenario.
+You will need to have the same environment set up as is for the ksched image described by `build/Dockerfile`. Use that as a guide for your setup.
+
+* Setup the [Flowlessly](https://github.com/ICGog/Flowlessly) solver binary in the correct location: `/usr/local/bin/flowlessly/`.
+* Setup the Kubernetes(v1.3) source at the following location in your go workspace: `$GOPATH/src/k8s.io`
+* Get the ksched source: `go get github.com/coreos/ksched` (or from the mirror repo `github.com/hasbro17/ksched-mirror`)
+* Generate the proto files by running `proto/genproto.sh` 
+
+
