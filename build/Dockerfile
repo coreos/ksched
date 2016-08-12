@@ -11,8 +11,6 @@ RUN apt-get --yes --force-yes install git-all build-essential cmake libgflags2 l
 RUN cd /root && git clone https://github.com/hasbro17/Flowlessly.git && cd /root/Flowlessly && cmake . && make
 RUN mkdir -p /usr/local/bin/flowlessly/ && cp /root/Flowlessly/build/flow_scheduler /usr/local/bin/flowlessly/
 
-# This part not really needed if we just get the ksched binary directly but putting in to compile it within the container
-
 # Enivronment variables for Go
 RUN echo "export PATH=$PATH:/usr/local/go/bin:/root/go-workspace/bin" >> ~/.bashrc
 RUN echo "export GOPATH=/root/go-workspace" >> ~/.bashrc
@@ -27,10 +25,13 @@ RUN mkdir /root/go-workspace/src/k8s.io && cd /root/go-workspace/src/github.com/
 # Set up proto stuff
 RUN cd /root && mkdir proto-bin && cd proto-bin && wget "https://github.com/google/protobuf/releases/download/v3.0.0/protoc-3.0.0-linux-x86_64.zip" && unzip protoc-3.0.0-linux-x86_64.zip && cp bin/protoc /usr/local/bin/protoc
 
+
+
 # After this point, you would still need to 
 # 1. Run the container on the k8s master node in host networking mode
 # 2. Clone the ksched repo inside it
-# 3. Build and run the k8sscheduler binary inside the container
+# 3. Build and run the k8sscheduler binary inside the container 
 
 # TODO:
 # Add an init file to clone the ksched repo on startup using ssh auth
+ADD init.sh /root/init.sh
