@@ -30,7 +30,7 @@ var (
 
 func init() {
 	flag.StringVar(&address, "addr", "127.0.0.1:8080", "APIServer addr")
-	flag.IntVar(&maxTasksPerPu, "mt", 1000, "max tasks")
+	flag.IntVar(&maxTasksPerPu, "mt", 1000, "maximum number of tasks per machine")
 	flag.IntVar(&batchTimeout, "pbt", 2, "pods batch timeout in seconds")
 	flag.IntVar(&nodeBatchTimeout, "nbt", 2, "node batch timeout in seconds")
 	flag.IntVar(&podChanSize, "pcs", 5000, "pod channel size in client's pod informer")
